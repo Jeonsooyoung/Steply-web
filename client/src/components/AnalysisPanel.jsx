@@ -5,8 +5,8 @@ import { recommendationLabel } from '../pose/recommendationRules';
 import { roundMetric, statusFromScore } from '../utils/format';
 import { movementTests } from '../data/movementTests';
 
-//false로 바꿀 경우 개발자 디버깅용 요소는 없어짐.
-const SHOW_DEBUG_TOOLS = true;
+// false로 바꿀 경우 개발자 디버깅용 요소는 없어짐.
+const SHOW_DEBUG_TOOLS = false;
 
 function percent(value) {
   if (!Number.isFinite(value)) return '-';
@@ -20,6 +20,21 @@ function phaseLabel(phase) {
   if (phase === 'walking') return 'Walking';
   if (phase === 'unknown') return 'Searching';
   return 'Waiting';
+}
+
+function userFriendlyStatus(state, remoteCameraFrame, frameLoadError) {
+  if (frameLoadError) return 'The camera frame could not be loaded. Please reconnect the camera.';
+  if (!remoteCameraFrame?.src) return 'Scan the QR code with the mobile app and start camera streaming.';
+  if (state.warningMessage) return state.warningMessage;
+  if (!state.isFullBodyVisible) return 'Move back until your full body is visible on the screen.';
+  if (state.postureMessage) return state.postureMessage;
+  return 'Good. Follow the screen and continue the test slowly.';
+}
+
+function visibilityLabel(state, remoteCameraFrame) {
+  if (!remoteCameraFrame?.src) return 'Waiting for camera';
+  if (state.isFullBodyVisible) return 'Full body detected';
+  return 'Waiting for full body';
 }
 
 export function AnalysisPanel({
@@ -37,6 +52,7 @@ export function AnalysisPanel({
   const score = remoteCameraFrame?.src ? Math.round((state.confidence || 0) * 100) : 0;
   const status = state.warningMessage ? 'practice_needed' : statusFromScore(score || 72);
   const durationSeconds = state.durationSeconds || poseAnalysis?.durationSeconds || result?.durationSeconds || 30;
+  const elapsedSeconds = roundMetric(state.elapsedSeconds, 0);
   const primaryValue = state.primaryValue ?? state.repetitionCount ?? 0;
   const primaryLabel = state.primaryLabel || 'Chair Stands';
 
@@ -53,6 +69,7 @@ export function AnalysisPanel({
     : '-';
 
   const cameraStatusText = frameLoadError || remoteCameraStatus || 'Waiting for phone camera';
+  const friendlyStatus = userFriendlyStatus(state, remoteCameraFrame, frameLoadError);
 
   useEffect(() => {
     setFrameLoadError('');
@@ -63,7 +80,7 @@ export function AnalysisPanel({
       <SteplyCard className="arena-card">
         <div className="arena-card__topbar">
           <div>
-            <div className="eyebrow">PC Background Pose Analysis</div>
+            <div className="eyebrow">Movement Test</div>
             <h2>{selectedTest ? selectedTest.replaceAll('_', ' ') : 'Remote Camera'}</h2>
           </div>
           <StatusPill status={status} />
@@ -126,7 +143,7 @@ export function AnalysisPanel({
         </div>
 
         <p className="coach-message">
-          {state.warningMessage || state.postureMessage || 'Scan the QR code with the mobile app, then start streaming.'}
+          {friendlyStatus}
         </p>
 
         <div className="analysis-controls">
@@ -168,8 +185,33 @@ export function AnalysisPanel({
       </SteplyCard>
 
       <aside className="analysis-side">
+        <SteplyCard className="feedback-stack feedback-stack--analysis">
+          <div className="eyebrow">Test Status</div>
+          <h3>Current Test Status</h3>
+
+          <div className="analysis-summary-grid">
+            <div>
+              <span>Elapsed Time</span>
+              <strong>{elapsedSeconds} / {durationSeconds}초</strong>
+            </div>
+
+            <div>
+              <span>{primaryLabel}</span>
+              <strong>{roundMetric(primaryValue, 0)}</strong>
+            </div>
+          </div>
+
+          <p className="analysis-summary-message">
+            {friendlyStatus}
+          </p>
+
+          <div className="analysis-summary-status">
+            {visibilityLabel(state, remoteCameraFrame)}
+          </div>
+        </SteplyCard>
+
         <TimerCircle
-          value={roundMetric(state.elapsedSeconds, 0)}
+          value={elapsedSeconds}
           max={durationSeconds}
           label="seconds"
           score={roundMetric(primaryValue, 0)}
@@ -178,42 +220,9 @@ export function AnalysisPanel({
         <MetricCard
           value={roundMetric(primaryValue, 0)}
           label={primaryLabel}
-          detail={`${roundMetric(state.elapsedSeconds, 0)} / ${durationSeconds} sec`}
+          detail={`${elapsedSeconds} / ${durationSeconds} sec`}
           accent
         />
-
-        <MetricCard
-          value={phaseLabel(state.phase)}
-          label="Phase"
-          detail={state.isFullBodyVisible ? 'Full body visible' : 'Waiting for full body'}
-          status={status}
-        />
-
-        <MetricCard
-          value={percent(state.confidence)}
-          label="Pose Confidence"
-          detail={`Worker: ${poseAnalysis?.workerStatus || 'booting'}`}
-        />
-
-        {SHOW_DEBUG_TOOLS ? (
-          <MetricCard
-            value={frameKb}
-            label="Frame KB"
-            detail={`Frame #${remoteCameraFrame?.sequence || '-'} · ${receivedTime}`}
-          />
-        ) : null}
-
-        <SteplyCard className="feedback-stack feedback-stack--analysis">
-          <div className="eyebrow">Realtime Rules</div>
-          <h3>Pose Analysis Status</h3>
-          <ul>
-            <li>{state.postureMessage || 'Waiting for analysis'}</li>
-            <li>{state.isArmUseSuspected ? 'Arm support suspected: yes' : 'Arm support suspected: no'}</li>
-            <li>Trunk center: {percent(state.trunkLeanScore)}</li>
-            <li>Left-right symmetry: {percent(state.symmetryScore)}</li>
-            <li>Sway stability: {percent(state.stabilityScore)}</li>
-          </ul>
-        </SteplyCard>
 
         {result ? (
           <SteplyCard className="feedback-stack feedback-stack--result-mini">
@@ -242,6 +251,24 @@ export function AnalysisPanel({
             <div className="eyebrow">MediaPipe</div>
             <h3>Analysis Error</h3>
             <p>{poseAnalysis.error}</p>
+          </SteplyCard>
+        ) : null}
+
+        {SHOW_DEBUG_TOOLS ? (
+          <SteplyCard className="feedback-stack feedback-stack--analysis">
+            <div className="eyebrow">Developer Details</div>
+            <h3>Analysis Details</h3>
+            <ul>
+              <li>Phase: {phaseLabel(state.phase)}</li>
+              <li>Pose confidence: {percent(state.confidence)}</li>
+              <li>Worker: {poseAnalysis?.workerStatus || 'booting'}</li>
+              <li>Frame size: {frameKb} KB</li>
+              <li>Frame #{remoteCameraFrame?.sequence || '-'} · {receivedTime}</li>
+              <li>{state.isArmUseSuspected ? 'Arm support suspected: yes' : 'Arm support suspected: no'}</li>
+              <li>Trunk center: {percent(state.trunkLeanScore)}</li>
+              <li>Left-right symmetry: {percent(state.symmetryScore)}</li>
+              <li>Sway stability: {percent(state.stabilityScore)}</li>
+            </ul>
           </SteplyCard>
         ) : null}
 

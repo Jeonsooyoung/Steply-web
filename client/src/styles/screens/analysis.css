@@ -17,8 +17,15 @@
   box-shadow: 0 24px 64px rgba(13, 32, 46, 0.28);
 }
 
-.arena-card .eyebrow { color: #8de0c8; }
-.arena-card h2 { color: #f5fffc; font-size: clamp(26px, 3vw, 38px); text-transform: capitalize; }
+.arena-card .eyebrow {
+  color: #8de0c8;
+}
+
+.arena-card h2 {
+  color: #f5fffc;
+  font-size: clamp(26px, 3vw, 38px);
+  text-transform: capitalize;
+}
 
 .arena-card__topbar {
   display: flex;
@@ -93,11 +100,23 @@
 }
 
 @keyframes stagePulse {
-  0%, 100% { transform: scale(.84); opacity: .25; }
-  50% { transform: scale(1.07); opacity: .6; }
+
+  0%,
+  100% {
+    transform: scale(.84);
+    opacity: .25;
+  }
+
+  50% {
+    transform: scale(1.07);
+    opacity: .6;
+  }
 }
 
-.coach-figure--stage { filter: drop-shadow(0 22px 24px rgba(0,0,0,0.24)); }
+.coach-figure--stage {
+  filter: drop-shadow(0 22px 24px rgba(0, 0, 0, 0.24));
+}
+
 .coach-figure--stage .chair-seat {
   left: 37px;
   bottom: 42px;
@@ -106,6 +125,7 @@
   border-radius: 8px;
   background: #F4A261;
 }
+
 .coach-figure--stage .chair-leg {
   bottom: 16px;
   width: 9px;
@@ -113,8 +133,14 @@
   border-radius: 999px;
   background: #df8751;
 }
-.coach-figure--stage .chair-leg--left { left: 49px; }
-.coach-figure--stage .chair-leg--right { right: 49px; }
+
+.coach-figure--stage .chair-leg--left {
+  left: 49px;
+}
+
+.coach-figure--stage .chair-leg--right {
+  right: 49px;
+}
 
 .movement-bars {
   display: grid;
@@ -136,8 +162,15 @@
 }
 
 @keyframes barGlow {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.22); }
+
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.22);
+  }
 }
 
 .coach-message {
@@ -146,8 +179,8 @@
   padding: 18px 20px;
   border-radius: 22px;
   color: #eaf8f4;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.13);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.13);
   font-size: 19px;
   font-weight: 760;
   line-height: 1.45;
@@ -176,8 +209,15 @@
 }
 
 @keyframes timerPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.015); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.015);
+  }
 }
 
 .timer-circle__inner {
@@ -196,8 +236,19 @@
   font-weight: 950;
   letter-spacing: 0;
 }
-.timer-circle__label { font-size: 15px; font-weight: 850; color: var(--text-secondary); }
-.timer-circle__score { margin-top: 4px; font-size: 14px; font-weight: 900; color: var(--primary); }
+
+.timer-circle__label {
+  font-size: 15px;
+  font-weight: 850;
+  color: var(--text-secondary);
+}
+
+.timer-circle__score {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--primary);
+}
 
 .analysis-side .metric-card {
   min-height: 118px;
@@ -233,7 +284,10 @@
   font-weight: 780;
 }
 
-.action-stack { display: grid; gap: 10px; }
+.action-stack {
+  display: grid;
+  gap: 10px;
+}
 
 .arena-stage--camera {
   aspect-ratio: 4 / 3;
