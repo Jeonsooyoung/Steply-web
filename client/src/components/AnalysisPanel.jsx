@@ -31,12 +31,6 @@ function userFriendlyStatus(state, remoteCameraFrame, frameLoadError) {
   return 'Good. Follow the screen and continue the test slowly.';
 }
 
-function visibilityLabel(state, remoteCameraFrame) {
-  if (!remoteCameraFrame?.src) return 'Waiting for camera';
-  if (state.isFullBodyVisible) return 'Full body detected';
-  return 'Waiting for full body';
-}
-
 export function AnalysisPanel({
   remoteCameraFrame,
   remoteCameraStatus,
@@ -224,30 +218,6 @@ export function AnalysisPanel({
       </SteplyCard>
 
       <aside className="analysis-side">
-        <SteplyCard className="feedback-stack feedback-stack--analysis">
-          <div className="eyebrow">Test Status</div>
-          <h3>Current Test Status</h3>
-
-          <div className="analysis-summary-grid">
-            <div>
-              <span>Elapsed Time</span>
-              <strong>{elapsedSeconds} / {durationSeconds}초</strong>
-            </div>
-
-            <div>
-              <span>{primaryLabel}</span>
-              <strong>{roundMetric(primaryValue, 0)}</strong>
-            </div>
-          </div>
-
-          <p className="analysis-summary-message">
-            {friendlyStatus}
-          </p>
-
-          <div className="analysis-summary-status">
-            {visibilityLabel(state, remoteCameraFrame)}
-          </div>
-        </SteplyCard>
 
         <TimerCircle
           value={elapsedSeconds}
