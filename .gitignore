@@ -20,4 +20,4 @@ yarn-error.log*
 Thumbs.db
 
 # local test/history data
-data/
+/data/
