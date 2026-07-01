@@ -5,6 +5,9 @@ import { recommendationLabel } from '../pose/recommendationRules';
 import { roundMetric, statusFromScore } from '../utils/format';
 import { movementTests } from '../data/movementTests';
 
+//false로 바꿀 경우 개발자 디버깅용 요소는 없어짐.
+const SHOW_DEBUG_TOOLS = true;
+
 function percent(value) {
   if (!Number.isFinite(value)) return '-';
   return `${Math.round(value * 100)}%`;
@@ -27,18 +30,28 @@ export function AnalysisPanel({
   poseAnalysis,
 }) {
   const [frameLoadError, setFrameLoadError] = useState('');
+
   const state = poseAnalysis?.analysisState || {};
   const result = poseAnalysis?.analysisResult || null;
+
   const score = remoteCameraFrame?.src ? Math.round((state.confidence || 0) * 100) : 0;
   const status = state.warningMessage ? 'practice_needed' : statusFromScore(score || 72);
   const durationSeconds = state.durationSeconds || poseAnalysis?.durationSeconds || result?.durationSeconds || 30;
   const primaryValue = state.primaryValue ?? state.repetitionCount ?? 0;
   const primaryLabel = state.primaryLabel || 'Chair Stands';
-  const frameKb = remoteCameraFrame?.byteLength ? Math.round(remoteCameraFrame.byteLength / 1024) : '-';
+
+  const frameKb = remoteCameraFrame?.byteLength
+    ? Math.round(remoteCameraFrame.byteLength / 1024)
+    : '-';
+
   const receivedTime = remoteCameraFrame?.receivedAt
     ? new Date(remoteCameraFrame.receivedAt).toLocaleTimeString()
     : '-';
-  const resultLevel = result?.recommendationLevel ? recommendationLabel(result.recommendationLevel) : '-';
+
+  const resultLevel = result?.recommendationLevel
+    ? recommendationLabel(result.recommendationLevel)
+    : '-';
+
   const cameraStatusText = frameLoadError || remoteCameraStatus || 'Waiting for phone camera';
 
   useEffect(() => {
@@ -99,8 +112,15 @@ export function AnalysisPanel({
               <div className="stage-pulse" />
             </>
           )}
+
           <div className="remote-camera-badge">
-            <span className={remoteCameraFrame?.src && !frameLoadError ? 'remote-camera-dot remote-camera-dot--live' : 'remote-camera-dot'} />
+            <span
+              className={
+                remoteCameraFrame?.src && !frameLoadError
+                  ? 'remote-camera-dot remote-camera-dot--live'
+                  : 'remote-camera-dot'
+              }
+            />
             {cameraStatusText}
           </div>
         </div>
@@ -110,30 +130,78 @@ export function AnalysisPanel({
         </p>
 
         <div className="analysis-controls">
-          <SteplyButton onClick={poseAnalysis?.startAnalysis} disabled={!remoteCameraFrame?.src || poseAnalysis?.isRunning}>
+          <SteplyButton
+            onClick={poseAnalysis?.startAnalysis}
+            disabled={!remoteCameraFrame?.src || poseAnalysis?.isRunning}
+          >
             Start Analysis
           </SteplyButton>
-          <SteplyButton variant="secondary" onClick={poseAnalysis?.finishAnalysis} disabled={!poseAnalysis?.isRunning}>
+
+          <SteplyButton
+            variant="secondary"
+            onClick={poseAnalysis?.finishAnalysis}
+            disabled={!poseAnalysis?.isRunning}
+          >
             Save Result
           </SteplyButton>
+
           <SteplyButton variant="ghost" onClick={poseAnalysis?.resetAnalysis}>
             Reset
           </SteplyButton>
-          <SteplyButton variant="ghost" onClick={poseAnalysis?.probeDebug}>
-            Debug Probe
-          </SteplyButton>
-          <SteplyButton variant="secondary" onClick={poseAnalysis?.addManualRepetition} disabled={!poseAnalysis?.isRunning}>
-            +1 Rep Adjust
-          </SteplyButton>
+
+          {SHOW_DEBUG_TOOLS ? (
+            <>
+              <SteplyButton variant="ghost" onClick={poseAnalysis?.probeDebug}>
+                Debug Probe
+              </SteplyButton>
+
+              <SteplyButton
+                variant="secondary"
+                onClick={poseAnalysis?.addManualRepetition}
+                disabled={!poseAnalysis?.isRunning}
+              >
+                +1 Rep Adjust
+              </SteplyButton>
+            </>
+          ) : null}
         </div>
       </SteplyCard>
 
       <aside className="analysis-side">
-        <TimerCircle value={roundMetric(state.elapsedSeconds, 0)} max={durationSeconds} label="seconds" score={roundMetric(primaryValue, 0)} />
-        <MetricCard value={roundMetric(primaryValue, 0)} label={primaryLabel} detail={`${roundMetric(state.elapsedSeconds, 0)} / ${durationSeconds} sec`} accent />
-        <MetricCard value={phaseLabel(state.phase)} label="Phase" detail={state.isFullBodyVisible ? 'Full body visible' : 'Waiting for full body'} status={status} />
-        <MetricCard value={percent(state.confidence)} label="Pose Confidence" detail={`Worker: ${poseAnalysis?.workerStatus || 'booting'}`} />
-        <MetricCard value={frameKb} label="Frame KB" detail={`Frame #${remoteCameraFrame?.sequence || '-'} · ${receivedTime}`} />
+        <TimerCircle
+          value={roundMetric(state.elapsedSeconds, 0)}
+          max={durationSeconds}
+          label="seconds"
+          score={roundMetric(primaryValue, 0)}
+        />
+
+        <MetricCard
+          value={roundMetric(primaryValue, 0)}
+          label={primaryLabel}
+          detail={`${roundMetric(state.elapsedSeconds, 0)} / ${durationSeconds} sec`}
+          accent
+        />
+
+        <MetricCard
+          value={phaseLabel(state.phase)}
+          label="Phase"
+          detail={state.isFullBodyVisible ? 'Full body visible' : 'Waiting for full body'}
+          status={status}
+        />
+
+        <MetricCard
+          value={percent(state.confidence)}
+          label="Pose Confidence"
+          detail={`Worker: ${poseAnalysis?.workerStatus || 'booting'}`}
+        />
+
+        {SHOW_DEBUG_TOOLS ? (
+          <MetricCard
+            value={frameKb}
+            label="Frame KB"
+            detail={`Frame #${remoteCameraFrame?.sequence || '-'} · ${receivedTime}`}
+          />
+        ) : null}
 
         <SteplyCard className="feedback-stack feedback-stack--analysis">
           <div className="eyebrow">Realtime Rules</div>
@@ -152,9 +220,19 @@ export function AnalysisPanel({
             <div className="eyebrow">Final Result</div>
             <h3>{resultLevel}</h3>
             <ul>
-              <li>{result.primaryLabel || 'Final reps'}: {roundMetric(result.primaryValue ?? result.repetitionCount, 0)}</li>
-              <li>Average pace: {result.averageRepSeconds ? `${result.averageRepSeconds.toFixed(1)} sec/rep` : '-'}</li>
-              <li>{result.armUseDisqualified ? 'Arm support detected: official score is 0' : 'No arm-support disqualification'}</li>
+              <li>
+                {result.primaryLabel || 'Final reps'}:{' '}
+                {roundMetric(result.primaryValue ?? result.repetitionCount, 0)}
+              </li>
+              <li>
+                Average pace:{' '}
+                {result.averageRepSeconds ? `${result.averageRepSeconds.toFixed(1)} sec/rep` : '-'}
+              </li>
+              <li>
+                {result.armUseDisqualified
+                  ? 'Arm support detected: official score is 0'
+                  : 'No arm-support disqualification'}
+              </li>
             </ul>
           </SteplyCard>
         ) : null}
@@ -167,7 +245,7 @@ export function AnalysisPanel({
           </SteplyCard>
         ) : null}
 
-        {poseAnalysis?.debugLog?.length ? (
+        {SHOW_DEBUG_TOOLS && poseAnalysis?.debugLog?.length ? (
           <SteplyCard className="feedback-stack feedback-stack--analysis">
             <div className="eyebrow">Debug</div>
             <h3>MediaPipe Loader Trace</h3>
