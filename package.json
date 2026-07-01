@@ -1,0 +1,26 @@
+{
+  "name": "steply-web-dashboard",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Steply React dashboard for QR session linking, movement check selection, realtime pose analysis display, recommendations, and local history storage.",
+  "scripts": {
+    "dev": "node scripts/prepare-mediapipe-assets.js && node scripts/dev.js",
+    "server": "node server.js",
+    "client": "node scripts/prepare-mediapipe-assets.js && vite --host 0.0.0.0",
+    "build": "node scripts/prepare-mediapipe-assets.js && vite build",
+    "start": "node server.js",
+    "check": "node scripts/prepare-mediapipe-assets.js --optional && node scripts/check.js",
+    "prepare:mediapipe": "node scripts/prepare-mediapipe-assets.js"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "vite": "^7.1.9",
+    "typescript": "^5.9.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0",
+    "@mediapipe/tasks-vision": "^0.10.22"
+  },
+  "devDependencies": {}
+}

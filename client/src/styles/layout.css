@@ -1,0 +1,108 @@
+.steply-shell {
+  display: grid;
+  grid-template-columns: minmax(300px, var(--rail-width)) minmax(0, 1fr);
+  gap: 24px;
+  width: min(1720px, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.session-rail {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  display: grid;
+  gap: 18px;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.session-rail::-webkit-scrollbar { width: 8px; }
+.session-rail::-webkit-scrollbar-thumb { background: rgba(79, 138, 123, 0.22); border-radius: 999px; }
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 4px 4px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+  color: white;
+  font-size: 26px;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: var(--shadow-card);
+}
+
+.brand-lockup strong { display: block; font-size: 24px; letter-spacing: -0.03em; }
+.brand-lockup span { color: var(--text-secondary); font-size: 16px; }
+
+.dashboard-main {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+
+.top-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 8px 4px 0;
+}
+
+.top-bar h1 {
+  margin: 0;
+  font-size: clamp(30px, 3.6vw, 48px);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+  font-weight: 900;
+  color: #17352f;
+}
+
+.top-bar p {
+  max-width: 780px;
+  margin: 10px 0 0;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.top-bar__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  border: var(--border-soft);
+  box-shadow: var(--shadow-card);
+  color: var(--primary-dark);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 7px rgba(91, 174, 125, 0.16);
+}
+
+.eyebrow {
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
