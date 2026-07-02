@@ -1,22 +1,32 @@
 :root {
-  --primary: #4F8A7B;
-  --primary-dark: #2F5F55;
-  --secondary: #86A8E7;
-  --accent: #F4A261;
-  --background: #F8F5EF;
+  color-scheme: light;
+  --primary: #2F6F62;
+  --on-primary: #FFFFFF;
+  --primary-dark: #24584E;
+  --primary-container: #D7ECE5;
+  --secondary: #496A9A;
+  --secondary-container: #DCE7F7;
+  --tertiary: #8A5B18;
+  --tertiary-container: #FFE2B6;
+  --accent: #8A5B18;
+  --background: #F7F9F6;
   --surface: #FFFFFF;
-  --surface-variant: #EFE8DD;
-  --text-primary: #1F2933;
-  --text-secondary: #5F6874;
-  --success: #5BAE7D;
-  --warning: #E9A23B;
-  --error: #D9534F;
-  --shadow-soft: 0 18px 48px rgba(47, 95, 85, 0.14);
-  --shadow-card: 0 12px 30px rgba(31, 41, 51, 0.08);
-  --border-soft: 1px solid rgba(47, 95, 85, 0.14);
-  --radius-card: 24px;
-  --radius-button: 18px;
-  --rail-width: 360px;
+  --surface-variant: #E3EAE6;
+  --text-primary: #17211D;
+  --text-secondary: #4F5F58;
+  --outline: #B7C2BC;
+  --success: #2F6F62;
+  --warning: #8A5B18;
+  --error: #BA1A1A;
+  --error-container: #FFDAD6;
+  --shadow-soft: 0 8px 22px rgba(23, 33, 29, 0.08);
+  --shadow-card: 0 1px 3px rgba(23, 33, 29, 0.08);
+  --border-soft: 1px solid var(--outline);
+  --radius-card: 8px;
+  --radius-button: 14px;
+  --radius-input: 12px;
+  --radius-notice: 8px;
+  --rail-width: 336px;
 }
 
 * { box-sizing: border-box; }
@@ -28,10 +38,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background:
-    radial-gradient(circle at 14% 10%, rgba(134, 168, 231, 0.28), transparent 34%),
-    radial-gradient(circle at 90% 4%, rgba(244, 162, 97, 0.24), transparent 28%),
-    linear-gradient(145deg, #fffdfa 0%, var(--background) 52%, #f2ebdf 100%);
+  background: var(--background);
   color: var(--text-primary);
 }
 
@@ -42,3 +49,30 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: 0.62; }
 
 .steply-hidden { display: none; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --primary: #A8D8CA;
+    --on-primary: #08201A;
+    --primary-dark: #A8D8CA;
+    --primary-container: #1A554B;
+    --secondary: #B4C7E8;
+    --secondary-container: #253D63;
+    --tertiary: #F6C77B;
+    --tertiary-container: #5B3C0E;
+    --accent: #F6C77B;
+    --background: #111916;
+    --surface: #18211D;
+    --surface-variant: #3E4A45;
+    --text-primary: #E4ECE7;
+    --text-secondary: #C3CCC6;
+    --outline: #7F8B85;
+    --success: #A8D8CA;
+    --warning: #F6C77B;
+    --error: #FFB4AB;
+    --error-container: #690005;
+    --shadow-soft: 0 8px 22px rgba(0, 0, 0, 0.32);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.24);
+  }
+}

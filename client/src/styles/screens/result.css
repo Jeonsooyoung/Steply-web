@@ -1,51 +1,43 @@
 .result-hero-card {
   position: relative;
-  min-height: 260px;
+  min-height: auto;
   overflow: hidden;
-  padding: 28px;
-  background:
-    radial-gradient(circle at 86% 24%, rgba(244, 162, 97, 0.26), transparent 18%),
-    linear-gradient(135deg, #ffffff, #eef8f5);
+  padding: 18px;
+  background: var(--primary-container);
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--outline));
 }
 
-.result-hero-card h2 { font-size: clamp(34px, 4vw, 54px); margin-bottom: 12px; }
-.result-hero-card p { max-width: 780px; font-size: 19px; margin-bottom: 18px; }
+.result-hero-card h2 { font-size: clamp(28px, 4vw, 36px); margin-bottom: 12px; font-weight: 800; }
+.result-hero-card p { max-width: 620px; font-size: 15px; margin-bottom: 18px; }
 
 .celebration-orb {
-  position: absolute;
-  right: 44px;
-  top: 42px;
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(244, 162, 97, 0.28), rgba(79, 138, 123, 0.12) 60%, transparent 62%);
-  animation: floaty 5s ease-in-out infinite;
+  display: none;
 }
 
 .feedback-result-card {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
   align-items: start;
 }
 
 .feedback-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .feedback-list span {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 999px;
-  background: rgba(79, 138, 123, 0.1);
-  color: var(--primary-dark);
-  font-size: 16px;
-  font-weight: 850;
+  background: var(--primary-container);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .result-actions {
   display: grid;
-  grid-template-columns: minmax(240px, 360px) minmax(220px, 300px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
