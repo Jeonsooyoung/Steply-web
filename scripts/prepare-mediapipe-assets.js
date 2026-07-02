@@ -33,6 +33,9 @@ if (!fs.existsSync(sourceDir)) {
 const required = [
   'vision_wasm_internal.js',
   'vision_wasm_internal.wasm',
+  'vision_wasm_module_internal.js',
+  'vision_wasm_module_internal.wasm',
+  'vision_wasm_module_raw_internal.wasm',
   'vision_wasm_nosimd_internal.js',
   'vision_wasm_nosimd_internal.wasm',
 ];
@@ -44,6 +47,12 @@ for (const targetDir of targetDirs) {
     const from = path.join(sourceDir, entry);
     const to = path.join(targetDir, entry);
     fs.cpSync(from, to, { recursive: true, force: true });
+  }
+
+  const moduleWasm = path.join(targetDir, 'vision_wasm_module_internal.wasm');
+  const moduleRawWasm = path.join(targetDir, 'vision_wasm_module_raw_internal.wasm');
+  if (fs.existsSync(moduleWasm)) {
+    fs.copyFileSync(moduleWasm, moduleRawWasm);
   }
 
   const copied = fs.readdirSync(targetDir);
