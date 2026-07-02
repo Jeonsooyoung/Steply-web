@@ -1,8 +1,6 @@
 import { SteplyButton, SteplyCard, MetricCard, SafetyNoticeCard } from './SteplyPrimitives';
 
 export function StartPanel({ session, onStartAnalysis, isMobileConnected = false }) {
-  const profileName = session?.profile?.displayName || session?.profile?.name || 'Waiting for mobile profile';
-
   return (
     <div className="panel-grid panel-grid--start">
       <SteplyCard className="hero-card hero-card--wellness">
@@ -15,8 +13,8 @@ export function StartPanel({ session, onStartAnalysis, isMobileConnected = false
               Start Test
             </SteplyButton>
             <span className="hero-card__helper">
-              {isMobileConnected ? 'Profile' : 'Status'}:{' '}
-              <strong>{isMobileConnected ? profileName : 'Connect the mobile camera first'}</strong>
+              Status:{' '}
+              <strong>{isMobileConnected ? 'Ready to start' : 'Connect the mobile camera first'}</strong>
             </span>
           </div>
         </div>

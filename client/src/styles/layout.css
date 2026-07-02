@@ -147,6 +147,20 @@
   justify-self: center;
 }
 
+.steply-shell--with-sidebar {
+  grid-template-columns: minmax(0, 1fr);
+  width: min(1016px, 100%);
+}
+
+.steply-shell--sidebar-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.steply-shell--with-sidebar .dashboard-main {
+  width: min(640px, 100%);
+  justify-self: center;
+}
+
 .qr-link-modal {
   position: fixed;
   inset: 0;

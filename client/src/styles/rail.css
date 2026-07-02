@@ -21,6 +21,121 @@
   width: min(100%, 240px);
 }
 
+.profile-sidebar {
+  position: fixed;
+  left: 20px;
+  top: 20px;
+  z-index: 20;
+  display: grid;
+  gap: 12px;
+  width: 320px;
+  max-height: calc(100vh - 40px);
+  transition: width 180ms ease;
+}
+
+.profile-sidebar__toggle {
+  position: absolute;
+  top: 14px;
+  right: -16px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  width: 32px;
+  height: 32px;
+  border: var(--border-soft);
+  border-radius: 50%;
+  color: var(--primary);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.profile-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.profile-sidebar__brand strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.profile-sidebar__brand span {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.profile-sidebar__card {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-sidebar__status-list {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-sidebar__status-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 0;
+  border-top: 1px solid color-mix(in srgb, var(--outline) 48%, transparent);
+}
+
+.profile-sidebar__status-list span {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.profile-sidebar__status-list strong {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-sidebar--collapsed {
+  justify-items: center;
+  width: 56px;
+}
+
+.profile-sidebar--collapsed .profile-sidebar__toggle {
+  right: -14px;
+}
+
+.profile-sidebar--collapsed .brand-mark {
+  width: 44px;
+  height: 44px;
+}
+
+.profile-sidebar__collapsed-status {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: var(--border-soft);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.status-dot--waiting {
+  background: var(--warning);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--warning) 18%, transparent);
+}
+
 .card-heading-row {
   display: flex;
   align-items: flex-start;

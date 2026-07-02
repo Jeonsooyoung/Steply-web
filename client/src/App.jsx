@@ -1,6 +1,7 @@
 import { useSteplyDashboard } from './hooks/useSteplyDashboard';
 import { useEffect, useState } from 'react';
 import { SessionRail } from './components/SessionRail';
+import { ProfileSidebar } from './components/ProfileSidebar';
 import { StartPanel } from './components/StartPanel';
 import { AnalysisPanel } from './components/AnalysisPanel';
 import { ResultPanel } from './components/ResultPanel';
@@ -96,9 +97,13 @@ export default function App() {
   const dashboard = useSteplyDashboard();
   const [isQrModalOpen, setIsQrModalOpen] = useState(true);
   const [hasStartedTest, setHasStartedTest] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const isFocusMode = shouldShowAnalysisPanel(dashboard, hasStartedTest);
   const isMobileConnected = Boolean(dashboard.session?.profile || dashboard.remoteCameraFrame?.src);
+  const shellClassName = isFocusMode
+    ? 'steply-shell steply-shell--focus'
+    : `steply-shell steply-shell--main steply-shell--with-sidebar ${isSidebarCollapsed ? 'steply-shell--sidebar-collapsed' : ''}`;
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -120,7 +125,17 @@ export default function App() {
   };
 
   return (
-    <div className={isFocusMode ? 'steply-shell steply-shell--focus' : 'steply-shell steply-shell--main'}>
+    <div className={shellClassName}>
+      {!isFocusMode ? (
+        <ProfileSidebar
+          session={dashboard.session}
+          remoteCameraStatus={dashboard.remoteCameraStatus}
+          workerStatus={dashboard.poseAnalysis?.workerStatus}
+          collapsed={isSidebarCollapsed}
+          onToggle={() => setIsSidebarCollapsed((current) => !current)}
+        />
+      ) : null}
+
       <main className={isFocusMode ? 'dashboard-main dashboard-main--focus' : 'dashboard-main'}>
         {!isFocusMode ? (
           <header className="top-bar">
