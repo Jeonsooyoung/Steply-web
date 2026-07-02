@@ -1,6 +1,8 @@
 import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 import { MediaPipePoseNames } from './poseLandmarks';
 import { createMovementAnalyzer } from './movementAnalyzers';
+import wasmModuleLoaderUrl from '../vendor/mediapipe/wasm/vision_wasm_module_internal.js?url';
+import wasmModuleBinaryUrl from '../vendor/mediapipe/wasm/vision_wasm_module_internal.wasm?url';
 
 const DEFAULT_MODEL_PATH = '/models/pose_landmarker_lite.task';
 const DEFAULT_WASM_PATH = '/wasm';
@@ -32,8 +34,6 @@ function debug(event, details = {}) {
 }
 
 function defaultWasmPath() {
-  const { protocol, hostname, port } = self.location;
-  if (port && port !== '3000') return `${protocol}//${hostname}:3000/wasm`;
   return DEFAULT_WASM_PATH;
 }
 
@@ -76,13 +76,20 @@ async function probeWasmBasePath(basePath) {
 
 async function resolveVisionFileset(config = {}) {
   const basePath = normalizeBasePath(config.wasmPath || defaultWasmPath());
+  const useBundledWasm = !config.wasmPath;
   debug('fileset-resolve-start', {
     workerLocation: self.location.href,
     basePath,
+    useBundledWasm,
     useModule: true,
   });
-  await probeWasmBasePath(basePath);
-  const fileset = await FilesetResolver.forVisionTasks(basePath, true);
+  if (!useBundledWasm) await probeWasmBasePath(basePath);
+  const fileset = useBundledWasm
+    ? {
+        wasmLoaderPath: wasmModuleLoaderUrl,
+        wasmBinaryPath: wasmModuleBinaryUrl,
+      }
+    : await FilesetResolver.forVisionTasks(basePath, true);
   debug('fileset-resolve-complete', {
     wasmLoaderPath: fileset.wasmLoaderPath,
     wasmBinaryPath: fileset.wasmBinaryPath,
