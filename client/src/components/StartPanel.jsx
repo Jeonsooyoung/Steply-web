@@ -1,6 +1,6 @@
 import { SteplyButton, SteplyCard, MetricCard, SafetyNoticeCard } from './SteplyPrimitives';
 
-export function StartPanel({ session, onStartAnalysis }) {
+export function StartPanel({ session, onStartAnalysis, isMobileConnected = false }) {
   const profileName = session?.profile?.displayName || session?.profile?.name || 'Waiting for mobile profile';
 
   return (
@@ -8,13 +8,16 @@ export function StartPanel({ session, onStartAnalysis }) {
       <SteplyCard className="hero-card hero-card--wellness">
         <div className="hero-card__content">
           <div className="eyebrow">Remote Camera Mode</div>
-          <h1>Link the phone camera to this PC screen</h1>
-          <p>Create a QR session on the PC, then scan it in the mobile app to link the profile and camera stream.</p>
+          <h1>Steply PC Movement Coach</h1>
+          <p>Start the movement test after the mobile app is linked and ready to stream camera frames.</p>
           <div className="hero-card__actions">
-            <SteplyButton onClick={onStartAnalysis}>
-              {session ? 'Open Camera Receiver' : 'Create QR Session'}
+            <SteplyButton onClick={onStartAnalysis} disabled={!isMobileConnected}>
+              Start Test
             </SteplyButton>
-            <span className="hero-card__helper">Profile: <strong>{profileName}</strong></span>
+            <span className="hero-card__helper">
+              {isMobileConnected ? 'Profile' : 'Status'}:{' '}
+              <strong>{isMobileConnected ? profileName : 'Connect the mobile camera first'}</strong>
+            </span>
           </div>
         </div>
         <div className="hero-illustration" aria-hidden="true">

@@ -137,3 +137,57 @@
 .dashboard-main--focus .screen-stage {
   width: 100%;
 }
+
+.steply-shell--main {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.steply-shell--main .dashboard-main {
+  width: min(640px, 100%);
+  justify-self: center;
+}
+
+.qr-link-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.qr-link-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 25, 22, 0.42);
+  backdrop-filter: blur(6px);
+}
+
+.qr-link-modal__panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 16px;
+  width: min(100%, 440px);
+  max-height: calc(100vh - 40px);
+  overflow: visible;
+  padding: 18px;
+  border: var(--border-soft);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.qr-link-modal__header h2 {
+  margin: 6px 0 8px;
+  color: var(--text-primary);
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.qr-link-modal__header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.5;
+}

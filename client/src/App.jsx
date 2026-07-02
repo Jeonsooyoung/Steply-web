@@ -1,5 +1,5 @@
 import { useSteplyDashboard } from './hooks/useSteplyDashboard';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { SessionRail } from './components/SessionRail';
 import { StartPanel } from './components/StartPanel';
 import { AnalysisPanel } from './components/AnalysisPanel';
@@ -41,11 +41,13 @@ function shouldShowExercisePanel(dashboard) {
     || timedOut;
 }
 
-function shouldShowAnalysisPanel(dashboard) {
-  return dashboard.activeStep === 'analysis' || Boolean(dashboard.remoteCameraFrame?.src);
+function shouldShowAnalysisPanel(dashboard, hasStartedTest) {
+  return hasStartedTest && (dashboard.activeStep === 'analysis' || Boolean(dashboard.remoteCameraFrame?.src));
 }
 
-function renderPanel(dashboard) {
+function renderPanel(dashboard, { hasStartedTest, onStartTest }) {
+  const isMobileConnected = Boolean(dashboard.session?.profile || dashboard.remoteCameraFrame?.src);
+
   if (shouldShowExercisePanel(dashboard)) {
     return (
       <ExercisePanel
@@ -69,7 +71,7 @@ function renderPanel(dashboard) {
     );
   }
 
-  if (shouldShowAnalysisPanel(dashboard)) {
+  if (shouldShowAnalysisPanel(dashboard, hasStartedTest)) {
     return (
       <AnalysisPanel
         selectedTest={dashboard.selectedTest}
@@ -84,34 +86,41 @@ function renderPanel(dashboard) {
   return (
     <StartPanel
       session={dashboard.session}
-      onStartAnalysis={() => dashboard.session ? dashboard.setActiveStep('analysis') : dashboard.handleCreateSession()}
+      isMobileConnected={isMobileConnected}
+      onStartAnalysis={onStartTest}
     />
   );
 }
 
 export default function App() {
   const dashboard = useSteplyDashboard();
+  const [isQrModalOpen, setIsQrModalOpen] = useState(true);
+  const [hasStartedTest, setHasStartedTest] = useState(false);
 
-  const isFocusMode = shouldShowAnalysisPanel(dashboard);
+  const isFocusMode = shouldShowAnalysisPanel(dashboard, hasStartedTest);
+  const isMobileConnected = Boolean(dashboard.session?.profile || dashboard.remoteCameraFrame?.src);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [dashboard.activeStep]);
 
-  return (
-    <div className={isFocusMode ? 'steply-shell steply-shell--focus' : 'steply-shell'}>
-      {!isFocusMode ? (
-        <SessionRail
-          sessionBundle={dashboard.sessionBundle}
-          networkInfo={dashboard.networkInfo}
-          onCreateSession={dashboard.handleCreateSession}
-          onCopyPayload={dashboard.handleCopyPayload}
-          onRefreshSession={dashboard.handleRefreshSession}
-          busy={dashboard.busy}
-          error={dashboard.error || dashboard.poseAnalysis?.error}
-        />
-      ) : null}
+  useEffect(() => {
+    if (isMobileConnected) {
+      setIsQrModalOpen(false);
+    }
+  }, [isMobileConnected]);
 
+  useEffect(() => {
+    setHasStartedTest(false);
+  }, [dashboard.session?.id]);
+
+  const handleStartTest = () => {
+    setHasStartedTest(true);
+    dashboard.setActiveStep('analysis');
+  };
+
+  return (
+    <div className={isFocusMode ? 'steply-shell steply-shell--focus' : 'steply-shell steply-shell--main'}>
       <main className={isFocusMode ? 'dashboard-main dashboard-main--focus' : 'dashboard-main'}>
         {!isFocusMode ? (
           <header className="top-bar">
@@ -128,9 +137,36 @@ export default function App() {
         ) : null}
 
         <div className="screen-stage" key={dashboard.activeStep}>
-          {renderPanel(dashboard)}
+          {renderPanel(dashboard, { hasStartedTest, onStartTest: handleStartTest })}
         </div>
       </main>
+
+      {!isFocusMode && isQrModalOpen ? (
+        <div className="qr-link-modal" role="dialog" aria-modal="true" aria-labelledby="qr-link-modal-title">
+          <div className="qr-link-modal__backdrop" />
+          <div className="qr-link-modal__panel">
+            <div className="qr-link-modal__header">
+              <div>
+                <div className="eyebrow">Start QR Link</div>
+                <h2 id="qr-link-modal-title">Mobile QR Link</h2>
+                <p>Scan the QR code with the mobile app to link the profile and camera stream.</p>
+              </div>
+            </div>
+
+            <SessionRail
+              className="session-rail--modal"
+              compact
+              sessionBundle={dashboard.sessionBundle}
+              networkInfo={dashboard.networkInfo}
+              onCreateSession={dashboard.handleCreateSession}
+              onCopyPayload={dashboard.handleCopyPayload}
+              onRefreshSession={dashboard.handleRefreshSession}
+              busy={dashboard.busy}
+              error={dashboard.error || dashboard.poseAnalysis?.error}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

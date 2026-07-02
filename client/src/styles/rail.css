@@ -1,6 +1,26 @@
 .session-card { display: grid; gap: 12px; }
 .session-card h2 { font-size: 22px; font-weight: 700; }
 
+.session-rail--modal {
+  position: static;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.session-rail--modal .brand-lockup,
+.session-rail--modal .local-network-note {
+  grid-column: auto;
+}
+
+.session-rail--modal .qr-image,
+.session-rail--modal .qr-placeholder {
+  width: min(100%, 240px);
+}
+
 .card-heading-row {
   display: flex;
   align-items: flex-start;

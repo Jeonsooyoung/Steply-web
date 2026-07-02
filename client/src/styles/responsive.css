@@ -7,7 +7,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
   }
+  .session-rail--modal { grid-template-columns: 1fr; }
   .brand-lockup, .local-network-note { grid-column: 1 / -1; }
+  .session-rail--modal .brand-lockup,
+  .session-rail--modal .local-network-note { grid-column: auto; }
   .analysis-layout { grid-template-columns: 1fr; }
   .analysis-side { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .timer-circle { max-width: 260px; justify-self: center; width: 100%; }
