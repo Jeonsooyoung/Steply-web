@@ -2,7 +2,7 @@
 .analysis-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(250px, 22vw, 300px);
-  gap: 18px;
+  gap: 16px;
   align-items: start;
 }
 
@@ -13,8 +13,8 @@
 
 .analysis-guided-body {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
   align-items: stretch;
 }
 
@@ -39,14 +39,11 @@
 /* Arena */
 .arena-card {
   min-height: 620px;
-  padding: 24px;
-  color: #eaf8f4;
-  background:
-    radial-gradient(circle at 70% 20%, rgba(91, 174, 125, 0.26), transparent 24%),
-    radial-gradient(circle at 25% 78%, rgba(134, 168, 231, 0.16), transparent 26%),
-    linear-gradient(145deg, #0f2634 0%, #123144 44%, #0d202e 100%);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 24px 64px rgba(13, 32, 46, 0.28);
+  padding: 18px;
+  color: var(--text-primary);
+  background: var(--surface);
+  border-color: var(--outline);
+  box-shadow: var(--shadow-card);
 }
 
 .arena-card--guided {
@@ -54,12 +51,12 @@
 }
 
 .arena-card .eyebrow {
-  color: #8de0c8;
+  color: var(--primary);
 }
 
 .arena-card h2 {
-  color: #f5fffc;
-  font-size: clamp(26px, 3vw, 38px);
+  color: var(--text-primary);
+  font-size: clamp(24px, 3vw, 32px);
   text-transform: capitalize;
 }
 
@@ -73,37 +70,37 @@
 .analysis-test-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin: 18px 0 8px;
+  gap: 8px;
+  margin: 16px 0 8px;
 }
 
 .analysis-test-tabs--guided {
-  margin: 22px 0;
+  margin: 16px 0;
 }
 
 .analysis-test-tab {
-  min-height: 48px;
+  min-height: 52px;
   padding: 10px 12px;
-  border: 1px solid rgba(141, 224, 200, 0.28);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(234, 248, 244, 0.86);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-button);
+  background: var(--surface);
+  color: var(--text-primary);
   font-size: 14px;
-  font-weight: 860;
+  font-weight: 700;
   line-height: 1.25;
   cursor: pointer;
 }
 
 .analysis-test-tab:hover {
-  border-color: rgba(141, 224, 200, 0.52);
-  background: rgba(255, 255, 255, 0.13);
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary-container) 45%, transparent);
 }
 
 .analysis-test-tab--active {
-  color: #0f2634;
-  background: linear-gradient(180deg, #d9f4eb, #8de0c8);
-  border-color: rgba(255, 255, 255, 0.7);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+  color: var(--primary);
+  background: var(--primary-container);
+  border-color: var(--primary);
+  box-shadow: none;
 }
 
 /* Stage */
@@ -113,14 +110,14 @@
   place-items: center;
   width: min(100%, 620px);
   min-height: 385px;
-  margin: 24px auto 18px;
+  margin: 20px auto 16px;
   overflow: hidden;
-  border: 1px solid rgba(141, 224, 200, 0.24);
-  border-radius: 32px;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-card);
   background:
-    linear-gradient(rgba(141, 224, 200, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(141, 224, 200, 0.08) 1px, transparent 1px),
-    rgba(255, 255, 255, 0.04);
+    linear-gradient(color-mix(in srgb, var(--primary) 9%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 9%, transparent) 1px, transparent 1px),
+    var(--surface-variant);
   background-size: 34px 34px;
 }
 
@@ -133,24 +130,22 @@
   height: min(56vh, 560px);
   min-height: 460px;
   margin: 0;
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at 50% 45%, rgba(141, 224, 200, 0.16), transparent 26%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(10, 23, 32, 0.28));
+  border-radius: var(--radius-card);
+  background: var(--surface-variant);
 }
 
 .stage-grid {
   position: absolute;
   inset: 34px;
-  border: 1px solid rgba(141, 224, 200, 0.16);
-  border-radius: 28px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: var(--radius-card);
 }
 
 .stage-pulse {
   position: absolute;
   width: 230px;
   height: 230px;
-  border: 2px solid rgba(141, 224, 200, 0.18);
+  border: 2px solid color-mix(in srgb, var(--primary) 20%, transparent);
   border-radius: 50%;
   animation: stagePulse 2.4s ease-in-out infinite;
 }
@@ -179,7 +174,7 @@
   width: 58px;
   height: 22px;
   border-radius: 8px;
-  background: #f4a261;
+  background: var(--tertiary-container);
 }
 
 .coach-figure--stage .chair-leg {
@@ -187,7 +182,7 @@
   width: 9px;
   height: 32px;
   border-radius: 999px;
-  background: #df8751;
+  background: var(--tertiary);
 }
 
 .coach-figure--stage .chair-leg--left {
@@ -225,14 +220,14 @@
 }
 
 .pose-overlay line {
-  stroke: rgba(141, 224, 200, 0.92);
+  stroke: color-mix(in srgb, var(--primary) 80%, white);
   stroke-width: 4;
   stroke-linecap: round;
   filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.45));
 }
 
 .pose-overlay circle {
-  fill: #f4a261;
+  fill: var(--tertiary);
   stroke: rgba(255, 255, 255, 0.92);
   stroke-width: 0.45;
   filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.45));
@@ -249,7 +244,7 @@
   position: absolute;
   width: 34px;
   height: 34px;
-  border-color: #8de0c8;
+  border-color: var(--primary);
 }
 
 .guided-camera-focus span:nth-child(1) {
@@ -291,18 +286,18 @@
   width: min(520px, calc(100% - 80px));
   padding: 20px 26px;
   color: #f5fffc;
-  background: rgba(7, 24, 33, 0.82);
-  border-radius: 999px;
-  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.24);
+  background: rgba(17, 25, 22, 0.82);
+  border-radius: var(--radius-button);
+  box-shadow: var(--shadow-soft);
   backdrop-filter: blur(18px);
   transform: translate(-50%, -50%);
 }
 
 .guided-camera-icon {
   flex: 0 0 auto;
-  color: #8de0c8;
+  color: color-mix(in srgb, var(--primary) 78%, white);
   font-size: 24px;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .guided-camera-message strong {
@@ -321,15 +316,16 @@
 /* Guide card */
 .movement-guide-card {
   min-height: 520px;
-  padding: 24px;
+  padding: 18px;
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--surface);
 }
 
 .movement-guide-card h3 {
   margin: 0 0 20px;
   color: var(--text-primary);
   font-size: 20px;
+  font-weight: 700;
 }
 
 .movement-guide-visual {
@@ -339,9 +335,9 @@
   min-height: 240px;
   margin-bottom: 20px;
   overflow: hidden;
-  border: 1px solid rgba(79, 138, 123, 0.08);
-  border-radius: 18px;
-  background: #fefdfc;
+  border: 1px solid color-mix(in srgb, var(--outline) 58%, transparent);
+  border-radius: var(--radius-card);
+  background: #fff;
 }
 
 .movement-guide-image {
@@ -364,7 +360,7 @@
   position: relative;
   padding-left: 34px;
   color: var(--text-primary);
-  font-weight: 780;
+  font-weight: 600;
 }
 
 .movement-guide-list li::before {
@@ -376,28 +372,28 @@
   place-items: center;
   width: 22px;
   height: 22px;
-  color: white;
+  color: var(--on-primary);
   background: var(--primary);
   border-radius: 7px;
   font-size: 14px;
 }
 
 .movement-guide-tip {
-  padding: 18px;
-  border-radius: 18px;
-  background: linear-gradient(145deg, rgba(141, 224, 200, 0.28), rgba(255, 255, 255, 0.72));
+  padding: 14px;
+  border-radius: var(--radius-notice);
+  background: var(--primary-container);
 }
 
 .movement-guide-tip strong {
   display: block;
   margin-bottom: 8px;
-  color: var(--primary-dark);
+  color: var(--primary);
 }
 
 .movement-guide-tip p {
   margin: 0;
   color: var(--text-primary);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.5;
 }
 
@@ -406,12 +402,12 @@
   width: min(100%, 640px);
   margin: 18px auto 0;
   padding: 18px 20px;
-  color: #eaf8f4;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 22px;
-  font-size: 19px;
-  font-weight: 760;
+  color: var(--text-primary);
+  background: var(--primary-container);
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--outline));
+  border-radius: var(--radius-notice);
+  font-size: 15px;
+  font-weight: 600;
   line-height: 1.45;
   text-align: center;
 }
@@ -420,7 +416,7 @@
   width: 100%;
   margin: 0;
   padding: 16px 20px;
-  font-size: 16px;
+  font-size: 15px;
   text-align: left;
 }
 
@@ -448,28 +444,29 @@
 
 .feedback-stack li {
   padding: 12px 14px;
-  color: var(--primary-dark);
-  background: rgba(79, 138, 123, 0.09);
-  border-radius: 16px;
-  font-weight: 780;
+  color: var(--text-primary);
+  background: var(--surface-variant);
+  border-radius: var(--radius-notice);
+  font-weight: 600;
 }
 
 .feedback-stack--warning {
-  border-color: rgba(217, 83, 79, 0.28);
-  background: rgba(255, 245, 242, 0.94);
+  border-color: color-mix(in srgb, var(--error) 28%, var(--outline));
+  background: var(--error-container);
 }
 
 .feedback-stack--warning h3 {
-  color: #66312f;
+  color: var(--error);
 }
 
 .guided-status-card {
-  padding: 24px;
+  padding: 18px;
 }
 
 .guided-status-card h3 {
   margin-top: 8px;
-  font-size: 22px;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .guided-status-row {
@@ -478,11 +475,11 @@
   gap: 10px;
   padding: 8px 0;
   color: var(--text-primary);
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .guided-status-row+.guided-status-row {
-  border-top: 1px solid rgba(79, 138, 123, 0.12);
+  border-top: 1px solid color-mix(in srgb, var(--outline) 48%, transparent);
 }
 
 .guided-status-row strong {
@@ -498,10 +495,10 @@
   width: min(100%, 260px);
   aspect-ratio: 1;
   padding: 12px;
-  background: conic-gradient(var(--primary) 0deg, var(--secondary) var(--timer-deg), rgba(239, 232, 221, 0.75) var(--timer-deg));
+  background: conic-gradient(var(--primary) 0deg, var(--secondary) var(--timer-deg), var(--surface-variant) var(--timer-deg));
   border-radius: 50%;
   box-shadow: var(--shadow-soft);
-  animation: timerPulse 1.8s ease-in-out infinite;
+  animation: none;
 }
 
 @keyframes timerPulse {
@@ -521,14 +518,14 @@
   place-items: center;
   width: 100%;
   height: 100%;
-  color: var(--primary-dark);
+  color: var(--primary);
   background: var(--surface);
   border-radius: 50%;
 }
 
 .timer-circle__value {
   font-size: clamp(44px, 5vw, 62px);
-  font-weight: 950;
+  font-weight: 800;
   line-height: 1;
   letter-spacing: 0;
 }
@@ -536,14 +533,14 @@
 .timer-circle__label {
   color: var(--text-secondary);
   font-size: 15px;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .timer-circle__score {
   margin-top: 4px;
   color: var(--primary);
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .analysis-side .metric-card {
@@ -569,7 +566,7 @@
 }
 
 .analysis-side--guided .metric-card {
-  border-radius: 22px;
+  border-radius: var(--radius-card);
 }
 
 @media (max-width: 1200px) {
