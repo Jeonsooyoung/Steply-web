@@ -10,6 +10,7 @@ const initialState = {
   isArmUseSuspected: false,
   isStandingOrRising: false,
   phase: 'waiting',
+  movementState: null,
 };
 
 function recommendationLevelForFallback(testType, state) {
@@ -43,6 +44,7 @@ function fallbackResultFromState({ selectedTest, state, durationSeconds, started
     trunkLeanScore: state.trunkLeanScore || 0,
     symmetryScore: state.symmetryScore || 0,
     stabilityScore: state.stabilityScore || 0,
+    movementState: state.movementState || null,
     recommendationLevel,
     summaryMessage: `${primaryLabel} ${primaryValue} measured. The browser completed the timed check.`,
     startedAt: startedAt || Date.now() - durationSeconds * 1000,

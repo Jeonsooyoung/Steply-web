@@ -4,6 +4,7 @@ const networkController = require('../controllers/networkController');
 const sessionController = require('../controllers/sessionController');
 const analysisController = require('../controllers/analysisController');
 const historyController = require('../controllers/historyController');
+const movementStateController = require('../controllers/movementStateController');
 
 async function requestHandler(req, res) {
   if (req.method === 'OPTIONS') return sendJson(res, 204, {});
@@ -45,6 +46,10 @@ async function requestHandler(req, res) {
 
     if (req.method === 'POST' && pathname === '/api/analysis/final') {
       return await analysisController.finalAnalysis(req, res);
+    }
+
+    if (req.method === 'POST' && pathname === '/api/predict_movement_state') {
+      return await movementStateController.predictMovementState(req, res);
     }
 
     if (req.method === 'GET' && pathname === '/api/history') {

@@ -373,6 +373,12 @@ export function AnalysisPanel({
               <li>Trunk center: {percent(state.trunkLeanScore)}</li>
               <li>Left-right symmetry: {percent(state.symmetryScore)}</li>
               <li>Sway stability: {percent(state.stabilityScore)}</li>
+              <li>
+                AI movement state:{' '}
+                {state.movementState
+                  ? `${state.movementState.label} (${percent(state.movementState.confidence)})`
+                  : '-'}
+              </li>
             </ul>
           </SteplyCard>
         ) : null}
