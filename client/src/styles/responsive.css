@@ -1,5 +1,27 @@
 @media (max-width: 1260px) {
   .steply-shell { grid-template-columns: 1fr; }
+  .steply-shell--with-sidebar,
+  .steply-shell--sidebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+  .profile-sidebar {
+    position: relative;
+    left: auto;
+    top: auto;
+    width: 100%;
+    max-height: none;
+  }
+  .profile-sidebar__toggle {
+    position: static;
+    width: 100%;
+    height: 44px;
+    border-radius: var(--radius-button);
+    font-size: 15px;
+  }
+  .profile-sidebar__toggle::after {
+    content: attr(title);
+    margin-left: 6px;
+  }
   .session-rail {
     position: relative;
     top: auto;
@@ -7,19 +29,21 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
   }
+  .session-rail--modal { grid-template-columns: 1fr; }
   .brand-lockup, .local-network-note { grid-column: 1 / -1; }
+  .session-rail--modal .brand-lockup,
+  .session-rail--modal .local-network-note { grid-column: auto; }
   .analysis-layout { grid-template-columns: 1fr; }
   .analysis-side { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .timer-circle { max-width: 260px; justify-self: center; width: 100%; }
 }
 
 @media (max-width: 980px) {
-  .steply-shell { padding: 18px; gap: 18px; }
+  .steply-shell { padding: 18px; gap: 16px; }
   .top-bar { flex-direction: column; }
   .journey-flow { grid-template-columns: 1fr 1fr; }
   .journey-flow > .status-pill { grid-column: 1 / -1; }
   .hero-card { grid-template-columns: 1fr; }
-  .hero-illustration { min-height: 220px; }
   .metric-row, .test-grid, .exercise-grid { grid-template-columns: 1fr; }
   .feedback-result-card { grid-template-columns: 1fr; }
   .result-actions { grid-template-columns: 1fr; }
@@ -27,17 +51,24 @@
 }
 
 @media (max-width: 720px) {
-  .steply-shell { padding: 14px; }
+  .steply-shell, .steply-shell--focus { padding: 16px; }
   .session-rail { grid-template-columns: 1fr; }
-  .top-bar h1 { font-size: 32px; }
-  .top-bar p { font-size: 16px; }
+  .top-bar h1 { font-size: 28px; }
+  .top-bar p { font-size: 15px; }
   .journey-flow { grid-template-columns: 1fr; }
-  .hero-card, .arena-card, .result-hero-card, .recommendation-header { padding: 20px; }
+  .hero-card, .arena-card, .result-hero-card, .recommendation-header { padding: 18px; }
   .hero-card__actions { grid-template-columns: 1fr; }
   .analysis-side { grid-template-columns: 1fr; }
   .timer-circle { max-width: 230px; }
   .arena-card { min-height: 520px; }
   .arena-stage { min-height: 300px; }
+  .analysis-test-tabs { grid-template-columns: 1fr; }
+  .analysis-controls--guided { grid-template-columns: 1fr; width: 100%; }
+  .guided-camera-message {
+    width: calc(100% - 32px);
+    padding: 14px 16px;
+  }
+  .guided-camera-message strong { font-size: 15px; }
   .coach-figure { transform: translate(-50%, -50%) scale(0.85); }
   @keyframes gentleCoachPulse {
     0%, 100% { transform: translate(-50%, -50%) scale(0.85); }
