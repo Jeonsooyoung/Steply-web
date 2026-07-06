@@ -12,6 +12,10 @@ export const PoseLandmarks = {
   RightKnee: 'right_knee',
   LeftAnkle: 'left_ankle',
   RightAnkle: 'right_ankle',
+  LeftHeel: 'left_heel',
+  RightHeel: 'right_heel',
+  LeftFootIndex: 'left_foot_index',
+  RightFootIndex: 'right_foot_index',
 };
 
 export const MediaPipePoseNames = [
@@ -44,10 +48,10 @@ export const MediaPipePoseNames = [
   PoseLandmarks.RightKnee,
   PoseLandmarks.LeftAnkle,
   PoseLandmarks.RightAnkle,
-  'left_heel',
-  'right_heel',
-  'left_foot_index',
-  'right_foot_index',
+  PoseLandmarks.LeftHeel,
+  PoseLandmarks.RightHeel,
+  PoseLandmarks.LeftFootIndex,
+  PoseLandmarks.RightFootIndex,
 ];
 
 export const RequiredChairStandLandmarks = [
