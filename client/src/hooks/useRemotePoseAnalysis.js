@@ -102,9 +102,14 @@ export function useRemotePoseAnalysis({ session, selectedTest, remoteCameraFrame
           analysisStateRef.current = message.state;
           setAnalysisState(message.state);
         }
-        if (message.landmarks?.length) setLandmarks(message.landmarks);
+        setLandmarks(message.landmarks || []);
         if (message.frameSize) setFrameSize(message.frameSize);
         setWorkerStatus('analyzing');
+      }
+      if (message.type === 'preview-frame') {
+        setLandmarks(message.landmarks || []);
+        if (message.frameSize) setFrameSize(message.frameSize);
+        setWorkerStatus('previewing');
       }
       if (message.type === 'session-finished') {
         if (finishFallbackTimerRef.current) window.clearTimeout(finishFallbackTimerRef.current);
@@ -204,6 +209,16 @@ export function useRemotePoseAnalysis({ session, selectedTest, remoteCameraFrame
     workerRef.current.postMessage({ type: 'manual-repetition' });
   }, []);
 
+  const previewSetupFrame = useCallback((frame) => {
+    if (!workerRef.current || !frame) return;
+    setError('');
+    workerRef.current.postMessage({
+      type: 'preview-frame',
+      frame,
+      receivedAt: Date.now(),
+    });
+  }, []);
+
   useEffect(() => {
     if (!workerRef.current) return;
     runningRef.current = false;
@@ -228,10 +243,18 @@ export function useRemotePoseAnalysis({ session, selectedTest, remoteCameraFrame
       startAnalysis();
       return;
     }
-    if (!runningRef.current) return;
     const frameKey = remoteCameraFrame.sequence || remoteCameraFrame.receivedAt || remoteCameraFrame.src;
     if (lastSubmittedFrameRef.current === frameKey) return;
     lastSubmittedFrameRef.current = frameKey;
+    if (!runningRef.current) {
+      if (analysisResult) return;
+      workerRef.current?.postMessage({
+        type: 'preview-frame',
+        frame: remoteCameraFrame.blob || remoteCameraFrame.src,
+        receivedAt: remoteCameraFrame.receivedAt || Date.now(),
+      });
+      return;
+    }
     workerRef.current?.postMessage({
       type: 'frame',
       frame: remoteCameraFrame.blob || remoteCameraFrame.src,
@@ -278,6 +301,7 @@ export function useRemotePoseAnalysis({ session, selectedTest, remoteCameraFrame
     resetAnalysis,
     probeDebug,
     addManualRepetition,
+    previewSetupFrame,
     durationSeconds,
   }), [
     workerStatus,
@@ -294,6 +318,7 @@ export function useRemotePoseAnalysis({ session, selectedTest, remoteCameraFrame
     resetAnalysis,
     probeDebug,
     addManualRepetition,
+    previewSetupFrame,
     durationSeconds,
   ]);
 }

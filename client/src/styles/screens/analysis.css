@@ -211,9 +211,22 @@
   object-fit: contain;
 }
 
+.reference-pose-overlay {
+  position: absolute;
+  inset: 3% 18%;
+  z-index: 3;
+  width: 64%;
+  height: 94%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.25));
+  mix-blend-mode: screen;
+}
+
 .pose-overlay {
   position: absolute;
   inset: 0;
+  z-index: 4;
   width: 100%;
   height: 100%;
   pointer-events: none;
@@ -397,6 +410,56 @@
   line-height: 1.5;
 }
 
+.movement-setup-guide {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--outline));
+  border-radius: var(--radius-notice);
+  background: var(--surface-variant);
+}
+
+.movement-setup-guide strong {
+  color: var(--primary);
+}
+
+.movement-setup-guide p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.movement-setup-guide ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.movement-setup-guide li {
+  position: relative;
+  padding-left: 20px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.movement-setup-guide li::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
 /* Controls and feedback */
 .coach-message {
   width: min(100%, 640px);
@@ -418,6 +481,157 @@
   padding: 16px 20px;
   font-size: 15px;
   text-align: left;
+}
+
+.setup-guide-card {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+.setup-guide-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.setup-guide-card h3 {
+  margin: 4px 0 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.setup-countdown {
+  display: grid;
+  place-items: center;
+  min-width: 62px;
+  min-height: 62px;
+  padding: 8px;
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--outline));
+  border-radius: 50%;
+  background: var(--primary-container);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.setup-countdown span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.setup-countdown--ready {
+  color: var(--on-primary);
+  background: var(--primary);
+}
+
+.setup-countdown--ready span {
+  color: color-mix(in srgb, var(--on-primary) 84%, transparent);
+}
+
+.setup-checklist {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setup-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+  color: var(--text-primary);
+  border: 1px solid color-mix(in srgb, var(--outline) 70%, transparent);
+  border-radius: var(--radius-notice);
+  background: var(--surface-variant);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.setup-checklist-item span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--error);
+  border-radius: 7px;
+  background: var(--error-container);
+  font-size: 12px;
+}
+
+.setup-checklist-item--passed span {
+  color: var(--on-primary);
+  background: var(--primary);
+}
+
+.setup-warning {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--error);
+  border-radius: var(--radius-notice);
+  background: var(--error-container);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.setup-warning--active {
+  color: var(--text-primary);
+  background: var(--primary-container);
+}
+
+.setup-image-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.setup-image-input {
+  display: none;
+}
+
+.reference-overlay-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.75fr);
+  gap: 10px;
+  align-items: center;
+  padding-top: 2px;
+}
+
+.reference-overlay-toggle,
+.reference-overlay-opacity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.reference-overlay-toggle input {
+  accent-color: var(--primary);
+}
+
+.reference-overlay-opacity {
+  justify-content: flex-end;
+  color: var(--text-secondary);
+}
+
+.reference-overlay-opacity input {
+  width: 110px;
+  accent-color: var(--primary);
 }
 
 .analysis-controls {
@@ -593,10 +807,20 @@
   .arena-stage--guided {
     height: 52vh;
   }
+
+  .setup-checklist {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
   .analysis-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .setup-checklist {
+    grid-template-columns: 1fr;
   }
 }

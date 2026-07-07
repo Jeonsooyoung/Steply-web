@@ -1,0 +1,25 @@
+{
+  "videos": [
+    {
+      "src": "/demo-videos/walking-top-h264.mp4",
+      "id": "walking-top",
+      "label": "Walking Top",
+      "testId": "tug",
+      "name": "Walking Top Demo"
+    },
+    {
+      "src": "/demo-videos/walking-bottom-h264.mp4",
+      "id": "walking-bottom",
+      "label": "Walking Bottom",
+      "testId": "tug",
+      "name": "Walking Bottom Demo"
+    },
+    {
+      "src": "/demo-videos/standing.mp4",
+      "id": "standing",
+      "label": "Standing",
+      "testId": "standing_posture",
+      "name": "Standing Demo"
+    }
+  ]
+}

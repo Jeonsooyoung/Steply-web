@@ -295,6 +295,61 @@ async function imageBitmapFromFrame(frame) {
   throw new Error('Unsupported camera frame type.');
 }
 
+async function detectPoseFromFrame(message) {
+  await initLandmarker(message.config || {});
+  const bitmap = await imageBitmapFromFrame(message.frame);
+  const timestampMs = nextMediaPipeTimestampMs(message.receivedAt || Date.now());
+  const result = landmarker.detect(bitmap);
+  const rawLandmarks = result.landmarks?.[0] || [];
+  const landmarks = normalizeLandmarks(rawLandmarks);
+  const visibilityValues = landmarks.map((point) => point.visibility).filter((value) => Number.isFinite(value));
+  const confidence = visibilityValues.length
+    ? visibilityValues.reduce((sum, value) => sum + value, 0) / visibilityValues.length
+    : rawLandmarks.length ? 1 : 0;
+
+  return {
+    bitmap,
+    timestampMs,
+    landmarks,
+    confidence,
+  };
+}
+
+async function handlePreviewFrame(message) {
+  const now = Date.now();
+  if (session?.active) return;
+  if (isAnalyzingFrame) return;
+  if (now - latestAnalyzeAt < MIN_FRAME_INTERVAL_MS) return;
+  latestAnalyzeAt = now;
+  isAnalyzingFrame = true;
+
+  let bitmap = null;
+  try {
+    const detected = await detectPoseFromFrame(message);
+    bitmap = detected.bitmap;
+    postMessage({
+      type: 'preview-frame',
+      landmarks: detected.landmarks,
+      confidence: detected.confidence,
+      frameSize: { width: bitmap.width, height: bitmap.height },
+      receivedAt: detected.timestampMs,
+      analyzedAt: Date.now(),
+    });
+  } catch (error) {
+    if (/Packet timestamp mismatch|WaitUntilIdle failed|CalculatorGraph::Run\(\) failed/.test(error.message || '')) {
+      closeLandmarker();
+    }
+    debug('preview-analysis-failed', {
+      message: error.message || 'Pose preview failed.',
+      stack: error.stack || null,
+    });
+    postMessage({ type: 'error', error: error.message || 'Pose preview failed.', at: Date.now() });
+  } finally {
+    if (bitmap) bitmap.close?.();
+    isAnalyzingFrame = false;
+  }
+}
+
 async function handleFrame(message) {
   const now = Date.now();
   latestFrameAt = now;
@@ -306,18 +361,13 @@ async function handleFrame(message) {
 
   let bitmap = null;
   try {
-    await initLandmarker(message.config || {});
-    bitmap = await imageBitmapFromFrame(message.frame);
-    const timestampMs = nextMediaPipeTimestampMs(message.receivedAt || now);
-    const result = landmarker.detect(bitmap);
-    const rawLandmarks = result.landmarks?.[0] || [];
-    const landmarks = normalizeLandmarks(rawLandmarks);
+    const detected = await detectPoseFromFrame(message);
+    bitmap = detected.bitmap;
+    const timestampMs = detected.timestampMs;
+    const landmarks = detected.landmarks;
     rememberLandmarkFrame(landmarks);
     maybePredictMovementState();
-    const visibilityValues = landmarks.map((point) => point.visibility).filter((value) => Number.isFinite(value));
-    const confidence = visibilityValues.length
-      ? visibilityValues.reduce((sum, value) => sum + value, 0) / visibilityValues.length
-      : rawLandmarks.length ? 1 : 0;
+    const confidence = detected.confidence;
 
     const poseFrame = { timestampMs, landmarks, confidence };
     const state = stateWithMovementState(analyzer.addFrame(poseFrame));
@@ -409,6 +459,7 @@ self.onmessage = async (event) => {
       await probeWasmBasePath(message.wasmPath || defaultWasmPath());
     }
     if (message.type === 'init') await initLandmarker(message.config || {});
+    if (message.type === 'preview-frame') await handlePreviewFrame(message);
     if (message.type === 'start-session') startSession(message);
     if (message.type === 'frame') await handleFrame(message);
     if (message.type === 'manual-repetition') {
