@@ -8,6 +8,7 @@ import { movementTests } from '../data/movementTests';
 import standingPostureGuide from '../assets/movement-guides/standing-posture-check.png';
 import chairStandGuide from '../assets/movement-guides/chair-stand-check.png';
 import tugWalkGuide from '../assets/movement-guides/tug-walk-check.png';
+import standingReferenceOverlay from '../assets/movement-guides/standing-reference-overlay.png';
 
 // false로 바꿀 경우 개발자 디버깅용 요소는 없어짐.
 const SHOW_DEBUG_TOOLS = false;
@@ -23,7 +24,7 @@ const movementGuideContent = {
     ],
     tip: 'Show your full body from head to feet so the posture line can be measured clearly.',
     setup: {
-      title: 'Recommended setup',
+      title: 'Front-facing setup',
       body: 'Stand facing the camera with your head, shoulders, hips, knees, and feet visible.',
       points: [
         'Keep your feet inside the camera frame.',
@@ -42,7 +43,7 @@ const movementGuideContent = {
     ],
     tip: 'Do not lean too far back on the chair. Push the floor gently with your feet.',
     setup: {
-      title: 'Recommended setup',
+      title: 'Side-view setup',
       body: 'Place the camera to the side so your sitting and standing movement is easy to see.',
       points: [
         'Show the chair, hips, knees, ankles, and feet.',
@@ -61,7 +62,7 @@ const movementGuideContent = {
     ],
     tip: 'Keep the walking path visible in the camera view, including the chair and marker.',
     setup: {
-      title: 'Recommended setup',
+      title: 'Walking-path setup',
       body: 'Stand or sit where your full body and walking path can be seen clearly.',
       points: [
         'Make sure both feet are visible before the test starts.',
@@ -102,6 +103,39 @@ function SetupChecklistItem({ label, passed }) {
   );
 }
 
+function setupChecklistItems(testType, checks) {
+  if (testType === 'standing_posture' || testType === 'balance_hold') {
+    return [
+      { label: 'Only you in frame', passed: checks.singlePersonStable },
+      { label: 'Face the camera', passed: checks.correctDirection },
+      { label: 'Head-to-feet visible', passed: checks.fullBodyVisible },
+      { label: 'Feet inside frame', passed: checks.lowerBodyVisible },
+      { label: 'Good camera distance', passed: checks.properDistance },
+      { label: 'Hold still clearly', passed: checks.goodVisibility && checks.stablePose },
+    ];
+  }
+
+  if (testType === 'tug' || testType === 'tug_walk') {
+    return [
+      { label: 'Only you in frame', passed: checks.singlePersonStable },
+      { label: 'Full body at start', passed: checks.fullBodyVisible },
+      { label: 'Both feet visible', passed: checks.lowerBodyVisible },
+      { label: 'Walking path framed', passed: checks.properDistance },
+      { label: 'Bright steady camera', passed: checks.goodVisibility },
+      { label: 'Ready start position', passed: checks.correctDirection },
+    ];
+  }
+
+  return [
+    { label: 'Only you in frame', passed: checks.singlePersonStable },
+    { label: 'Side view visible', passed: checks.correctDirection },
+    { label: 'Chair and body visible', passed: checks.fullBodyVisible },
+    { label: 'Knees and ankles visible', passed: checks.lowerBodyVisible },
+    { label: 'Good camera distance', passed: checks.properDistance },
+    { label: 'Movement clearly detected', passed: checks.goodVisibility && checks.stablePose },
+  ];
+}
+
 function userFriendlyStatus(state, remoteCameraFrame, frameLoadError) {
   if (frameLoadError) return 'The camera frame could not be loaded. Please reconnect the camera.';
   if (!remoteCameraFrame?.src) return 'Scan the QR code with the mobile app and start camera streaming.';
@@ -121,15 +155,21 @@ export function AnalysisPanel({
   const [frameLoadError, setFrameLoadError] = useState('');
   const [readyHoldSeconds, setReadyHoldSeconds] = useState(0);
   const [qualityWarning, setQualityWarning] = useState('');
+  const [setupImageFrame, setSetupImageFrame] = useState(null);
+  const [showReferenceOverlay, setShowReferenceOverlay] = useState(true);
+  const [referenceOverlayOpacity, setReferenceOverlayOpacity] = useState(0.38);
   const previousSetupSampleRef = useRef(null);
   const readyStartedAtRef = useRef(null);
   const autoStartRequestedRef = useRef(false);
   const badQualityStartedAtRef = useRef(null);
+  const setupImageInputRef = useRef(null);
 
   const state = poseAnalysis?.analysisState || {};
   const result = poseAnalysis?.analysisResult || null;
 
-  const score = remoteCameraFrame?.src ? Math.round((state.confidence || 0) * 100) : 0;
+  const displayFrame = setupImageFrame || remoteCameraFrame;
+  const isSetupImageMode = Boolean(setupImageFrame?.src);
+  const score = displayFrame?.src ? Math.round((state.confidence || 0) * 100) : 0;
   const status = state.warningMessage ? 'practice_needed' : statusFromScore(score || 72);
   const durationSeconds = state.durationSeconds || poseAnalysis?.durationSeconds || result?.durationSeconds || 30;
 
@@ -187,8 +227,10 @@ export function AnalysisPanel({
     ? recommendationLabel(result.recommendationLevel)
     : '-';
 
-  const cameraStatusText = frameLoadError || remoteCameraStatus || 'Waiting for phone camera';
-  const friendlyStatus = userFriendlyStatus(state, remoteCameraFrame, frameLoadError);
+  const cameraStatusText = isSetupImageMode
+    ? 'Setup image preview'
+    : frameLoadError || remoteCameraStatus || 'Waiting for phone camera';
+  const friendlyStatus = userFriendlyStatus(state, displayFrame, frameLoadError);
   const startAnalysis = poseAnalysis?.startAnalysis;
   const setupCheck = useMemo(() => evaluateSetupReadiness({
     landmarks: poseAnalysis?.landmarks || [],
@@ -196,19 +238,28 @@ export function AnalysisPanel({
     previousSample: previousSetupSampleRef.current,
     strictStability: !poseAnalysis?.isRunning,
   }), [poseAnalysis?.isRunning, poseAnalysis?.landmarks, selectedTest]);
-  const setupStatus = setupStatusLabel(setupCheck, poseAnalysis?.isRunning, Boolean(remoteCameraFrame?.src && !frameLoadError));
-  const setupCountdown = setupCheck.isReady && !poseAnalysis?.isRunning
+  const setupStatus = isSetupImageMode
+    ? 'Image check'
+    : setupStatusLabel(setupCheck, poseAnalysis?.isRunning, Boolean(displayFrame?.src && !frameLoadError));
+  const setupChecklist = setupChecklistItems(selectedTest, setupCheck.checks);
+  const setupCountdown = setupCheck.isReady && !poseAnalysis?.isRunning && !isSetupImageMode
     ? Math.max(1, READY_HOLD_SECONDS - Math.floor(readyHoldSeconds))
     : null;
   const setupMessage = poseAnalysis?.isRunning
     ? (qualityWarning || friendlyStatus)
-    : remoteCameraFrame?.src && !frameLoadError
-      ? setupCheck.mainMessage
+    : displayFrame?.src && !frameLoadError
+      ? isSetupImageMode
+        ? 'Setup image checked. Use a live camera stream to start the test.'
+        : setupCheck.mainMessage
       : friendlyStatus;
 
   useEffect(() => {
     setFrameLoadError('');
   }, [remoteCameraFrame?.sequence, remoteCameraFrame?.src]);
+
+  useEffect(() => () => {
+    if (setupImageFrame?.src) URL.revokeObjectURL(setupImageFrame.src);
+  }, [setupImageFrame?.src]);
 
   useEffect(() => {
     if (setupCheck.sample?.bodyBox) previousSetupSampleRef.current = setupCheck.sample;
@@ -223,7 +274,7 @@ export function AnalysisPanel({
   }, [selectedTest, poseAnalysis?.analysisResult]);
 
   useEffect(() => {
-    if (poseAnalysis?.isRunning || poseAnalysis?.analysisResult || !remoteCameraFrame?.src || frameLoadError) {
+    if (poseAnalysis?.isRunning || poseAnalysis?.analysisResult || !remoteCameraFrame?.src || isSetupImageMode || frameLoadError) {
       readyStartedAtRef.current = null;
       autoStartRequestedRef.current = false;
       setReadyHoldSeconds(0);
@@ -256,9 +307,32 @@ export function AnalysisPanel({
     poseAnalysis?.analysisResult,
     poseAnalysis?.isRunning,
     remoteCameraFrame?.src,
+    isSetupImageMode,
     startAnalysis,
     setupCheck.isReady,
   ]);
+
+  const handleSetupImageChange = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (setupImageFrame?.src) URL.revokeObjectURL(setupImageFrame.src);
+    const src = URL.createObjectURL(file);
+    setFrameLoadError('');
+    setSetupImageFrame({
+      src,
+      blob: file,
+      receivedAt: Date.now(),
+      sequence: `setup-${Date.now()}`,
+    });
+    poseAnalysis?.previewSetupFrame?.(file);
+  };
+
+  const clearSetupImage = () => {
+    if (setupImageFrame?.src) URL.revokeObjectURL(setupImageFrame.src);
+    setSetupImageFrame(null);
+    setQualityWarning('');
+  };
 
   useEffect(() => {
     if (!poseAnalysis?.isRunning) {
@@ -293,6 +367,7 @@ export function AnalysisPanel({
   const selectedTestTitle = selectedTestInfo?.title || selectedTest?.replaceAll('_', ' ') || 'Remote Camera';
   const selectedTestDuration = selectedTestInfo?.duration || `${durationSeconds} sec`;
   const movementGuide = movementGuideContent[selectedTest] || movementGuideContent.chair_stand;
+  const canUseReferenceOverlay = selectedTest === 'standing_posture';
   return (
     <div className="analysis-layout analysis-layout--guided">
       <SteplyCard className="arena-card arena-card--guided">
@@ -354,15 +429,23 @@ export function AnalysisPanel({
 
           <div className="analysis-main-zone">
             <div className="arena-stage arena-stage--camera arena-stage--guided">
-              {remoteCameraFrame?.src ? (
+              {displayFrame?.src ? (
                 <div className="remote-camera-layer">
                   <img
                     className="remote-camera-frame"
-                    src={remoteCameraFrame.src}
-                    alt="Camera stream from the phone"
+                    src={displayFrame.src}
+                    alt={isSetupImageMode ? 'Uploaded setup preview' : 'Camera stream from the phone'}
                     onLoad={() => setFrameLoadError('')}
                     onError={() => setFrameLoadError('Frame received, but the browser could not decode the image.')}
                   />
+                  {canUseReferenceOverlay && showReferenceOverlay ? (
+                    <img
+                      className="reference-pose-overlay"
+                      src={standingReferenceOverlay}
+                      alt="Standing posture reference overlay"
+                      style={{ opacity: referenceOverlayOpacity }}
+                    />
+                  ) : null}
                   <PoseOverlay landmarks={poseAnalysis?.landmarks || []} />
                 </div>
               ) : (
@@ -397,9 +480,11 @@ export function AnalysisPanel({
                   <p>
                     {poseAnalysis?.isRunning
                       ? 'Keep moving clearly inside the camera view.'
+                      : isSetupImageMode
+                        ? 'This image is for setup validation only.'
                       : setupCheck.isReady
                         ? 'The test will start automatically after the countdown.'
-                        : 'The test starts after your setup stays ready for 3 seconds.'}
+                        : movementGuide.setup.body}
                   </p>
                 </div>
               </div>
@@ -407,7 +492,7 @@ export function AnalysisPanel({
               <div className="remote-camera-badge">
                 <span
                   className={
-                    remoteCameraFrame?.src && !frameLoadError
+                    displayFrame?.src && !frameLoadError
                       ? 'remote-camera-dot remote-camera-dot--live'
                       : 'remote-camera-dot'
                   }
@@ -433,12 +518,9 @@ export function AnalysisPanel({
               </div>
 
               <ul className="setup-checklist">
-                <SetupChecklistItem label="One person only" passed={setupCheck.checks.singlePersonStable} />
-                <SetupChecklistItem label="Full body visible" passed={setupCheck.checks.fullBodyVisible} />
-                <SetupChecklistItem label="Proper distance" passed={setupCheck.checks.properDistance} />
-                <SetupChecklistItem label="Lower body visible" passed={setupCheck.checks.lowerBodyVisible} />
-                <SetupChecklistItem label="Stable detection" passed={setupCheck.checks.goodVisibility && setupCheck.checks.stablePose} />
-                <SetupChecklistItem label="Correct direction" passed={setupCheck.checks.correctDirection} />
+                {setupChecklist.map((item) => (
+                  <SetupChecklistItem key={item.label} label={item.label} passed={item.passed} />
+                ))}
               </ul>
 
               {setupCheck.warnings[0] && !poseAnalysis?.isRunning ? (
@@ -448,14 +530,63 @@ export function AnalysisPanel({
               {qualityWarning ? (
                 <p className="setup-warning setup-warning--active">{qualityWarning}</p>
               ) : null}
+
+              <div className="setup-image-actions">
+                <input
+                  ref={setupImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="setup-image-input"
+                  onChange={handleSetupImageChange}
+                />
+                <SteplyButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setupImageInputRef.current?.click()}
+                >
+                  Upload Setup Image
+                </SteplyButton>
+                <SteplyButton
+                  type="button"
+                  variant="ghost"
+                  onClick={clearSetupImage}
+                  disabled={!setupImageFrame}
+                >
+                  Clear Image
+                </SteplyButton>
+              </div>
+
+              <div className="reference-overlay-controls">
+                <label className="reference-overlay-toggle">
+                  <input
+                    type="checkbox"
+                    checked={showReferenceOverlay}
+                    disabled={!canUseReferenceOverlay}
+                    onChange={(event) => setShowReferenceOverlay(event.target.checked)}
+                  />
+                  Standing reference overlay
+                </label>
+                <label className="reference-overlay-opacity">
+                  Opacity
+                  <input
+                    type="range"
+                    min="0.15"
+                    max="0.7"
+                    step="0.05"
+                    value={referenceOverlayOpacity}
+                    disabled={!canUseReferenceOverlay || !showReferenceOverlay}
+                    onChange={(event) => setReferenceOverlayOpacity(Number(event.target.value))}
+                  />
+                </label>
+              </div>
             </SteplyCard>
 
             <div className="analysis-controls analysis-controls--guided">
               <SteplyButton
                 onClick={poseAnalysis?.startAnalysis}
-                disabled={!remoteCameraFrame?.src || poseAnalysis?.isRunning || !setupCheck.isReady}
+                disabled={!remoteCameraFrame?.src || isSetupImageMode || poseAnalysis?.isRunning || !setupCheck.isReady}
               >
-                {setupCheck.isReady ? '▶ Start Analysis' : 'Waiting for Setup'}
+                {isSetupImageMode ? 'Live Camera Required' : setupCheck.isReady ? '▶ Start Analysis' : 'Waiting for Setup'}
               </SteplyButton>
 
               <SteplyButton

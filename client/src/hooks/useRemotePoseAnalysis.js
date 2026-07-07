@@ -209,6 +209,16 @@ export function useRemotePoseAnalysis({ session, selectedTest, remoteCameraFrame
     workerRef.current.postMessage({ type: 'manual-repetition' });
   }, []);
 
+  const previewSetupFrame = useCallback((frame) => {
+    if (!workerRef.current || !frame) return;
+    setError('');
+    workerRef.current.postMessage({
+      type: 'preview-frame',
+      frame,
+      receivedAt: Date.now(),
+    });
+  }, []);
+
   useEffect(() => {
     if (!workerRef.current) return;
     runningRef.current = false;
@@ -291,6 +301,7 @@ export function useRemotePoseAnalysis({ session, selectedTest, remoteCameraFrame
     resetAnalysis,
     probeDebug,
     addManualRepetition,
+    previewSetupFrame,
     durationSeconds,
   }), [
     workerStatus,
@@ -307,6 +318,7 @@ export function useRemotePoseAnalysis({ session, selectedTest, remoteCameraFrame
     resetAnalysis,
     probeDebug,
     addManualRepetition,
+    previewSetupFrame,
     durationSeconds,
   ]);
 }
