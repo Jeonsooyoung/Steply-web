@@ -12,6 +12,25 @@ const CONFIG_PATH = path.join(TLS_DIR, 'openssl.cnf');
 const META_PATH = path.join(TLS_DIR, 'metadata.json');
 const CERT_DAYS = Number(process.env.STEPLY_TLS_CERT_DAYS || 30);
 
+function getOpenSslCommand() {
+  if (process.env.OPENSSL_BIN) return process.env.OPENSSL_BIN;
+
+  if (process.platform === 'win32') {
+    const candidates = [
+      path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Git', 'usr', 'bin', 'openssl.exe'),
+      path.join(process.env.ProgramW6432 || 'C:\\Program Files', 'Git', 'usr', 'bin', 'openssl.exe'),
+      path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Git', 'usr', 'bin', 'openssl.exe'),
+      path.join(process.env.ProgramFiles || 'C:\\Program Files', 'OpenSSL-Win64', 'bin', 'openssl.exe'),
+      path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'OpenSSL-Win32', 'bin', 'openssl.exe'),
+    ];
+
+    const found = candidates.find((candidate) => candidate && fs.existsSync(candidate));
+    if (found) return found;
+  }
+
+  return 'openssl';
+}
+
 function stripIpv6Brackets(value) {
   return String(value || '').replace(/^\[/, '').replace(/\]$/, '');
 }
@@ -105,7 +124,7 @@ function writeCertificate(hosts, hostsKey) {
   fs.mkdirSync(TLS_DIR, { recursive: true });
   fs.writeFileSync(CONFIG_PATH, opensslConfig(hosts));
 
-  execFileSync('openssl', [
+  execFileSync(getOpenSslCommand(), [
     'req',
     '-x509',
     '-nodes',
