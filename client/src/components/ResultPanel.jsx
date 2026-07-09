@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { MetricCard, SteplyButton, SteplyCard, StatusPill } from './SteplyPrimitives';
 import { testLabel } from '../pose/recommendationRules';
 import { WeakAreaIds } from '../pose/weakAreaRules';
@@ -117,6 +118,7 @@ function formatMetricValue(value, { digits = 0, fallback = 0 } = {}) {
 }
 
 export function ResultPanel({ finalResult, liveResult, onGoExercises, onDemoFinal }) {
+  const [showNextAction, setShowNextAction] = useState(false);
   const source = finalResult || liveResult || {};
   const cameraSetupNeeded = Boolean(
     source.invalid
@@ -156,6 +158,11 @@ export function ResultPanel({ finalResult, liveResult, onGoExercises, onDemoFina
   const safetyNote = source.recommendationPlan?.gameDisabledReason
     || primaryRecommendation?.safetyNote
     || 'Keep support nearby and move at a comfortable pace.';
+  useEffect(() => {
+    setShowNextAction(false);
+    const timerId = window.setTimeout(() => setShowNextAction(true), 3000);
+    return () => window.clearTimeout(timerId);
+  }, [finalResult, liveResult]);
 
   return (
     <div className="panel-grid panel-grid--result distance-mode distance-mode--result">
@@ -204,10 +211,14 @@ export function ResultPanel({ finalResult, liveResult, onGoExercises, onDemoFina
       </SteplyCard>
 
       <div className="result-actions">
-        <SteplyButton onClick={onGoExercises} disabled={cameraSetupNeeded}>
-          {cameraSetupNeeded ? 'Camera Check Needed' : 'Start My Exercise Game'}
-        </SteplyButton>
+        {showNextAction ? (
+          <>
+            <SteplyButton onClick={onGoExercises} disabled={!onGoExercises}>
+              Next
+            </SteplyButton>
         <SteplyButton variant="secondary" onClick={onDemoFinal}>Save Today’s Result</SteplyButton>
+          </>
+        ) : null}
       </div>
     </div>
   );

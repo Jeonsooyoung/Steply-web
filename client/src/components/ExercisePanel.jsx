@@ -260,7 +260,7 @@ function ExerciseStartControl({ activeExercise, activeGameType, onStart }) {
   );
 }
 
-export function ExercisePanel({ finalResult, remoteCameraFrame, poseAnalysis, onRestart, onViewProgress }) {
+export function ExercisePanel({ finalResult, remoteCameraFrame, poseAnalysis, onViewProgress }) {
   const recommendationTemplates = finalResult?.recommendations?.length
     ? finalResult.recommendations
     : finalResult?.recommendationLevel
@@ -476,7 +476,6 @@ export function ExercisePanel({ finalResult, remoteCameraFrame, poseAnalysis, on
         <div className="exercise-actions exercise-actions--guided">
           <SteplyButton onClick={onViewProgress}>View My Progress</SteplyButton>
           <SteplyButton variant="secondary" onClick={handleChooseAnotherExercise}>Choose Another Exercise</SteplyButton>
-          <SteplyButton variant="secondary" onClick={onRestart}>Start Another Mission</SteplyButton>
         </div>
 
         {safetyGateText ? (

@@ -21,6 +21,20 @@ function canMobileStream(session) {
   return Boolean(session.connectedAt && session.pairingTokenConsumedAt);
 }
 
+function closeReasonText(reason) {
+  if (!reason) return '';
+  if (Buffer.isBuffer(reason)) return reason.toString('utf8');
+  return String(reason);
+}
+
+function shouldCleanupMobileSessionOnClose(socket, code, reason) {
+  if (socket.role !== 'mobile') return false;
+  if (socket.keepSessionOnClose) return false;
+
+  const reasonText = closeReasonText(reason);
+  return !(code === 1000 && reasonText === 'Android camera stopped');
+}
+
 function sendToRole(sessionId, role, payload) {
   const sockets = getOrCreateSocketSet(sessionId);
   const serialized = typeof payload === 'string' ? payload : JSON.stringify(payload);
@@ -169,6 +183,7 @@ function attachDashboardWebSocket(server) {
       }
 
       if (msg.type === 'stopped' && socket.role === 'mobile') {
+        socket.keepSessionOnClose = true;
         broadcast(sessionId, {
           type: 'remote-camera-status',
           role: 'mobile',
@@ -179,10 +194,12 @@ function attachDashboardWebSocket(server) {
       }
     });
 
-    socket.on('close', () => {
+    socket.on('close', (code, reason) => {
       removeSocket(sessionId, socket);
       if (role === 'mobile') {
-        cleanupSessionPersonalData(sessionId, 'mobile-websocket-closed');
+        if (shouldCleanupMobileSessionOnClose(socket, code, reason)) {
+          cleanupSessionPersonalData(sessionId, 'mobile-websocket-closed');
+        }
         broadcast(sessionId, {
           type: 'remote-camera-status',
           role: 'mobile',

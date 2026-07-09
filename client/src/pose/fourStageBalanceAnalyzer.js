@@ -807,7 +807,7 @@ function currentStageFromResult(balanceResult) {
 }
 
 export class FourStageBalanceAnalyzer {
-  constructor({ durationSeconds = 56 } = {}) {
+  constructor({ durationSeconds = 40 } = {}) {
     this.durationSeconds = durationSeconds;
     this.reset();
   }

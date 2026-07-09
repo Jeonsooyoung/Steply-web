@@ -131,7 +131,7 @@ function previewStateForTest(selectedTest, elapsedSeconds) {
     };
   }
   return {
-    durationSeconds: 56,
+    durationSeconds: 40,
     primaryLabel: 'Hold Time',
     primaryValue: Math.min(10, elapsedSeconds),
     phase: 'standing',
@@ -433,7 +433,6 @@ export default function App() {
           finalResult={displayFinalResult || emergencyExerciseResult(panelDashboard)}
           remoteCameraFrame={dashboard.remoteCameraFrame}
           poseAnalysis={displayPoseAnalysis}
-          onRestart={handleStartTest}
           onViewProgress={() => dashboard.setActiveStep('progress')}
         />
       );
