@@ -494,8 +494,387 @@
 }
 .wide-cta { max-width: 620px; justify-self: center; }
 
+.exercise-mission-layout {
+  width: 100%;
+  min-width: 0;
+}
+
+.exercise-recommendation-screen {
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  gap: 16px;
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  align-content: start;
+}
+
+.exercise-recommendation-hero {
+  display: grid;
+  align-content: center;
+  min-height: 138px;
+}
+
+.exercise-recommendation-hero h2 {
+  margin: 6px 0 0;
+  font-size: clamp(34px, 3.2vw, 46px);
+  line-height: 1.08;
+}
+
+.exercise-recommendation-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.exercise-recommendation-option {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 126px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--outline) 76%, var(--distance-contrast-text));
+  border-radius: var(--radius-card);
+  color: var(--distance-contrast-text);
+  background: var(--distance-contrast-surface);
+  text-align: left;
+  box-shadow: var(--shadow-card);
+}
+
+.exercise-recommendation-option strong {
+  font-size: clamp(22px, 2vw, 28px);
+  line-height: 1.18;
+}
+
+.exercise-recommendation-option span {
+  color: var(--primary);
+  font-size: clamp(20px, 1.7vw, 24px);
+  font-weight: 850;
+}
+
+.exercise-recommendation-option--active {
+  border-color: var(--primary);
+  background: var(--primary-container);
+  color: var(--primary-dark);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.exercise-recommendation-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.exercise-recommendation-actions {
+  display: grid;
+}
+
+.exercise-recommendation-actions .steply-button {
+  min-height: 76px;
+  font-size: clamp(22px, 2vw, 28px);
+}
+
+.exercise-guide-column,
+.exercise-main-zone,
+.exercise-side-panel {
+  min-width: 0;
+  min-height: 0;
+}
+
+.exercise-guide-column {
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.exercise-goal-card {
+  display: grid;
+  align-content: center;
+  min-height: 96px;
+  padding: 18px;
+}
+
+.exercise-goal-card h2 {
+  margin: 4px 0 0;
+  font-size: 30px;
+  line-height: 1.12;
+}
+
+.exercise-choice-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.exercise-choice-tab {
+  min-height: 112px;
+  padding: 12px 14px;
+  font-size: 18px;
+  text-align: left;
+}
+
+.exercise-choice-tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.exercise-detail-card {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-height: 0;
+  padding: 18px;
+}
+
+.exercise-detail-card h3 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.18;
+}
+
+.exercise-detail-card p {
+  color: var(--distance-contrast-muted);
+  font-size: 20px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.exercise-detail-target {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: fit-content;
+  padding: 10px 14px;
+  border-radius: var(--radius-button);
+  color: var(--tertiary);
+  background: var(--tertiary-container);
+  font-weight: 800;
+}
+
+.exercise-detail-target strong {
+  font-size: 44px;
+  line-height: 1;
+}
+
+.exercise-detail-safety {
+  margin-top: auto;
+  padding: 12px;
+  border-radius: var(--radius-notice);
+  color: var(--tertiary);
+  background: var(--distance-warning-bg);
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.exercise-status-card {
+  min-height: 224px;
+}
+
+.exercise-status-card h3 {
+  font-size: 25px;
+  line-height: 1.2;
+}
+
+.exercise-status-card .guided-status-row {
+  grid-template-columns: minmax(0, 1fr) 118px;
+  min-height: 48px;
+  padding: 10px 0;
+  font-size: 22px;
+}
+
+.exercise-status-card .guided-status-row strong {
+  font-size: 28px;
+}
+
+.exercise-main-zone {
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  justify-items: stretch;
+  gap: 0;
+}
+
+.exercise-main-zone > .ar-game,
+.exercise-launch-stage-card {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: var(--border-soft);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.exercise-main-zone > .ar-game {
+  gap: 0;
+}
+
+.exercise-main-zone .ar-game__header,
+.exercise-main-zone .ar-game-tabs,
+.exercise-main-zone .ar-game__footer {
+  display: none;
+}
+
+.exercise-main-zone .ar-game-stage,
+.exercise-launch-stage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: inherit;
+  background: var(--surface-variant);
+}
+
+.exercise-main-zone .ar-game-camera-frame {
+  object-fit: contain;
+  object-position: center center;
+}
+
+.exercise-main-zone .pose-overlay line {
+  stroke: color-mix(in srgb, var(--primary) 82%, white);
+}
+
+.exercise-launch-message {
+  z-index: 2;
+  display: grid;
+  gap: 12px;
+  width: min(80%, 520px);
+  padding: 24px;
+  border-radius: var(--radius-card);
+  color: var(--distance-contrast-text);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+
+.exercise-launch-message h3 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.12;
+}
+
+.exercise-launch-message p {
+  color: var(--distance-contrast-muted);
+  font-size: 22px;
+  font-weight: 750;
+  line-height: 1.38;
+}
+
+.exercise-countdown-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  width: 180px;
+  height: 180px;
+  transform: translate(-50%, -50%);
+  border: 10px solid color-mix(in srgb, var(--primary) 74%, white);
+  border-radius: 50%;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  box-shadow: var(--shadow-soft);
+  font-weight: 900;
+}
+
+.exercise-countdown-overlay span {
+  font-size: 86px;
+  line-height: 0.86;
+}
+
+.exercise-countdown-overlay strong {
+  color: var(--distance-contrast-muted);
+  font-size: 19px;
+  line-height: 1;
+}
+
+.exercise-side-panel {
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  align-items: stretch;
+  gap: 14px;
+  height: 100%;
+  overflow: visible;
+}
+
+.exercise-start-control {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1;
+  padding: 24px;
+  border: 12px solid color-mix(in srgb, var(--primary) 72%, var(--secondary));
+  border-radius: 50%;
+  color: var(--primary);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  font-weight: 900;
+}
+
+.exercise-start-control:not(:disabled):hover {
+  transform: translateY(-1px);
+  background: var(--primary-container);
+}
+
+.exercise-start-control:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.exercise-start-control span {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.exercise-start-control strong {
+  color: var(--distance-contrast-text);
+  font-size: 46px;
+  line-height: 1;
+}
+
+.exercise-start-control small {
+  color: var(--distance-contrast-muted);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.exercise-actions--guided {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.exercise-actions--guided .steply-button {
+  min-height: 54px;
+}
+
+.exercise-safety-gate {
+  padding: 18px;
+}
+
 @media (max-width: 720px) {
+  .exercise-recommendation-options {
+    grid-template-columns: 1fr;
+  }
+
   .exercise-actions {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1180px) {
+  .exercise-mission-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .exercise-main-zone > .ar-game,
+  .exercise-launch-stage-card {
+    height: min(720px, 72vh);
+    min-height: 520px;
   }
 }

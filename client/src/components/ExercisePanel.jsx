@@ -3,7 +3,8 @@ import { recommendationExercises } from '../data/recommendationExercises';
 import { recommendationTemplatesForResult, testLabel } from '../pose/recommendationRules';
 import { gameTypeForRecommendation } from '../pose/arExerciseEngine';
 import { ArExerciseGame } from './ArExerciseGame';
-import { ExerciseCard, SteplyButton, SteplyCard } from './SteplyPrimitives';
+import { PoseOverlay } from './pose/PoseOverlay';
+import { SteplyButton, SteplyCard, TimerCircle } from './SteplyPrimitives';
 
 const friendlyExerciseCopy = {
   side_hip_strengthening: {
@@ -153,6 +154,20 @@ function exerciseId(template, index) {
   return `${template.exerciseKey || template.arInputKey || template.title}-${index}`;
 }
 
+function buildExerciseSourceList(recommendationTemplates) {
+  const mergedTemplates = recommendationTemplates.length
+    ? [...recommendationTemplates, ...recommendationExercises]
+    : recommendationExercises;
+  const seen = new Set();
+
+  return mergedTemplates.filter((template) => {
+    const key = template.exerciseKey || template.arInputKey || template.id || template.title;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function toExerciseCard(template, index) {
   const arMetadata = inferArMetadata(template);
   const normalizedTemplate = {
@@ -172,91 +187,306 @@ function toExerciseCard(template, index) {
   };
 }
 
+function repetitionsFromExercise(exercise) {
+  const fromType = Number.parseInt(exercise?.type, 10);
+  if (Number.isFinite(fromType)) return fromType;
+  const fromTitle = Number.parseInt(exercise?.title, 10);
+  if (Number.isFinite(fromTitle)) return fromTitle;
+  return 10;
+}
+
+function ExerciseCameraPreview({ remoteCameraFrame, poseAnalysis, countdownSeconds }) {
+  return (
+    <SteplyCard className="mission-camera-card exercise-launch-stage-card">
+      <div className="arena-stage arena-stage--camera arena-stage--guided exercise-launch-stage">
+        {remoteCameraFrame?.src ? (
+          <div className="remote-camera-layer">
+            <img
+              className="remote-camera-frame"
+              src={remoteCameraFrame.src}
+              alt="Live camera feed before exercise starts"
+            />
+            <PoseOverlay
+              landmarks={poseAnalysis?.landmarks || []}
+              frameSize={poseAnalysis?.frameSize}
+              fit="contain"
+            />
+          </div>
+        ) : (
+          <>
+            <div className="stage-grid" aria-hidden="true" />
+            <div className="exercise-launch-message">
+              <div className="eyebrow">Camera Setup</div>
+              <h3>Bring your body into view</h3>
+              <p>The exercise will start after the countdown when the phone camera is ready.</p>
+            </div>
+          </>
+        )}
+
+        <div className="guided-camera-focus" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+
+        <div className="exercise-countdown-overlay">
+          <span>{countdownSeconds}</span>
+          <strong>Starting soon</strong>
+        </div>
+
+        <div className="remote-camera-badge">
+          <span className={remoteCameraFrame?.src ? 'remote-camera-dot remote-camera-dot--live' : 'remote-camera-dot'} />
+          {remoteCameraFrame?.src ? 'Receiving live phone camera stream' : 'Waiting for live phone camera stream'}
+        </div>
+      </div>
+    </SteplyCard>
+  );
+}
+
+function ExerciseStartControl({ activeExercise, activeGameType, onStart }) {
+  const disabled = !activeExercise || !activeGameType;
+  return (
+    <button
+      type="button"
+      className="exercise-start-control"
+      onClick={onStart}
+      disabled={disabled}
+    >
+      <span>{disabled ? 'Practice Only' : 'Start'}</span>
+      <strong>{disabled ? 'No AR game' : 'Exercise'}</strong>
+      <small>{disabled ? 'Select another exercise' : '5 sec countdown'}</small>
+    </button>
+  );
+}
+
 export function ExercisePanel({ finalResult, remoteCameraFrame, poseAnalysis, onRestart, onViewProgress }) {
   const recommendationTemplates = finalResult?.recommendations?.length
     ? finalResult.recommendations
     : finalResult?.recommendationLevel
       ? recommendationTemplatesForResult(finalResult)
       : [];
-  const sourceExercises = recommendationTemplates.length ? recommendationTemplates : recommendationExercises;
+  const sourceExercises = useMemo(
+    () => buildExerciseSourceList(recommendationTemplates),
+    [recommendationTemplates],
+  );
   const dynamicExercises = useMemo(
     () => sourceExercises.map(toExerciseCard),
     [sourceExercises],
   );
+  const visibleExercises = useMemo(() => dynamicExercises.slice(0, 3), [dynamicExercises]);
   const recommendationSignature = dynamicExercises
     .map((exercise) => `${exercise.title}:${exercise.exerciseKey || ''}:${exercise.arInputKey || ''}`)
     .join('|');
   const [activeExerciseId, setActiveExerciseId] = useState('');
-  const activeExercise = dynamicExercises.find((exercise) => exercise.id === activeExerciseId) || null;
+  const [panelMode, setPanelMode] = useState('recommendations');
+  const [exercisePhase, setExercisePhase] = useState('idle');
+  const [countdownSeconds, setCountdownSeconds] = useState(5);
+  const activeExercise = dynamicExercises.find((exercise) => exercise.id === activeExerciseId)
+    || visibleExercises[0]
+    || null;
   const sourceTestLabel = finalResult?.testLabel || testLabel(finalResult?.testType);
   const activeGameType = activeExercise ? gameTypeForRecommendation(activeExercise) : null;
   const safetyGateText = finalResult?.recommendationPlan?.gameDisabledReason || null;
+  const targetReps = repetitionsFromExercise(activeExercise);
+  const activeExerciseIndex = Math.max(
+    0,
+    visibleExercises.findIndex((exercise) => exercise.id === activeExercise?.id),
+  );
 
   useEffect(() => {
-    setActiveExerciseId('');
+    setActiveExerciseId(visibleExercises[0]?.id || '');
+    setPanelMode('recommendations');
+    setExercisePhase('idle');
+    setCountdownSeconds(5);
   }, [recommendationSignature]);
 
-  return (
-    <div className="panel-grid panel-grid--exercise distance-mode distance-mode--exercise">
-      <SteplyCard className="recommendation-header">
-        <div>
-          <div className="eyebrow">Exercise Recommendations</div>
-          <h2>{activeExercise ? `${activeExercise.title} AR Game` : 'Choose an exercise to start'}</h2>
-          <p>
-            These games match today’s {sourceTestLabel} insight. Start one recommended exercise, move at a safe pace, and aim for one calm set.
-            {safetyGateText ? ` ${safetyGateText}` : ''}
-          </p>
-        </div>
-        <div className="recommendation-time">One set <strong>10</strong> reps</div>
-      </SteplyCard>
+  useEffect(() => {
+    setExercisePhase('idle');
+    setCountdownSeconds(5);
+  }, [activeExercise?.id]);
 
-      {activeExercise && activeGameType ? (
-        <ArExerciseGame
-          recommendations={[activeExercise]}
-          remoteCameraFrame={remoteCameraFrame}
-          poseAnalysis={poseAnalysis}
-        />
-      ) : (
-        <SteplyCard className="ar-game-launch-card">
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [panelMode]);
+
+  useEffect(() => {
+    if (exercisePhase !== 'countdown') return undefined;
+
+    const durationMs = 5000;
+    const startedAt = performance.now();
+    setCountdownSeconds(5);
+
+    const tick = () => {
+      const elapsedMs = performance.now() - startedAt;
+      const remaining = Math.max(0, Math.ceil((durationMs - elapsedMs) / 1000));
+      setCountdownSeconds(remaining);
+
+      if (elapsedMs >= durationMs) {
+        setExercisePhase('running');
+      }
+    };
+
+    tick();
+    const intervalId = window.setInterval(tick, 100);
+    return () => window.clearInterval(intervalId);
+  }, [exercisePhase, activeExercise?.id]);
+
+  const handleSelectExercise = (exerciseId) => {
+    setActiveExerciseId(exerciseId);
+    setExercisePhase('idle');
+    setCountdownSeconds(5);
+  };
+
+  const handleOpenExercise = () => {
+    setPanelMode('exercise');
+    setExercisePhase('idle');
+    setCountdownSeconds(5);
+  };
+
+  const handleChooseAnotherExercise = () => {
+    setPanelMode('recommendations');
+    setExercisePhase('idle');
+    setCountdownSeconds(5);
+  };
+
+  if (panelMode === 'recommendations') {
+    return (
+      <div className="exercise-recommendation-screen distance-mode distance-mode--exercise">
+        <SteplyCard className="exercise-recommendation-hero">
           <div>
-            <div className="eyebrow">AR Game</div>
-            <h3>Start from a recommended exercise</h3>
-            <p>
-              Select Start on any exercise card to open the matching live camera game.
-              Keep a chair or wall nearby before you begin.
-            </p>
+            <div className="eyebrow">Exercise Recommendation</div>
+            <h2>{sourceTestLabel}</h2>
           </div>
         </SteplyCard>
-      )}
 
-      <div className="exercise-grid">
-        {dynamicExercises.map((exercise) => {
-          const isActive = exercise.id === activeExerciseId;
-          const isPlayable = exercise.gameAllowed !== false && Boolean(gameTypeForRecommendation(exercise));
-          return (
-            <ExerciseCard
-              key={exercise.id}
-              {...exercise}
-              active={isActive}
-              action={(
-                <SteplyButton
-                  type="button"
-                  variant={isActive ? 'secondary' : 'primary'}
-                  onClick={() => setActiveExerciseId(exercise.id)}
-                  disabled={!isPlayable}
-                >
-                  {!isPlayable ? 'Supported Practice' : isActive ? 'AR Game Open' : 'Start'}
-                </SteplyButton>
-              )}
-            />
-          );
-        })}
-      </div>
+        <div className="exercise-recommendation-options" aria-label="Exercise recommendations">
+          {visibleExercises.map((exercise, index) => {
+            const isActive = exercise.id === activeExercise?.id;
+            const isPlayable = exercise.gameAllowed !== false && Boolean(gameTypeForRecommendation(exercise));
+            return (
+              <button
+                key={exercise.id}
+                type="button"
+                className={`exercise-recommendation-option ${isActive ? 'exercise-recommendation-option--active' : ''}`}
+                onClick={() => handleSelectExercise(exercise.id)}
+                disabled={!isPlayable}
+              >
+                <strong>{index + 1}. {exercise.title}</strong>
+                <span>{exercise.type}</span>
+              </button>
+            );
+          })}
+        </div>
 
-      <div className="exercise-actions">
-        <SteplyButton onClick={onViewProgress}>View My Progress</SteplyButton>
-        <SteplyButton variant="secondary" onClick={onRestart}>Start Another Mission</SteplyButton>
+        <div className="exercise-recommendation-actions">
+          <SteplyButton onClick={handleOpenExercise} disabled={!activeGameType}>
+            Start Selected Exercise
+          </SteplyButton>
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="exercise-mission-layout analysis-layout analysis-layout--guided distance-mode distance-mode--exercise">
+      <aside className="mission-guide-column exercise-guide-column">
+        <SteplyCard className="movement-guide-card exercise-detail-card">
+          <div className="eyebrow">Exercise Type</div>
+          <h3>{activeExercise?.title || 'Choose an exercise'}</h3>
+          <p>{activeExercise?.description || 'Select one recommended exercise to open the matching live camera game.'}</p>
+          <div className="exercise-detail-target">
+            <span>One set</span>
+            <strong>{targetReps}</strong>
+            <span>reps</span>
+          </div>
+          {activeExercise?.safety ? (
+            <div className="exercise-detail-safety">{activeExercise.safety}</div>
+          ) : null}
+        </SteplyCard>
+
+        <SteplyCard className="feedback-stack feedback-stack--analysis guided-status-card exercise-status-card">
+          <div className="eyebrow">Live Status</div>
+          <h3>Large, simple feedback</h3>
+          <div className="guided-status-row">
+            <span>Exercise</span>
+            <strong>{activeExerciseIndex + 1} / {visibleExercises.length}</strong>
+          </div>
+          <div className="guided-status-row">
+            <span>Set Goal</span>
+            <strong>{targetReps} reps</strong>
+          </div>
+        </SteplyCard>
+      </aside>
+
+      <main className="analysis-main-zone analysis-main-zone--mission exercise-main-zone">
+        {exercisePhase === 'running' && activeExercise && activeGameType ? (
+          <ArExerciseGame
+            key={activeExercise.id}
+            recommendations={[activeExercise]}
+            remoteCameraFrame={remoteCameraFrame}
+            poseAnalysis={poseAnalysis}
+          />
+        ) : exercisePhase === 'countdown' ? (
+          <ExerciseCameraPreview
+            remoteCameraFrame={remoteCameraFrame}
+            poseAnalysis={poseAnalysis}
+            countdownSeconds={countdownSeconds}
+          />
+        ) : (
+          <SteplyCard className="mission-camera-card exercise-launch-stage-card">
+            <div className="arena-stage arena-stage--camera arena-stage--guided exercise-launch-stage">
+              <div className="stage-grid" aria-hidden="true" />
+              <div className="exercise-launch-message">
+                <div className="eyebrow">Posture Setup</div>
+                <h3>{activeExercise?.title || 'Ready posture'}</h3>
+                <p>Press Start, then get your full body in view before the game begins.</p>
+              </div>
+              <div className="guided-camera-focus" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="remote-camera-badge">
+                <span className={remoteCameraFrame?.src ? 'remote-camera-dot remote-camera-dot--live' : 'remote-camera-dot'} />
+                {remoteCameraFrame?.src ? 'Receiving live phone camera stream' : 'Waiting for live phone camera stream'}
+              </div>
+            </div>
+          </SteplyCard>
+        )}
+      </main>
+
+      <aside className="analysis-side analysis-side--guided exercise-side-panel">
+        {exercisePhase === 'idle' ? (
+          <ExerciseStartControl
+            activeExercise={activeExercise}
+            activeGameType={activeGameType}
+            onStart={() => setExercisePhase('countdown')}
+          />
+        ) : (
+          <TimerCircle
+            value={exercisePhase === 'countdown' ? countdownSeconds : targetReps}
+            max={exercisePhase === 'countdown' ? 5 : targetReps}
+            label={exercisePhase === 'countdown' ? 'start' : 'reps'}
+            score={targetReps}
+          />
+        )}
+
+        <div className="exercise-actions exercise-actions--guided">
+          <SteplyButton onClick={onViewProgress}>View My Progress</SteplyButton>
+          <SteplyButton variant="secondary" onClick={handleChooseAnotherExercise}>Choose Another Exercise</SteplyButton>
+          <SteplyButton variant="secondary" onClick={onRestart}>Start Another Mission</SteplyButton>
+        </div>
+
+        {safetyGateText ? (
+          <SteplyCard className="feedback-stack feedback-stack--warning exercise-safety-gate">
+            <div className="eyebrow">Safety</div>
+            <h3>Check setup first</h3>
+            <p>{safetyGateText}</p>
+          </SteplyCard>
+        ) : null}
+      </aside>
     </div>
   );
 }

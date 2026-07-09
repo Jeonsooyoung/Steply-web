@@ -366,21 +366,21 @@ export default function App() {
     }
   };
 
+  const isExercisePanelVisible = activeContext === 'home' && shouldShowExercisePanel({
+    ...dashboard,
+    poseAnalysis: displayPoseAnalysis,
+  });
   const activeView = activeContext === 'care'
     ? 'care'
     : activeContext === 'reports'
       ? 'reports'
-      : dashboard.activeStep === 'analysis'
+      : isExercisePanelVisible || dashboard.activeStep === 'analysis'
         ? 'mission'
         : dashboard.activeStep === 'exercise'
           ? 'exercise'
           : dashboard.activeStep === 'progress'
             ? 'progress'
             : 'home';
-  const isExercisePanelVisible = activeContext === 'home' && shouldShowExercisePanel({
-    ...dashboard,
-    poseAnalysis: displayPoseAnalysis,
-  });
   const shouldShowJourneyFlow = activeContext !== 'home';
 
   const pageHeader = activeContext === 'home'
