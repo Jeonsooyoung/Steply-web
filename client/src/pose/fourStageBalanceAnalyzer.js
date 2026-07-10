@@ -301,10 +301,15 @@ function detectPossibleHandSupport(points, minVisibility, scale) {
   const sides = [];
   for (const [side, wrist] of [['left', leftWrist], ['right', rightWrist]]) {
     if (!wrist) continue;
+    const sideHip = side === 'left' ? leftHip : rightHip;
     const belowHip = wrist.y >= hipCenter.y - scale.height * 0.03;
-    const farLateral = Math.abs(wrist.x - shoulderCenter.x) >= shoulderWidth * 0.75;
+    const farFromBodyCenter = Math.abs(wrist.x - shoulderCenter.x) >= shoulderWidth * 0.75;
+    const farFromSameHip = sideHip
+      ? Math.abs(wrist.x - sideHip.x) >= shoulderWidth * 0.45
+      : farFromBodyCenter;
     const veryLow = wrist.y >= hipCenter.y + scale.height * 0.12;
-    if (belowHip && (farLateral || veryLow)) sides.push(side);
+    const reachingToSupport = belowHip && farFromSameHip && (farFromBodyCenter || veryLow);
+    if (reachingToSupport) sides.push(side);
   }
 
   return {
@@ -334,8 +339,10 @@ function extractFrameFeatures(frame, options) {
 
   const lateralSeparation = bothFeetVisible ? Math.abs(leftFoot.x - rightFoot.x) : null;
   const depthAvailable = bothFeetVisible && finite(leftFoot.z) && finite(rightFoot.z);
+  const imagePlaneAnteriorPosteriorSeparation = bothFeetVisible ? Math.abs(leftFoot.y - rightFoot.y) : null;
+  const depthAnteriorPosteriorSeparation = depthAvailable ? Math.abs(leftFoot.z - rightFoot.z) : null;
   const anteriorPosteriorSeparation = bothFeetVisible
-    ? Math.abs((depthAvailable ? leftFoot.z - rightFoot.z : leftFoot.y - rightFoot.y))
+    ? imagePlaneAnteriorPosteriorSeparation
     : null;
   const verticalFootSeparation = leftAnkle && rightAnkle ? Math.abs(leftAnkle.y - rightAnkle.y) : null;
   const leftRaised = leftAnkle && rightAnkle ? rightAnkle.y - leftAnkle.y : null;
@@ -359,7 +366,8 @@ function extractFrameFeatures(frame, options) {
     bothFeetVisible,
     scale,
     bodyBox: box,
-    anteriorPosteriorAxis: depthAvailable ? 'z' : 'y',
+    anteriorPosteriorAxis: 'y',
+    depthAnteriorPosteriorSeparationRatio: finite(depthAnteriorPosteriorSeparation) ? depthAnteriorPosteriorSeparation / scale.width : null,
     lateralSeparationRatio: finite(lateralSeparation) ? lateralSeparation / scale.width : 0,
     anteriorPosteriorSeparationRatio: finite(anteriorPosteriorSeparation) ? anteriorPosteriorSeparation / scale.width : 0,
     verticalFootSeparationRatio: finite(verticalFootSeparation) ? verticalFootSeparation / scale.height : 0,

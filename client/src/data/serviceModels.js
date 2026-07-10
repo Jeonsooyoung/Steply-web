@@ -33,17 +33,17 @@ export const weakAreaSupportMessages = {
   [WeakAreaIds.LowerLimbMuscularEndurance]:
     'Sit-to-stand movement looked a little more effortful today. Let’s build steady leg endurance with a calm pace.',
   [RuleWeaknessIds.HipAbductorMediolateralControl]:
-    'Your body swayed a little more from side to side today. Let’s wake up your side hip muscles with a short exercise game.',
+    'Your body swayed a little more from side to side today. Let’s wake up your side hip muscles with a short exercise plan.',
   [RuleWeaknessIds.AnkleStrategyProprioception]:
     'The first few seconds were a little unsteady today. We’ll practice gentle ankle and balance control.',
   [RuleWeaknessIds.LowerBodyEndurance]:
-    'Your legs slowed down near the end. We’ll practice a gentle strength game at a safe pace.',
+    'Your legs slowed down near the end. We’ll practice gentle strengthening at a safe pace.',
   [RuleWeaknessIds.HipExtensorGluteStrength]:
     'Standing up took a little more effort today. Let’s build leg strength with a short chair exercise.',
   [RuleWeaknessIds.TurningControl]:
     'Turning took a little longer today. Let’s practice a slow, steady walking path.',
   [RuleWeaknessIds.GaitStability]:
-    'Your steps were shorter today. We’ll work on steady walking with a simple path game.',
+    'Your steps were shorter today. We’ll work on steady walking with a simple supported path.',
 };
 
 export function displayWeakAreaLabel(value) {
@@ -65,7 +65,6 @@ export function buildDemoFinalResult(testType = 'four_stage_balance') {
         ...OtagoExerciseCatalog[OtagoExerciseKeys.SideHipStrengthening],
         id: 'side_hip_strengthening',
         name: 'Side Hip Strengthening',
-        arGameName: 'Side Leg Target Reach',
         reason: 'Side-to-side sway was higher during balance stance.',
       };
   const normalizedRecommendation = {
@@ -77,7 +76,6 @@ export function buildDemoFinalResult(testType = 'four_stage_balance') {
     weakAreaId,
     recommendationRole: 'primary',
     reason: recommendation.reason || 'This exercise matches today’s movement pattern.',
-    gameAllowed: true,
   };
   const primaryValue = testType === 'timed_up_and_go'
     ? 13.4
@@ -131,7 +129,6 @@ export function buildDemoFinalResult(testType = 'four_stage_balance') {
     recommendationPlan: {
       reason: normalizedRecommendation.reason,
       safetyGates: [],
-      dynamicGameAllowed: true,
       recommendedExercises: [normalizedRecommendation],
     },
     rawMetrics: testType === 'timed_up_and_go'

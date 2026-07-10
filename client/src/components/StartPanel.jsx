@@ -59,8 +59,8 @@ export function StartPanel({
           <span>Get the next safe exercise.</span>
         </SteplyCard>
         <SteplyCard className="home-pipeline-card">
-          <strong>Gamified Repetition</strong>
-          <span>Practice with a simple movement game.</span>
+          <strong>Recommended Practice</strong>
+          <span>Follow the safe exercise plan.</span>
         </SteplyCard>
         <SteplyCard className="home-pipeline-card">
           <strong>Progress Tracking</strong>

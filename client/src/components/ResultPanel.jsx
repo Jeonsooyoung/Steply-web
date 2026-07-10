@@ -128,6 +128,9 @@ function sanitizeObservationText(text) {
     .replace(new RegExp('high\\s+risk', 'gi'), 'needs review')
     .replace(/failed/gi, 'needs practice')
     .replace(/disqualified/gi, 'used support')
+    .replace(/dynamic balance games/gi, 'harder balance practice')
+    .replace(/exercise game/gi, 'exercise plan')
+    .replace(/game/gi, 'practice')
     .replace(/diagnosis/gi, 'exercise-planning note');
 }
 
@@ -259,7 +262,7 @@ function buildProblemReportItems(result = {}, { cameraSetupNeeded = false, statu
     addUniqueReportItem(items, {
       label: 'Balance',
       title: 'A foot step-out or reposition was observed',
-      detail: 'Supported balance drills are recommended before dynamic balance games.',
+      detail: 'Supported balance drills are recommended before harder balance practice.',
     });
   }
   if (flags.lossOfBalanceDetected) {
@@ -403,7 +406,7 @@ export function ResultPanel({ finalResult, liveResult, onGoExercises, onDemoFina
           <h3>{recommendationTitle}</h3>
           <p>So Steply recommends this exercise first: {sanitizeObservationText(recommendationReason)}</p>
           <SteplyButton onClick={onGoExercises} disabled={!onGoExercises || !primaryRecommendation}>
-            Start Recommended Exercise
+            View Recommended Exercises
           </SteplyButton>
         </div>
       </SteplyCard>
@@ -443,7 +446,7 @@ export function ResultPanel({ finalResult, liveResult, onGoExercises, onDemoFina
         <div>
           <div className="eyebrow">Completion Badge</div>
           <h3>Safe Steps Badge</h3>
-          <p>Mission complete. The next exercise game will help practice the area that changed today.</p>
+          <p>Mission complete. The next exercise recommendation helps practice the area that changed today.</p>
         </div>
       </SteplyCard>
 

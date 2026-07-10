@@ -9,7 +9,7 @@ const contextOptions = [
 const navItems = [
   { id: 'home', label: 'Today', context: 'home' },
   { id: 'mission', label: 'Start Mission', context: 'home' },
-  { id: 'exercise', label: 'Exercise Game', context: 'home' },
+  { id: 'exercise', label: 'Recommended Exercise', context: 'home' },
   { id: 'progress', label: 'My Progress', context: 'home' },
   { id: 'care', label: 'Care Dashboard', context: 'care' },
   { id: 'reports', label: 'Reports', context: 'reports' },

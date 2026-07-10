@@ -21,10 +21,10 @@ export const journeySteps = [
     activeWhen: ['result'],
   },
   {
-    id: 'game',
+    id: 'practice',
     number: 4,
-    title: 'Gamified Repetition',
-    description: 'Guided exercise game',
+    title: 'Recommended Practice',
+    description: 'Safe exercise plan',
     activeWhen: ['exercise'],
   },
   {

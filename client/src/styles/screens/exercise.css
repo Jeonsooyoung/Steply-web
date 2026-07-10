@@ -641,6 +641,31 @@
   font-size: clamp(22px, 2vw, 28px);
 }
 
+.exercise-recommendation-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.exercise-recommendation-detail-card,
+.exercise-recommendation-summary-card {
+  min-height: 100%;
+}
+
+.exercise-recommendation-summary-card {
+  align-content: start;
+  padding: clamp(18px, 2vw, 24px);
+}
+
+.exercise-recommendation-summary-card p {
+  margin: 0;
+  color: var(--distance-contrast-muted);
+  font-size: clamp(18px, 1.4vw, 22px);
+  font-weight: 760;
+  line-height: 1.36;
+}
+
 .exercise-guide-column,
 .exercise-main-zone,
 .exercise-side-panel {
@@ -982,6 +1007,10 @@
 
 @media (max-width: 720px) {
   .exercise-recommendation-options {
+    grid-template-columns: 1fr;
+  }
+
+  .exercise-recommendation-detail-grid {
     grid-template-columns: 1fr;
   }
 

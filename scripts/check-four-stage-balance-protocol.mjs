@@ -8,12 +8,12 @@ const root = path.resolve(__dirname, '..');
 
 const point = (name, x, y, z = null, visibility = 0.95) => ({ name, x, y, z, visibility });
 
-function footPoints(side, x, y) {
+function footPoints(side, x, y, z = null) {
   const prefix = side === 'left' ? 'left' : 'right';
   return [
-    point(`${prefix}_ankle`, x, y),
-    point(`${prefix}_heel`, x - (side === 'left' ? 0.006 : -0.006), y + 0.018),
-    point(`${prefix}_foot_index`, x + (side === 'left' ? 0.012 : -0.012), y - 0.018),
+    point(`${prefix}_ankle`, x, y, z),
+    point(`${prefix}_heel`, x - (side === 'left' ? 0.006 : -0.006), y + 0.018, z),
+    point(`${prefix}_foot_index`, x + (side === 'left' ? 0.012 : -0.012), y - 0.018, z),
   ];
 }
 
@@ -42,22 +42,28 @@ function stageFeet(stageId) {
   };
 }
 
-function balanceFrame(stageId, timestampMs, { support = false } = {}) {
+function balanceFrame(stageId, timestampMs, { armsDown = false, support = false, noisyFootDepth = false } = {}) {
   const feet = stageFeet(stageId);
+  const leftWrist = support
+    ? { x: 0.24, y: 0.58 }
+    : armsDown ? { x: 0.42, y: 0.70 } : { x: 0.38, y: 0.50 };
+  const rightWrist = support
+    ? { x: 0.76, y: 0.58 }
+    : armsDown ? { x: 0.58, y: 0.70 } : { x: 0.62, y: 0.50 };
   const landmarks = [
     point('nose', 0.5, 0.18),
     point('left_shoulder', 0.40, 0.32),
     point('right_shoulder', 0.60, 0.32),
     point('left_elbow', 0.36, 0.46),
     point('right_elbow', 0.64, 0.46),
-    point('left_wrist', support ? 0.24 : 0.38, support ? 0.58 : 0.50),
-    point('right_wrist', support ? 0.76 : 0.62, support ? 0.58 : 0.50),
+    point('left_wrist', leftWrist.x, leftWrist.y),
+    point('right_wrist', rightWrist.x, rightWrist.y),
     point('left_hip', 0.44, 0.54),
     point('right_hip', 0.56, 0.54),
     point('left_knee', feet.left.x, 0.70),
     point('right_knee', feet.right.x, 0.70),
-    ...footPoints('left', feet.left.x, feet.left.y),
-    ...footPoints('right', feet.right.x, feet.right.y),
+    ...footPoints('left', feet.left.x, feet.left.y, noisyFootDepth ? -0.28 : null),
+    ...footPoints('right', feet.right.x, feet.right.y, noisyFootDepth ? 0.28 : null),
   ];
   return {
     timestampMs,
@@ -117,6 +123,20 @@ try {
   assert.equal(stopResult.balanceResult.stageById.tandem.status, 'not_observed');
   assert.equal(stopResult.balanceResult.stageById.tandem.holdSeconds, 0);
   assert.equal(stopResult.primaryValue, 0);
+
+  const armsDownAnalyzer = new FourStageBalanceAnalyzer({ durationSeconds: 60 });
+  armsDownAnalyzer.startSession('protocol-arms-down', 1000);
+  timestampMs = addStageFrames(armsDownAnalyzer, 'side_by_side', 1000, 11000, 250, { armsDown: true });
+  const armsDownResult = armsDownAnalyzer.finishSession(timestampMs);
+  assert.equal(armsDownResult.balanceResult.stageById.side_by_side.status, 'completed');
+  assert.notEqual(armsDownResult.balanceResult.officialProtocol.failureReason, 'support_used');
+
+  const noisyDepthAnalyzer = new FourStageBalanceAnalyzer({ durationSeconds: 60 });
+  noisyDepthAnalyzer.startSession('protocol-noisy-depth', 1000);
+  timestampMs = addStageFrames(noisyDepthAnalyzer, 'side_by_side', 1000, 11000, 250, { noisyFootDepth: true });
+  const noisyDepthResult = noisyDepthAnalyzer.finishSession(timestampMs);
+  assert.equal(noisyDepthResult.balanceResult.stageById.side_by_side.status, 'completed');
+  assert.notEqual(noisyDepthResult.balanceResult.officialProtocol.failureReason, 'feet_moved');
 
   const supportAnalyzer = new FourStageBalanceAnalyzer({ durationSeconds: 60 });
   supportAnalyzer.startSession('protocol-support', 1000);
