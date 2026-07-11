@@ -1,0 +1,202 @@
+{
+  "createdAt": "2026-07-11T05:11:10.381Z",
+  "base": "http://127.0.0.1:5177",
+  "results": [
+    {
+      "name": "progress-none",
+      "route": "/display/progress?scenario=none",
+      "path": "/display/progress?scenario=none",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1234,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "progress-one",
+      "route": "/display/progress?scenario=one",
+      "path": "/display/progress?scenario=one",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1329,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "progress-five",
+      "route": "/display/progress?scenario=five",
+      "path": "/display/progress?scenario=five",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1329,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "progress-invalid",
+      "route": "/display/progress?scenario=invalid",
+      "path": "/display/progress?scenario=invalid",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1493,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "progress-missing-weekly",
+      "route": "/display/progress?scenario=five&weekly=missing",
+      "path": "/display/progress?scenario=five&weekly=missing",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1300,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "progress-safety",
+      "route": "/display/progress?scenario=safety&safety=1",
+      "path": "/display/progress?scenario=safety&safety=1",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1329,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "reports-disabled",
+      "route": "/display/reports?scenario=five&sharing=disabled",
+      "path": "/display/reports?scenario=five&sharing=disabled",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1361,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "reports-enabled",
+      "route": "/display/reports?scenario=five&sharing=enabled",
+      "path": "/display/reports?scenario=five&sharing=enabled",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1287,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "professional-report",
+      "route": "/display/reports?view=professional&scenario=five",
+      "path": "/display/reports?view=professional&scenario=five",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1401,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "settings",
+      "route": "/display/settings",
+      "path": "/display/settings",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1746,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "settings-delete",
+      "route": "/display/settings?confirm=delete",
+      "path": "/display/settings?confirm=delete",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1746,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "settings-large-text",
+      "route": "/display/settings?text=Extra%20Large",
+      "path": "/display/settings?text=Extra%20Large",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1753,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "settings-high-contrast",
+      "route": "/display/settings?contrast=1",
+      "path": "/display/settings?contrast=1",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1746,
+        "clientHeight": 720
+      },
+      "passed": true
+    },
+    {
+      "name": "settings-reduced-motion",
+      "route": "/display/settings?motion=reduced",
+      "path": "/display/settings?motion=reduced",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "scrollHeight": 1746,
+        "clientHeight": 720
+      },
+      "passed": true
+    }
+  ]
+}

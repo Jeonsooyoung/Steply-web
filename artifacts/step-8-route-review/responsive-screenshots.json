@@ -1,0 +1,91 @@
+{
+  "createdAt": "2026-07-11T05:12:18.867Z",
+  "base": "http://127.0.0.1:5177",
+  "records": [
+    {
+      "name": "laptop-progress-five",
+      "width": 1440,
+      "height": 900,
+      "route": "/display/progress?scenario=five",
+      "waitFor": ".step-eight-progress",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/laptop-progress-five.png",
+      "metrics": {
+        "clientHeight": 720,
+        "clientWidth": 1280,
+        "path": "/display/progress?scenario=five",
+        "scrollHeight": 1329,
+        "scrollWidth": 1280,
+        "text": "S\nProgress\nProgress\n\nReview assessment and exercise changes over time.\n\nOK\nProgress ready\nLast 4 Weeks\nHome\nSession\nResults\nExercises\nProgress\nReports\nSettings\nLast 4 Weeks\nLast 3 Months\nAll Time\nCurrent Support Level\nModerate Support Needs\n\nRegular strength and balance practice may be helpful.\n\nExercise Completion This Week\n2 of 3\n\nWeekly target: 3 sessions\n\nNext Reassessment\nJuly 25\n\nBased on the current care plan\n\nRecent Safety Events\n0\n\nNo recent safety events recorded\n\nValid repetitions\n\nChair Stand Progress\nCDC reference: 10 stands\n7\nJun 26\n8\nJun 29\n9\nJul 2\n10\nJul 5\n11\nJul 8\nCDC reference: 10 stands\n\nYour Chair Stand result increased by 4 repetitions.\n\nHold time by position\n\nBalance Progress\n10-second reference line\nFeet Side by Side\n10 seconds\nSemi-Tandem\n10 seconds\nTandem Stand\n9.2 seconds\nOne-Leg Stand\n5.2 seconds\n\nYour Tandem Stand time increased by 3.6 seconds.\n\nCompleted sessions\n\nWeekly Exercise Completion\nThree-session weekly target\n1 of 3\nWeek 1\n2 of 3\nWeek 2\n3 of 3\nWeek 3\n2 of 3\nThis Week"
+      },
+      "passed": true
+    },
+    {
+      "name": "tv-reports-weekly",
+      "width": 1920,
+      "height": 1080,
+      "route": "/display/reports?scenario=five&sharing=disabled",
+      "waitFor": ".step-eight-report",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/tv-reports-weekly.png",
+      "metrics": {
+        "clientHeight": 720,
+        "clientWidth": 1280,
+        "path": "/display/reports?scenario=five&sharing=disabled",
+        "scrollHeight": 1361,
+        "scrollWidth": 1280,
+        "text": "S\nReports\nWeekly Report\n\nReview weekly progress before sharing or exporting.\n\nOK\nReport ready\nModerate Support Needs\nHome\nSession\nResults\nExercises\nProgress\nReports\nSettings\nSupport Level\nModerate Support Needs\n\nRegular strength and balance practice may be helpful.\n\nFunctional Areas\n\nSide-to-Side Stability: Your movement showed a balance pattern that may benefit from supported practice.\n\nLeg Endurance: Your chair stand result may benefit from regular strength practice.\n\nRecent Assessment Results\n\n11 valid chair stands recorded.\n\nYour Tandem Stand time increased by 3.6 seconds.\n\nExercise Completion\n\n2 of 3 completed this week.\n\nSafety Events\n\nNo recent safety events recorded.\n\nReported Falls\n\nNo falls reported this week.\n\nRecommended Next Step\n\nContinue the current Otago Exercise Programme plan.\n\nSteply Actions This Week\nReassessment moved earlier\n\nYour reassessment was moved earlier because your Tandem Stand time decreased across recent sessions.\n\nSession split suggested\n\nA shorter session was suggested to keep exercise practice manageable.\n\nExercise progression held\n\nExercise progression was held because recent safety information needs review.\n\nSharing is off until you allow it in settings.\n\nShare With Caregiver\nExport Report\nView Professional Report\nSharing Settings"
+      },
+      "passed": true
+    },
+    {
+      "name": "tablet-professional-report",
+      "width": 900,
+      "height": 1180,
+      "route": "/display/reports?view=professional&scenario=five",
+      "waitFor": ".step-eight-professional-report",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/tablet-professional-report.png",
+      "metrics": {
+        "clientHeight": 720,
+        "clientWidth": 1280,
+        "path": "/display/reports?view=professional&scenario=five",
+        "scrollHeight": 1401,
+        "scrollWidth": 1280,
+        "text": "S\nReports\nProfessional Report\n\nA denser summary for review by a healthcare professional.\n\nOK\nReport ready\nProfessional view\nHome\nSession\nResults\nExercises\nProgress\nReports\nSettings\n\nProfessional report\n\nProfessional Report\nBack to Weekly Report\nCDC Screening Responses\nFallen in the past year\nNo\nFeels unsteady\nNo\nWorried about falling\nNo\nValid Assessment Results\n\nChair Stand result: 11 valid stands.\n\nTandem Stand: 9.2 seconds.\n\nReference Values\n\nChair Stand CDC reference: 10 or more valid stands.\n\nBalance reference: 10 seconds for each completed position.\n\nFunctional Observations\n\nSide-to-Side Stability: Your movement showed a balance pattern that may benefit from supported practice.\n\nLeg Endurance: Your chair stand result may benefit from regular strength practice.\n\nExercise Prescription\n\nTandem Stand\n\nSit to Stand\n\nAdherence\n\n2 of 3 completed this week.\n\nSafety Events\n\nNo recent safety events recorded.\n\nFall Reports\n\nNo falls reported this week.\n\nAgent Decision Log Summary\n\nYour reassessment was moved earlier because your Tandem Stand time decreased across recent sessions.\n\nA shorter session was suggested to keep exercise practice manageable.\n\nExercise progression was held because recent safety information needs review."
+      },
+      "passed": true
+    },
+    {
+      "name": "phone-settings",
+      "width": 390,
+      "height": 844,
+      "route": "/display/settings?text=Extra%20Large&contrast=1&motion=reduced",
+      "waitFor": ".step-eight-settings",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/phone-settings.png",
+      "metrics": {
+        "clientHeight": 720,
+        "clientWidth": 1280,
+        "path": "/display/settings?text=Extra%20Large&contrast=1&motion=reduced",
+        "scrollHeight": 1753,
+        "scrollWidth": 1280,
+        "text": "S\nSettings\nSettings\n\nAdjust Steply for comfort, connection, privacy, and reminders.\n\nOK\nSettings ready\nChanges stay on this device\nHome\nSession\nResults\nExercises\nProgress\nReports\nSettings\nProfile\nPreferred name\nAge\nSex used for reference values\nCaregiver information\nAccessibility\nText Size\nLarge\nExtra Large\nVoice Speed\nSlow\nNormal\nVoice Volume\nHigh Contrast\nReduce Motion\nCaptions\nCamera and Connection\nReconnect Phone\nTest Camera\nCheck Network\nCamera Instructions\nNotifications\nExercise Reminders\nReassessment Reminders\nCaregiver Notifications\nWeekly Report Notifications\nPrivacy\nView Stored Data\nExport My Data\nDelete My Data\nSharing Permissions\n\nVideo Storage Explanation: Steply does not save raw camera video. Movement measurements and assessment results may be stored on this device."
+      },
+      "passed": true
+    },
+    {
+      "name": "phone-delete-dialog",
+      "width": 390,
+      "height": 844,
+      "route": "/display/settings?confirm=delete",
+      "waitFor": ".step-eight-dialog",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/phone-delete-dialog.png",
+      "metrics": {
+        "clientHeight": 720,
+        "clientWidth": 1280,
+        "path": "/display/settings?confirm=delete",
+        "scrollHeight": 1746,
+        "scrollWidth": 1280,
+        "text": "S\nSettings\nSettings\n\nAdjust Steply for comfort, connection, privacy, and reminders.\n\nOK\nSettings ready\nChanges stay on this device\nHome\nSession\nResults\nExercises\nProgress\nReports\nSettings\nProfile\nPreferred name\nAge\nSex used for reference values\nCaregiver information\nAccessibility\nText Size\nLarge\nExtra Large\nVoice Speed\nSlow\nNormal\nVoice Volume\nHigh Contrast\nReduce Motion\nCaptions\nCamera and Connection\nReconnect Phone\nTest Camera\nCheck Network\nCamera Instructions\nNotifications\nExercise Reminders\nReassessment Reminders\nCaregiver Notifications\nWeekly Report Notifications\nPrivacy\nView Stored Data\nExport My Data\nDelete My Data\nSharing Permissions\n\nVideo Storage Explanation: Steply does not save raw camera video. Movement measurements and assessment results may be stored on this device.\n\nDelete all Steply records from this device?\n\nThis action cannot be undone.\n\nCancel\nDelete Records"
+      },
+      "passed": true
+    }
+  ]
+}

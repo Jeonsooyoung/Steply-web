@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { SteplyCard, TimerCircle } from './SteplyPrimitives';
+import { SteplyButton, SteplyCard, TimerCircle } from './SteplyPrimitives';
 import { PoseOverlay } from './pose/PoseOverlay';
 import { READY_HOLD_SECONDS, evaluateSetupReadiness } from '../pose/poseQuality';
-import { recommendationLabel } from '../pose/recommendationRules';
+import { recommendationLabel } from '../pipeline/ui/assessmentCopy.js';
 import { roundMetric } from '../utils/format';
 import { movementTests } from '../data/movementTests';
 import standingPostureGuide from '../assets/movement-guides/standing-posture-check.png';
@@ -20,6 +20,17 @@ function poseDebugEnabled() {
   }
 }
 
+function voiceGuidanceEnabled() {
+  if (typeof window === 'undefined') return false;
+  const search = new URLSearchParams(window.location.search);
+  if (search.get('voice') === 'off' || search.get('voice') === '0') return false;
+  try {
+    return window.localStorage.getItem('steply.voiceGuidance') !== 'false';
+  } catch (_) {
+    return true;
+  }
+}
+
 const SHOW_DEBUG_TOOLS = poseDebugEnabled();
 
 const selectableMovementTests = movementTests;
@@ -27,7 +38,7 @@ const selectableMovementTests = movementTests;
 const movementGuideContent = {
   four_stage_balance: {
     image: standingPostureGuide,
-    alt: '4-stage balance standing guide from front and side views',
+    alt: '4-Stage Balance Test standing guide from front and side views',
     steps: [
       'Complete each stance for 10 seconds before moving to the next one.',
       'Keep your eyes open and do not move your feet during the timed hold.',
@@ -35,12 +46,12 @@ const movementGuideContent = {
     ],
     tip: 'The test stops when a stage cannot be held for 10 seconds without foot movement or support.',
     setup: {
-      title: 'Front-view setup',
-      body: 'Place your phone about 1.5m away and make sure your full body is visible.',
+      title: 'Slight angle setup',
+      body: 'Turn slightly so the camera can see your foot placement.',
       points: [
-        'Keep your feet and ankles inside the bottom of the frame.',
+        'Make sure both heels and toes are clearly visible.',
+        'Move back until your full body is visible.',
         'Stand near a chair or wall if you need support.',
-        'Use the large screen for simple step-by-step guidance.',
       ],
     },
   },
@@ -73,8 +84,8 @@ const movementGuideContent = {
     ],
     tip: 'Use the floor through both feet and avoid dropping quickly into the chair.',
     setup: {
-      title: 'Side-view setup',
-      body: 'Place the camera to the side so sitting and standing are easy to see.',
+      title: '45-degree chair setup',
+      body: 'Place the camera at a slight side angle so the chair, hips, knees, and feet are visible.',
       points: [
         'Keep the chair, hips, knees, ankles, and feet visible.',
         'Sit comfortably near the front of the chair before starting.',
@@ -146,7 +157,7 @@ function currentBalanceProtocolStage(protocol) {
 }
 
 function balanceProtocolTitle(protocol, stage) {
-  if (!protocol || !stage) return '4-Stage Balance';
+  if (!protocol || !stage) return '4-Stage Balance Test';
   if (protocol.status === 'completed') return 'Test complete';
   if (protocol.status === 'stopped') return 'Stop';
   if (stage.status === 'holding') return 'Ready, begin';
@@ -216,7 +227,7 @@ function setupChecklistItems(testType, checks) {
   if (testType === 'standing_posture' || testType === 'balance_hold' || testType === 'four_stage_balance') {
     return [
       { label: 'One person in view', passed: checks.singlePersonStable },
-      { label: 'Facing the camera', passed: checks.correctDirection },
+      { label: testType === 'four_stage_balance' ? 'Slight angle view ready' : 'Facing the camera', passed: checks.correctDirection },
       { label: 'Full body visible', passed: checks.fullBodyVisible },
       { label: 'Both feet visible', passed: checks.feetVisible ?? checks.lowerBodyVisible },
       { label: 'Good camera distance', passed: checks.properDistance },
@@ -267,8 +278,8 @@ export function AnalysisPanel({
   onSelectTest,
   poseAnalysis,
   missionPreviewActive = false,
-  onPreviewMissionStart,
-  onPreviewResult,
+  onStop,
+  onRetry,
 }) {
   const [frameLoadError, setFrameLoadError] = useState('');
   const [readyHoldSeconds, setReadyHoldSeconds] = useState(0);
@@ -363,6 +374,11 @@ export function AnalysisPanel({
   const brightnessFrameText = brightnessStats && Number.isFinite(brightnessStats.raw)
     ? `${percent(brightnessStats.raw)} -> ${percent(brightnessStats.corrected)}`
     : '-';
+  const debugOverlay = poseAnalysis?.debugOverlay || null;
+  const calibrationProgress = poseAnalysis?.calibrationStatus?.progress || debugOverlay?.calibrationProgress || null;
+  const coordinateOrientation = poseAnalysis?.calibrationProfile?.coordinateOrientation
+    || debugOverlay?.coordinateOrientation
+    || null;
 
   const resultLevel = result?.recommendationLevel
     ? recommendationLabel(result.recommendationLevel)
@@ -415,6 +431,22 @@ export function AnalysisPanel({
   const setupStatus = isSetupImageMode
     ? 'Image check'
     : setupStatusLabel(displaySetupCheck, isMissionRunning, Boolean((displayFrame?.src || missionPreviewActive) && !frameLoadError));
+  const currentGuidedStep = !displayFrame?.src || frameLoadError
+    ? 'Camera setup'
+    : !displaySetupCheck.isReady
+      ? 'Camera setup'
+      : poseAnalysis?.calibrationStatus && !poseAnalysis.calibrationStatus.canStartAssessment
+        ? 'Calibration'
+        : isMissionRunning
+          ? 'Assessment'
+          : 'Ready to start';
+  const poseStatusText = poseAnalysis?.qualityStatus?.state
+    || (displaySetupCheck.isReady ? 'Ready' : 'Not ready');
+  const pauseReasonText = qualityWarning
+    || debugOverlay?.pauseReason
+    || poseAnalysis?.qualityStatus?.reasons?.[0]?.message
+    || poseAnalysis?.qualityStatus?.reasons?.[0]?.code
+    || (state.trackingPaused ? 'Tracking paused. Return to the marked position.' : '-');
   const setupChecklist = setupChecklistItems(selectedTest, displaySetupCheck.checks);
   const setupCountdown = displaySetupCheck.isReady && !isMissionRunning && !isSetupImageMode
     ? Math.max(1, READY_HOLD_SECONDS - Math.floor(readyHoldSeconds))
@@ -614,6 +646,25 @@ export function AnalysisPanel({
     ? balanceStageTarget
     : isSetupCountingDown ? READY_HOLD_SECONDS : durationSeconds;
   const timerDisplayLabel = isBalanceProtocolActive ? 'stage sec' : isSetupCountingDown ? 'setup' : 'sec';
+  const voiceEnabled = voiceGuidanceEnabled();
+  const lastSpokenGuidanceRef = useRef('');
+
+  useEffect(() => {
+    if (!voiceEnabled || typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      return undefined;
+    }
+    const text = `${timerGuidanceTitle}. ${timerGuidanceBody}`;
+    if (!text.trim() || lastSpokenGuidanceRef.current === text) return undefined;
+    lastSpokenGuidanceRef.current = text;
+    const utterance = new window.SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.92;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, [timerGuidanceTitle, timerGuidanceBody, voiceEnabled]);
 
   return (
     <div className="analysis-layout analysis-layout--guided distance-mode distance-mode--analysis">
@@ -621,6 +672,7 @@ export function AnalysisPanel({
         <SteplyCard className="mission-goal-card">
           <div>
             <div className="eyebrow">Goal</div>
+            {missionPreviewActive ? <strong className="demo-data-badge">DEMO DATA — NOT SAVED</strong> : null}
             <h2>{selectedTestTitle}</h2>
           </div>
         </SteplyCard>
@@ -653,7 +705,22 @@ export function AnalysisPanel({
 
         <SteplyCard className="feedback-stack feedback-stack--analysis guided-status-card">
           <div className="eyebrow">Live Status</div>
-          <h3>{isBalanceProtocolActive ? balanceStage?.title || '4-Stage Balance' : 'Large, simple numbers'}</h3>
+          <h3>{isBalanceProtocolActive ? balanceStage?.title || '4-Stage Balance Test' : 'Large, simple numbers'}</h3>
+
+          <div className="guided-status-row">
+            <span>Current step</span>
+            <strong>{currentGuidedStep}</strong>
+          </div>
+
+          <div className="guided-status-row">
+            <span>Camera</span>
+            <strong>{setupStatus}</strong>
+          </div>
+
+          <div className="guided-status-row">
+            <span>Pose tracking</span>
+            <strong>{poseStatusText}</strong>
+          </div>
 
           <div className="guided-status-row">
             <span>{isBalanceProtocolActive ? 'Stage' : 'Time'}</span>
@@ -667,6 +734,11 @@ export function AnalysisPanel({
                 ? `${roundMetric(balanceStageHold, 0)} / ${balanceStageTarget}s`
                 : roundMetric(primaryValue, 0)}
             </strong>
+          </div>
+
+          <div className="guided-status-row">
+            <span>Pause reason</span>
+            <strong>{pauseReasonText}</strong>
           </div>
         </SteplyCard>
       </aside>
@@ -736,7 +808,7 @@ export function AnalysisPanel({
                     : isSetupImageMode
                       ? 'This image is only for checking setup.'
                     : displaySetupCheck.isReady
-                      ? 'The mission can begin when you press Start Mission.'
+                      ? 'The timer starts after your setup is steady.'
                       : movementGuide.setup.body}
                 </p>
               </div>
@@ -794,8 +866,16 @@ export function AnalysisPanel({
           <div>
             <strong>{timerGuidanceTitle}</strong>
             <p>{timerGuidanceBody}</p>
+            <span className="voice-guidance-status">
+              Voice guidance is {voiceEnabled ? 'on' : 'off'}.
+            </span>
           </div>
         </SteplyCard>
+
+        <div className="assessment-action-bar">
+          <SteplyButton variant="secondary" onClick={onRetry}>Measure Again</SteplyButton>
+          <SteplyButton className="screen-stop-button" variant="secondary" onClick={onStop}>Stop</SteplyButton>
+        </div>
 
         {result ? (
           <SteplyCard className="feedback-stack feedback-stack--result-mini">
@@ -859,7 +939,19 @@ export function AnalysisPanel({
               <li>Phase: {phaseLabel(state.phase)}</li>
               <li>Pose confidence: {percent(state.confidence)}</li>
               <li>Tracking quality: {percent(trackingQualityScore)}</li>
+              <li>Structured quality: {poseAnalysis?.qualityStatus?.state || '-'}</li>
               <li>Quality level: {poseAnalysis?.trackingQuality?.level || '-'}</li>
+              <li>Processing FPS: {debugOverlay?.fps || '-'}</li>
+              <li>Processing latency: {milliseconds(debugOverlay?.processingLatencyMs)}</li>
+              <li>Calibration: {poseAnalysis?.calibrationStatus?.status || '-'}</li>
+              <li>Calibration ready: {poseAnalysis?.calibrationStatus?.canStartAssessment ? 'yes' : 'no'}</li>
+              <li>Calibration progress: standing {calibrationProgress?.standingStable ? 'yes' : 'no'}, sitting {calibrationProgress?.sittingStable ? 'yes' : 'no'}, feet {calibrationProgress?.balanceFootStable ? 'yes' : 'no'}</li>
+              <li>Coordinate orientation: {coordinateOrientation?.verticalMotionDirection || '-'}</li>
+              <li>Camera mirrored: {coordinateOrientation ? (coordinateOrientation.cameraMirrored ? 'yes' : 'no') : '-'}</li>
+              <li>Camera view: {debugOverlay?.cameraView || poseAnalysis?.qualityStatus?.camera?.view || '-'}</li>
+              <li>Pause reason: {debugOverlay?.pauseReason || poseAnalysis?.qualityStatus?.reasons?.[0]?.code || '-'}</li>
+              <li>Landmark confidence: overall {percent(debugOverlay?.landmarkConfidence?.overall)}, feet {percent(debugOverlay?.landmarkConfidence?.feet)}</li>
+              <li>Foot placement observable: {debugOverlay?.footPlacementObservable ? 'yes' : 'no'}</li>
               <li>Full body: {displaySetupCheck.fullBodyVisible ? 'yes' : 'no'}</li>
               <li>Feet visible: {displaySetupCheck.feetVisible ? 'yes' : 'no'}</li>
               <li>Camera still: {displaySetupCheck.cameraStill ? 'yes' : 'no'}</li>
@@ -869,9 +961,9 @@ export function AnalysisPanel({
               <li>Pose timing: {frameTimingText}</li>
               <li>Lighting calibration: {brightnessCalibrationText}</li>
               <li>Frame brightness: {brightnessFrameText}</li>
-              <li>Frame #{remoteCameraFrame?.sequence || '-'} · {receivedTime}</li>
+              <li>Frame #{remoteCameraFrame?.sequence || '-'} - {receivedTime}</li>
               <li>Smoothed/raw visible: {poseAnalysis?.smoothingStats?.smoothedVisibleCount ?? '-'} / {poseAnalysis?.smoothingStats?.rawVisibleCount ?? '-'}</li>
-              <li>Interpolated: {poseAnalysis?.smoothingStats?.interpolatedCount ?? '-'} · outliers: {poseAnalysis?.smoothingStats?.rejectedOutlierCount ?? '-'}</li>
+              <li>Interpolated: {poseAnalysis?.smoothingStats?.interpolatedCount ?? '-'} - outliers: {poseAnalysis?.smoothingStats?.rejectedOutlierCount ?? '-'}</li>
               <li>Paused: {state.trackingPaused ? 'yes' : 'no'}</li>
               <li>{state.isArmUseSuspected ? 'Arm support suspected: yes' : 'Arm support suspected: no'}</li>
               <li>Trunk center: {percent(state.trunkLeanScore)}</li>

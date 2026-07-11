@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-07-11T04:54:22.867Z",
+  "totalChecks": 10,
+  "failures": [],
+  "checks": [
+    {
+      "label": "restricted start is disabled",
+      "ok": true,
+      "url": "http://127.0.0.1:5175/display/exercises/plan?scenario=restricted"
+    },
+    {
+      "label": "plan start opens first preview",
+      "ok": true,
+      "url": "http://127.0.0.1:5175/display/exercises/front_knee_strengthening/preview"
+    },
+    {
+      "label": "preview start opens live exercise",
+      "ok": true,
+      "url": "http://127.0.0.1:5175/display/exercises/front_knee_strengthening/live"
+    },
+    {
+      "label": "pause sets paused state",
+      "ok": true,
+      "url": "http://127.0.0.1:5175/display/exercises/front_knee_strengthening/live?scenario=strength&count=2&target=6&paused=1"
+    },
+    {
+      "label": "resume returns to live exercise",
+      "ok": true,
+      "url": "http://127.0.0.1:5175/display/exercises/front_knee_strengthening/live?scenario=strength&count=2&target=6"
+    },
+    {
+      "label": "rest starts next set",
+      "ok": true,
+      "url": "http://127.0.0.1:5175/display/exercises/sit_to_stand/live?scenario=strength&set=2&rest=30&count=0"
+    },
+    {
+      "label": "manual completion opens post-check",
+      "ok": true,
+      "url": "http://127.0.0.1:5175/display/exercises/sideways_walking/complete?status=completed"
+    },
+    {
+      "label": "manual skip opens skipped post-check",
+      "ok": true,
+      "url": "http://127.0.0.1:5175/display/exercises/sideways_walking/complete?status=skipped"
+    },
+    {
+      "label": "manual discomfort opens symptom stop",
+      "ok": true,
+      "url": "http://127.0.0.1:5175/display/exercises/sideways_walking/live?state=symptom&symptom=discomfort"
+    },
+    {
+      "label": "post-exercise symptom stops session",
+      "ok": true,
+      "url": "http://127.0.0.1:5175/display/exercises/front_knee_strengthening/complete?scenario=strength&status=completed"
+    }
+  ]
+}

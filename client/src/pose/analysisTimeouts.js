@@ -1,0 +1,2 @@
+export const ANALYZER_FINAL_TIMEOUT_MS = 1200;
+

@@ -1,0 +1,1142 @@
+[
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "analysis-start",
+    "url": "/display/session/analyzing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "analysis-quality",
+    "url": "/display/session/analyzing?stage=1",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "analysis-reference",
+    "url": "/display/session/analyzing?stage=2",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "analysis-done",
+    "url": "/display/session/analyzing?done=1",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "summary-low-improved",
+    "url": "/display/results/summary?support=low&problem=none&trend=improved&reps=13&reference=10&previousReps=11&previousTandem=8.5",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "summary-strength-only",
+    "url": "/display/results/summary?support=moderate&problem=strength&reps=9&reference=10&previousReps=10&previousTandem=8.2",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "summary-balance-only",
+    "url": "/display/results/summary?support=moderate&problem=balance&reps=11&reference=10&previousReps=11&previousTandem=9.5",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "summary-both-declining",
+    "url": "/display/results/summary?support=moderate&problem=both&trend=declining&reps=8&reference=10&previousReps=11&previousTandem=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "summary-arm-use",
+    "url": "/display/results/summary?support=high&result=arm&reps=0&reference=10&trend=declining",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "summary-invalid",
+    "url": "/display/results/summary?result=invalid&previous=missing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "summary-missing-previous",
+    "url": "/display/results/summary?support=moderate&problem=strength&previous=missing&reps=9&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "summary-professional-restrictions",
+    "url": "/display/results/summary?support=high&result=professional&problem=both&reps=7&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "details-low",
+    "url": "/display/results/details?support=low&problem=none&trend=improved&reps=13&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "details-high",
+    "url": "/display/results/details?support=high&problem=both&trend=declining&reps=7&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "laptop",
+    "width": 1440,
+    "height": 900,
+    "case": "details-invalid",
+    "url": "/display/results/details?result=invalid&previous=missing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "analysis-start",
+    "url": "/display/session/analyzing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "analysis-quality",
+    "url": "/display/session/analyzing?stage=1",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "analysis-reference",
+    "url": "/display/session/analyzing?stage=2",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "analysis-done",
+    "url": "/display/session/analyzing?done=1",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "summary-low-improved",
+    "url": "/display/results/summary?support=low&problem=none&trend=improved&reps=13&reference=10&previousReps=11&previousTandem=8.5",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "summary-strength-only",
+    "url": "/display/results/summary?support=moderate&problem=strength&reps=9&reference=10&previousReps=10&previousTandem=8.2",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "summary-balance-only",
+    "url": "/display/results/summary?support=moderate&problem=balance&reps=11&reference=10&previousReps=11&previousTandem=9.5",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "summary-both-declining",
+    "url": "/display/results/summary?support=moderate&problem=both&trend=declining&reps=8&reference=10&previousReps=11&previousTandem=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "summary-arm-use",
+    "url": "/display/results/summary?support=high&result=arm&reps=0&reference=10&trend=declining",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "summary-invalid",
+    "url": "/display/results/summary?result=invalid&previous=missing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "summary-missing-previous",
+    "url": "/display/results/summary?support=moderate&problem=strength&previous=missing&reps=9&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "summary-professional-restrictions",
+    "url": "/display/results/summary?support=high&result=professional&problem=both&reps=7&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "details-low",
+    "url": "/display/results/details?support=low&problem=none&trend=improved&reps=13&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "details-high",
+    "url": "/display/results/details?support=high&problem=both&trend=declining&reps=7&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tv",
+    "width": 1920,
+    "height": 1080,
+    "case": "details-invalid",
+    "url": "/display/results/details?result=invalid&previous=missing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "analysis-start",
+    "url": "/display/session/analyzing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "analysis-quality",
+    "url": "/display/session/analyzing?stage=1",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "analysis-reference",
+    "url": "/display/session/analyzing?stage=2",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "analysis-done",
+    "url": "/display/session/analyzing?done=1",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "summary-low-improved",
+    "url": "/display/results/summary?support=low&problem=none&trend=improved&reps=13&reference=10&previousReps=11&previousTandem=8.5",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "summary-strength-only",
+    "url": "/display/results/summary?support=moderate&problem=strength&reps=9&reference=10&previousReps=10&previousTandem=8.2",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "summary-balance-only",
+    "url": "/display/results/summary?support=moderate&problem=balance&reps=11&reference=10&previousReps=11&previousTandem=9.5",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "summary-both-declining",
+    "url": "/display/results/summary?support=moderate&problem=both&trend=declining&reps=8&reference=10&previousReps=11&previousTandem=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "summary-arm-use",
+    "url": "/display/results/summary?support=high&result=arm&reps=0&reference=10&trend=declining",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "summary-invalid",
+    "url": "/display/results/summary?result=invalid&previous=missing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "summary-missing-previous",
+    "url": "/display/results/summary?support=moderate&problem=strength&previous=missing&reps=9&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "summary-professional-restrictions",
+    "url": "/display/results/summary?support=high&result=professional&problem=both&reps=7&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "details-low",
+    "url": "/display/results/details?support=low&problem=none&trend=improved&reps=13&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "details-high",
+    "url": "/display/results/details?support=high&problem=both&trend=declining&reps=7&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "tablet",
+    "width": 834,
+    "height": 1112,
+    "case": "details-invalid",
+    "url": "/display/results/details?result=invalid&previous=missing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "analysis-start",
+    "url": "/display/session/analyzing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "analysis-quality",
+    "url": "/display/session/analyzing?stage=1",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "analysis-reference",
+    "url": "/display/session/analyzing?stage=2",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "analysis-done",
+    "url": "/display/session/analyzing?done=1",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "summary-low-improved",
+    "url": "/display/results/summary?support=low&problem=none&trend=improved&reps=13&reference=10&previousReps=11&previousTandem=8.5",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "summary-strength-only",
+    "url": "/display/results/summary?support=moderate&problem=strength&reps=9&reference=10&previousReps=10&previousTandem=8.2",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "summary-balance-only",
+    "url": "/display/results/summary?support=moderate&problem=balance&reps=11&reference=10&previousReps=11&previousTandem=9.5",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "summary-both-declining",
+    "url": "/display/results/summary?support=moderate&problem=both&trend=declining&reps=8&reference=10&previousReps=11&previousTandem=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "summary-arm-use",
+    "url": "/display/results/summary?support=high&result=arm&reps=0&reference=10&trend=declining",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "summary-invalid",
+    "url": "/display/results/summary?result=invalid&previous=missing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "summary-missing-previous",
+    "url": "/display/results/summary?support=moderate&problem=strength&previous=missing&reps=9&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "summary-professional-restrictions",
+    "url": "/display/results/summary?support=high&result=professional&problem=both&reps=7&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": true,
+      "chair": true
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "details-low",
+    "url": "/display/results/details?support=low&problem=none&trend=improved&reps=13&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "details-high",
+    "url": "/display/results/details?support=high&problem=both&trend=declining&reps=7&reference=10",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  },
+  {
+    "viewport": "phone",
+    "width": 390,
+    "height": 844,
+    "case": "details-invalid",
+    "url": "/display/results/details?result=invalid&previous=missing",
+    "missing": [],
+    "forbidden": null,
+    "horizontalOverflow": false,
+    "buttonOverflow": [],
+    "smallTargets": [],
+    "cardOverflow": 0,
+    "stopSessionVisible": true,
+    "charts": {
+      "balance": false,
+      "chair": false
+    },
+    "failures": []
+  }
+]

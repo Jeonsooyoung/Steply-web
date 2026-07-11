@@ -55,7 +55,7 @@ function DashboardView({ participants, onSelect }) {
           <div className="eyebrow">Care Dashboard</div>
           <h2>Senior center balance screening</h2>
           <p>
-            Prioritize participants by recent score change, participation, tandem hold time, repeated weak areas, and referral needs.
+            Prioritize participants by recent score change, participation, tandem hold time, functional findings, and referral needs.
           </p>
         </div>
         <SteplyButton className="care-hero__button">Start Center Session</SteplyButton>
@@ -114,11 +114,12 @@ function DashboardView({ participants, onSelect }) {
 
 function ParticipantDetail({ participant, onBack }) {
   if (!participant) return null;
+  const functionalFindings = participant.functionalFindings || [];
   const failedCriteria = participant.failedCriteria || (
     participant.tandemHoldSeconds < 10
       ? ['Tandem stance under 10 seconds']
       : participant.riskCategory === 'Moderate'
-        ? ['Repeated mild weakness signal']
+        ? ['Repeated movement finding']
         : []
   );
   const professionalReviewSuggested = participant.professionalReviewSuggested
@@ -141,7 +142,7 @@ function ParticipantDetail({ participant, onBack }) {
         <div>
           <div className="eyebrow">Participant Detail</div>
           <h2>{participant.name}</h2>
-          <p>Recent movement checks, weak areas, adherence, and the practical next action for staff.</p>
+          <p>Recent movement checks, functional findings, adherence, and the practical next action for staff.</p>
         </div>
         <StatusPill status={categoryStatus(participant.riskCategory)}>{participant.riskCategory}</StatusPill>
       </SteplyCard>
@@ -169,10 +170,10 @@ function ParticipantDetail({ participant, onBack }) {
         </SteplyCard>
 
         <SteplyCard className="detail-section">
-          <div className="eyebrow">Weak Areas</div>
+          <div className="eyebrow">Functional Findings</div>
           <h3>Patterns to review</h3>
-          <div className="weak-area-chip-list">
-            {participant.weakAreas.map((weakArea) => <span key={weakArea}>{weakArea}</span>)}
+          <div className="finding-chip-list">
+            {functionalFindings.map((finding) => <span key={finding}>{finding}</span>)}
           </div>
           <TrendBars values={participant.trend} />
         </SteplyCard>
@@ -180,7 +181,7 @@ function ParticipantDetail({ participant, onBack }) {
         <SteplyCard className="detail-section">
           <div className="eyebrow">Screening Rules</div>
           <h3>{failedCriteria.length ? 'Failed criteria' : 'No failed cutoff today'}</h3>
-          <div className="weak-area-chip-list">
+          <div className="finding-chip-list">
             {(failedCriteria.length ? failedCriteria : ['Continue trend monitoring']).map((criterion) => (
               <span key={criterion}>{criterion}</span>
             ))}

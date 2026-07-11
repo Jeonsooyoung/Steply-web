@@ -54,8 +54,8 @@ export function ProgressPanel({ historyItems = [], historySource }) {
         />
         <MetricCard
           value={`${balancePoints.length + chairStandPoints.length}`}
-          label="V1 Checks Logged"
-          detail="4-Stage Balance and 30 sec Chair Stand"
+          label="Movement Checks Logged"
+          detail="4-Stage Balance Test and 30-Second Chair Stand Test"
         />
       </div>
 

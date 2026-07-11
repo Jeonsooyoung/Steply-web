@@ -81,8 +81,8 @@ function FamilyReport() {
         </SteplyCard>
 
         <SteplyCard className="report-insight-card">
-          <div className="eyebrow">Weak Area Detected</div>
-          <h3>{weeklyReport.weakArea}</h3>
+          <div className="eyebrow">Functional Finding</div>
+          <h3>{weeklyReport.functionalFinding}</h3>
           <p>
             This is a screening trend from repeated home movement checks. It is not a diagnosis.
           </p>
@@ -117,7 +117,7 @@ function ProfessionalReport() {
 
       <div className="metric-row">
         <MetricCard value="Needs Review" label="Risk Classification" detail="Based on repeated screening signals" status="recheck" />
-        <MetricCard value={weeklyReport.weakArea} label="Weak Area Trend" detail="Repeated side-to-side stability change" accent />
+        <MetricCard value={weeklyReport.functionalFinding} label="Functional Finding Trend" detail="Repeated side-to-side movement pattern" accent />
         <MetricCard value="58%" label="Adherence" detail="Exercise sessions completed this week" />
         <MetricCard
           value={weeklyReport.professionalReviewSuggested ? 'Yes' : 'Monitor'}

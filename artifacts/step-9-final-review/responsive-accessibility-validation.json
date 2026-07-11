@@ -1,0 +1,919 @@
+{
+  "createdAt": "2026-07-11T05:34:59.548Z",
+  "base": "http://127.0.0.1:5176",
+  "responsive": [
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "home",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Good morning | Steply",
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1281,
+        "clientHeight": 900
+      },
+      "activeCriticalVisible": true,
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/1440x900-home.png",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "balance-live",
+      "missing": [],
+      "internalMatch": null,
+      "title": "4-Stage Balance Test | Steply",
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1216,
+        "clientHeight": 900
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "chair-live",
+      "missing": [],
+      "internalMatch": null,
+      "title": "30-Second Chair Stand Test | Steply",
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1298,
+        "clientHeight": 900
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "results-summary",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Movement Check | Steply",
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 2306,
+        "clientHeight": 900
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "exercise-plan",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Exercise Plan | Steply",
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1252,
+        "clientHeight": 900
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "weekly-report",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Weekly Report | Steply",
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1360,
+        "clientHeight": 900
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "settings-large-contrast",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Settings | Steply",
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1767,
+        "clientHeight": 900
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "invalid-assessment",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Session Notice | Steply",
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900,
+        "clientHeight": 900
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": "home",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Good morning | Steply",
+      "overflow": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 1262,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": "balance-live",
+      "missing": [],
+      "internalMatch": null,
+      "title": "4-Stage Balance Test | Steply",
+      "overflow": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 1154,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/1366x768-balance-live.png",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": "chair-live",
+      "missing": [],
+      "internalMatch": null,
+      "title": "30-Second Chair Stand Test | Steply",
+      "overflow": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 1181,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/1366x768-chair-live.png",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": "results-summary",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Movement Check | Steply",
+      "overflow": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 2289,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": "exercise-plan",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Exercise Plan | Steply",
+      "overflow": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 1242,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": "weekly-report",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Weekly Report | Steply",
+      "overflow": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 1377,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": "settings-large-contrast",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Settings | Steply",
+      "overflow": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 1763,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": "invalid-assessment",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Session Notice | Steply",
+      "overflow": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "home",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Good morning | Steply",
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1253,
+        "clientHeight": 1080
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "balance-live",
+      "missing": [],
+      "internalMatch": null,
+      "title": "4-Stage Balance Test | Steply",
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1317,
+        "clientHeight": 1080
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "chair-live",
+      "missing": [],
+      "internalMatch": null,
+      "title": "30-Second Chair Stand Test | Steply",
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1322,
+        "clientHeight": 1080
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "results-summary",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Movement Check | Steply",
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 2302,
+        "clientHeight": 1080
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "exercise-plan",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Exercise Plan | Steply",
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1260,
+        "clientHeight": 1080
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "weekly-report",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Weekly Report | Steply",
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1313,
+        "clientHeight": 1080
+      },
+      "activeCriticalVisible": true,
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/1920x1080-weekly-report.png",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "settings-large-contrast",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Settings | Steply",
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1744,
+        "clientHeight": 1080
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "invalid-assessment",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Session Notice | Steply",
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1080,
+        "clientHeight": 1080
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1024x768",
+        "width": 1024,
+        "height": 768
+      },
+      "route": "home",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Good morning | Steply",
+      "overflow": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "scrollHeight": 2009,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1024x768",
+        "width": 1024,
+        "height": 768
+      },
+      "route": "balance-live",
+      "missing": [],
+      "internalMatch": null,
+      "title": "4-Stage Balance Test | Steply",
+      "overflow": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "scrollHeight": 1879,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1024x768",
+        "width": 1024,
+        "height": 768
+      },
+      "route": "chair-live",
+      "missing": [],
+      "internalMatch": null,
+      "title": "30-Second Chair Stand Test | Steply",
+      "overflow": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "scrollHeight": 2645,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1024x768",
+        "width": 1024,
+        "height": 768
+      },
+      "route": "results-summary",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Movement Check | Steply",
+      "overflow": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "scrollHeight": 3157,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/1024x768-results-summary.png",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1024x768",
+        "width": 1024,
+        "height": 768
+      },
+      "route": "exercise-plan",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Exercise Plan | Steply",
+      "overflow": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "scrollHeight": 2564,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1024x768",
+        "width": 1024,
+        "height": 768
+      },
+      "route": "weekly-report",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Weekly Report | Steply",
+      "overflow": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "scrollHeight": 1814,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1024x768",
+        "width": 1024,
+        "height": 768
+      },
+      "route": "settings-large-contrast",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Settings | Steply",
+      "overflow": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "scrollHeight": 2648,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "1024x768",
+        "width": 1024,
+        "height": 768
+      },
+      "route": "invalid-assessment",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Session Notice | Steply",
+      "overflow": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "scrollHeight": 768,
+        "clientHeight": 768
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": "home",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Good morning | Steply",
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 2783,
+        "clientHeight": 844
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": "balance-live",
+      "missing": [],
+      "internalMatch": null,
+      "title": "4-Stage Balance Test | Steply",
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 2284,
+        "clientHeight": 844
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": "chair-live",
+      "missing": [],
+      "internalMatch": null,
+      "title": "30-Second Chair Stand Test | Steply",
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 3181,
+        "clientHeight": 844
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": "results-summary",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Movement Check | Steply",
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 4667,
+        "clientHeight": 844
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": "exercise-plan",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Exercise Plan | Steply",
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 3928,
+        "clientHeight": 844
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": "weekly-report",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Weekly Report | Steply",
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 2616,
+        "clientHeight": 844
+      },
+      "activeCriticalVisible": true,
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": "settings-large-contrast",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Settings | Steply",
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 2951,
+        "clientHeight": 844
+      },
+      "activeCriticalVisible": true,
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/390x844-settings-large-contrast.png",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": "invalid-assessment",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Session Notice | Steply",
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 1492,
+        "clientHeight": 844
+      },
+      "activeCriticalVisible": true,
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/390x844-invalid-assessment.png",
+      "passed": true
+    }
+  ],
+  "screenshots": [
+    {
+      "viewport": "1440x900",
+      "route": "home",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/1440x900-home.png"
+    },
+    {
+      "viewport": "1366x768",
+      "route": "balance-live",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/1366x768-balance-live.png"
+    },
+    {
+      "viewport": "1366x768",
+      "route": "chair-live",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/1366x768-chair-live.png"
+    },
+    {
+      "viewport": "1920x1080",
+      "route": "weekly-report",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/1920x1080-weekly-report.png"
+    },
+    {
+      "viewport": "1024x768",
+      "route": "results-summary",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/1024x768-results-summary.png"
+    },
+    {
+      "viewport": "390x844",
+      "route": "settings-large-contrast",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/390x844-settings-large-contrast.png"
+    },
+    {
+      "viewport": "390x844",
+      "route": "invalid-assessment",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-9-final-review/390x844-invalid-assessment.png"
+    }
+  ],
+  "accessibility": [
+    {
+      "name": "share-dialog-initial-focus",
+      "passed": true
+    },
+    {
+      "name": "share-dialog-shift-tab-trap",
+      "passed": true
+    },
+    {
+      "name": "share-dialog-tab-trap",
+      "passed": true
+    },
+    {
+      "name": "share-dialog-escape-closes",
+      "passed": true
+    },
+    {
+      "name": "delete-dialog-initial-focus",
+      "passed": true
+    },
+    {
+      "name": "delete-dialog-escape-closes",
+      "passed": true
+    },
+    {
+      "name": "keyboard-focus-visible",
+      "passed": true,
+      "focusInfo": {
+        "tag": "BUTTON",
+        "text": "Split Into Two Short Sessions",
+        "outline": "none",
+        "boxShadow": "rgba(8, 127, 117, 0.22) 0px 0px 0px 4px",
+        "width": 308.5625,
+        "height": 72
+      }
+    },
+    {
+      "name": "timed-assessment-back-guard",
+      "passed": true,
+      "backGuard": {
+        "url": "/display/assessment/balance/live?stage=3&state=holding&remaining=7",
+        "text": "S\n4-Stage Balance Test\nStage 3 of 4\n\nTandem Stand\n\nOK\nPhone Connected\nHolding\n!\nStop Session\nSession progress\n7 of 9\nWaiting for camera view\nStay inside the guide\nPosition guide\nFoot\nFoot\nSafe movement area\nStable support\nCamera quality\ni\nPhone Connected\nChecking\nOK\nFull Body Visible\nReady\nOK\nFeet Visible\nReady\nOK\nLighting\nReady\ni\nKeep looking forward.\nStage 3 of 4\nTandem Stand\n7\nseconds left\nHear Again\nPause\ni\nCurrent instruction\n\nHold steady and look forward.\n\nPosition detection\nHolding\ni\nLive analysis only. Raw camera video is not saved.\nUse Pause, Hear Again, or Stop Session during a timed assessment."
+      }
+    },
+    {
+      "name": "high-support-restriction-blocks-start",
+      "passed": true
+    },
+    {
+      "name": "public-display-memory-cleared",
+      "passed": true,
+      "storageState": {
+        "safety": null,
+        "display": null
+      }
+    }
+  ],
+  "zoomChecks": [
+    {
+      "name": "zoom-125",
+      "passed": true,
+      "overflow": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024
+      }
+    },
+    {
+      "name": "zoom-150",
+      "passed": true,
+      "overflow": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024
+      }
+    }
+  ]
+}

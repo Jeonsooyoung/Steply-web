@@ -11,7 +11,8 @@ async function requestJson(path, options = {}) {
   const data = text ? JSON.parse(text) : {};
 
   if (!response.ok) {
-    throw new Error(data.error || `Request failed: ${response.status}`);
+    const reason = data.reason ? ` (${data.reason})` : '';
+    throw new Error(`${data.error || `Request failed: ${response.status}`}${reason}`);
   }
 
   return data;

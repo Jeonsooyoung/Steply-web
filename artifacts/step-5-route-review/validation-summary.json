@@ -1,0 +1,365 @@
+{
+  "generatedAt": "2026-07-11T04:04:18.896Z",
+  "total": 40,
+  "failures": 0,
+  "results": [
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "instruction-blocked",
+      "path": "/display/assessment/chair/instruction",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "instruction-ready",
+      "path": "/display/assessment/chair/instruction?ready=1",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-ready",
+      "path": "/display/assessment/chair/live?state=ready&ready=1",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-stand-up",
+      "path": "/display/assessment/chair/live?state=stand_up&ready=1&reps=8&remaining=17",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-stand-tall",
+      "path": "/display/assessment/chair/live?state=stand_tall&ready=1&reps=8&remaining=16",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-sit-down",
+      "path": "/display/assessment/chair/live?state=sit_down&ready=1&reps=8&remaining=15",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-incomplete-stand",
+      "path": "/display/assessment/chair/live?state=incomplete_stand&ready=1&reps=8&remaining=14",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-incomplete-sit",
+      "path": "/display/assessment/chair/live?state=incomplete_sit&ready=1&reps=8&remaining=13",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-half-rep",
+      "path": "/display/assessment/chair/live?state=half_rep&ready=1&reps=11&remaining=0",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-camera-body",
+      "path": "/display/assessment/chair/live?state=camera&quality=body&ready=1&reps=6&remaining=18",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-camera-feet",
+      "path": "/display/assessment/chair/live?state=camera&quality=feet&ready=1&reps=6&remaining=18",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-camera-area",
+      "path": "/display/assessment/chair/live?state=camera&quality=area&ready=1&reps=6&remaining=18",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-connection-lost",
+      "path": "/display/assessment/chair/live?state=lost&quality=connection&ready=1&reps=6&remaining=18",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-paused",
+      "path": "/display/assessment/chair/live?state=paused&ready=1&reps=6&remaining=18",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-arm-first",
+      "path": "/display/assessment/chair/live?state=arm_first&ready=1&reps=4&remaining=22",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-arm-second",
+      "path": "/display/assessment/chair/live?state=arm_second&ready=1&reps=4&remaining=0",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-safety-dizzy",
+      "path": "/display/assessment/chair/live?state=safety&symptom=dizziness&ready=1&reps=4&remaining=22",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-safety-chest",
+      "path": "/display/assessment/chair/live?state=safety&symptom=chest&ready=1&reps=4&remaining=22",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-calibration-failed",
+      "path": "/display/assessment/chair/live?state=calibration_failed&calibrated=0&reps=0&remaining=30",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "live-complete",
+      "path": "/display/assessment/chair/live?state=complete&ready=1&reps=11&remaining=0",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "result-normal",
+      "path": "/display/assessment/chair/result?result=complete&reps=11",
+      "title": "Test complete",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "result-half",
+      "path": "/display/assessment/chair/result?result=complete&reps=11&half=1",
+      "title": "Test complete",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "result-arm",
+      "path": "/display/assessment/chair/result?result=arm&reps=0",
+      "title": "Chair Stand Test Ended",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "width": 1366,
+      "height": 768,
+      "name": "result-ended",
+      "path": "/display/assessment/chair/result?result=ended&reps=4",
+      "title": "Chair Stand Test Ended",
+      "errors": []
+    },
+    {
+      "viewport": "tv",
+      "width": 1920,
+      "height": 1080,
+      "name": "instruction-ready",
+      "path": "/display/assessment/chair/instruction?ready=1",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "tv",
+      "width": 1920,
+      "height": 1080,
+      "name": "live-stand-up",
+      "path": "/display/assessment/chair/live?state=stand_up&ready=1&reps=8&remaining=17",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "tv",
+      "width": 1920,
+      "height": 1080,
+      "name": "live-camera-body",
+      "path": "/display/assessment/chair/live?state=camera&quality=body&ready=1&reps=6&remaining=18",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "tv",
+      "width": 1920,
+      "height": 1080,
+      "name": "live-arm-first",
+      "path": "/display/assessment/chair/live?state=arm_first&ready=1&reps=4&remaining=22",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "tv",
+      "width": 1920,
+      "height": 1080,
+      "name": "live-complete",
+      "path": "/display/assessment/chair/live?state=complete&ready=1&reps=11&remaining=0",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "tv",
+      "width": 1920,
+      "height": 1080,
+      "name": "result-normal",
+      "path": "/display/assessment/chair/result?result=complete&reps=11",
+      "title": "Test complete",
+      "errors": []
+    },
+    {
+      "viewport": "tablet",
+      "width": 768,
+      "height": 1024,
+      "name": "instruction-ready",
+      "path": "/display/assessment/chair/instruction?ready=1",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "tablet",
+      "width": 768,
+      "height": 1024,
+      "name": "live-stand-up",
+      "path": "/display/assessment/chair/live?state=stand_up&ready=1&reps=8&remaining=17",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "tablet",
+      "width": 768,
+      "height": 1024,
+      "name": "live-arm-first",
+      "path": "/display/assessment/chair/live?state=arm_first&ready=1&reps=4&remaining=22",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "tablet",
+      "width": 768,
+      "height": 1024,
+      "name": "live-safety-dizzy",
+      "path": "/display/assessment/chair/live?state=safety&symptom=dizziness&ready=1&reps=4&remaining=22",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "tablet",
+      "width": 768,
+      "height": 1024,
+      "name": "result-normal",
+      "path": "/display/assessment/chair/result?result=complete&reps=11",
+      "title": "Test complete",
+      "errors": []
+    },
+    {
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "name": "instruction-blocked",
+      "path": "/display/assessment/chair/instruction",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "name": "live-connection-lost",
+      "path": "/display/assessment/chair/live?state=lost&quality=connection&ready=1&reps=6&remaining=18",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "name": "live-complete",
+      "path": "/display/assessment/chair/live?state=complete&ready=1&reps=11&remaining=0",
+      "title": "30-Second Chair Stand Test",
+      "errors": []
+    },
+    {
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "name": "result-arm",
+      "path": "/display/assessment/chair/result?result=arm&reps=0",
+      "title": "Chair Stand Test Ended",
+      "errors": []
+    },
+    {
+      "viewport": "laptop",
+      "name": "stop-session-click",
+      "path": "/display/session/complete",
+      "title": "Session complete",
+      "errors": []
+    }
+  ]
+}

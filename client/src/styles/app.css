@@ -1,6 +1,7 @@
 @import './tokens.css';
 @import './layout.css';
 @import './primitives.css';
+@import './foundation.css';
 @import './rail.css';
 @import './flow.css';
 @import './screens/start.css';
@@ -11,7 +12,7 @@
 @import './screens/service.css';
 @import './responsive.css';
 
-button:not(.qr-link-modal__backdrop),
+button:not(.qr-link-modal__backdrop):not(.ds-button),
 .steply-button,
 .primary-nav__item,
 .senior-support-link,
@@ -22,8 +23,7 @@ button:not(.qr-link-modal__backdrop),
 .exercise-recommendation-option,
 .ar-game-tab,
 .participant-list button,
-.queue-list button,
-.profile-sidebar__toggle {
+.queue-list button {
   border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--outline)) !important;
   background: color-mix(in srgb, var(--glass-surface-strong) 74%, transparent) !important;
   color: var(--text-primary);
@@ -32,7 +32,7 @@ button:not(.qr-link-modal__backdrop),
   -webkit-backdrop-filter: blur(18px) saturate(1.18);
 }
 
-button:not(.qr-link-modal__backdrop):hover:not(:disabled),
+button:not(.qr-link-modal__backdrop):not(.ds-button):hover:not(:disabled),
 .steply-button:hover:not(:disabled),
 .primary-nav__item:hover,
 .senior-support-link:hover,
@@ -43,8 +43,7 @@ button:not(.qr-link-modal__backdrop):hover:not(:disabled),
 .exercise-recommendation-option:hover:not(:disabled),
 .ar-game-tab:hover,
 .participant-list button:hover,
-.queue-list button:hover,
-.profile-sidebar__toggle:hover {
+.queue-list button:hover {
   border-color: color-mix(in srgb, var(--primary) 48%, var(--outline)) !important;
   background: color-mix(in srgb, var(--primary-container) 34%, var(--glass-surface-strong)) !important;
   box-shadow: 0 16px 36px color-mix(in srgb, var(--primary) 14%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
@@ -67,7 +66,7 @@ button:not(.qr-link-modal__backdrop):hover:not(:disabled),
 }
 
 .steply-button:focus-visible,
-button:not(.qr-link-modal__backdrop):focus-visible {
+button:not(.qr-link-modal__backdrop):not(.ds-button):focus-visible {
   outline: 0;
   border-color: var(--primary) !important;
   box-shadow: var(--focus-ring), 0 12px 28px color-mix(in srgb, var(--primary) 14%, transparent) !important;

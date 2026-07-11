@@ -1,0 +1,44 @@
+{
+  "generatedAt": "2026-07-11T04:53:19.570Z",
+  "baseUrl": "http://127.0.0.1:5175",
+  "totalChecks": 60,
+  "failures": [],
+  "screenshots": [
+    {
+      "viewport": "laptop",
+      "case": "plan-strength",
+      "file": "laptop-plan-strength.png",
+      "path": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-7-route-review/laptop-plan-strength.png"
+    },
+    {
+      "viewport": "laptop",
+      "case": "live-rest",
+      "file": "laptop-live-rest.png",
+      "path": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-7-route-review/laptop-live-rest.png"
+    },
+    {
+      "viewport": "tv",
+      "case": "live-camera-strength",
+      "file": "tv-live-camera-strength.png",
+      "path": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-7-route-review/tv-live-camera-strength.png"
+    },
+    {
+      "viewport": "tablet",
+      "case": "session-complete",
+      "file": "tablet-session-complete.png",
+      "path": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-7-route-review/tablet-session-complete.png"
+    },
+    {
+      "viewport": "phone",
+      "case": "live-manual",
+      "file": "phone-live-manual.png",
+      "path": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-7-route-review/phone-live-manual.png"
+    },
+    {
+      "viewport": "phone",
+      "case": "complete-normal",
+      "file": "phone-complete-normal.png",
+      "path": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-7-route-review/phone-complete-normal.png"
+    }
+  ]
+}

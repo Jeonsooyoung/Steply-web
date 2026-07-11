@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-07-11T04:25:49.595Z",
+  "checks": [
+    {
+      "startPath": "/display/session/analyzing",
+      "buttonName": "View Results",
+      "expected": "disabled",
+      "ok": true
+    },
+    {
+      "startPath": "/display/session/analyzing?done=1",
+      "buttonName": "View Results",
+      "expectedPathPrefix": "/display/results/summary",
+      "current": "/display/results/summary",
+      "ok": true,
+      "snapshotRead": true
+    },
+    {
+      "startPath": "/display/results/summary?support=low&problem=none&reps=13&reference=10",
+      "buttonName": "View My Exercise Plan",
+      "expectedPathPrefix": "/display/exercises/plan",
+      "current": "/display/exercises/plan",
+      "ok": true,
+      "snapshotRead": true
+    },
+    {
+      "startPath": "/display/results/summary?support=moderate&problem=strength&reps=9&reference=10",
+      "buttonName": "View Detailed Results",
+      "expectedPathPrefix": "/display/results/details",
+      "current": "/display/results/details",
+      "ok": true,
+      "snapshotRead": true
+    },
+    {
+      "startPath": "/display/results/summary?support=high&result=professional&problem=both&reps=7&reference=10",
+      "buttonName": "View Professional Guidance",
+      "expectedPathPrefix": "/display/results/details#professional-guidance",
+      "current": "/display/results/details#professional-guidance",
+      "ok": true,
+      "snapshotRead": true
+    },
+    {
+      "startPath": "/display/results/summary?support=high&result=professional&problem=both&reps=7&reference=10",
+      "buttonName": "View Supported Exercises",
+      "expectedPathPrefix": "/display/exercises/plan?mode=supported",
+      "current": "/display/exercises/plan?mode=supported",
+      "ok": true,
+      "snapshotRead": true
+    }
+  ],
+  "failureCount": 0
+}

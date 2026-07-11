@@ -1,0 +1,762 @@
+[
+  {
+    "viewport": "laptop",
+    "case": "plan-strength",
+    "path": "/display/exercises/plan?scenario=strength",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "laptop",
+    "case": "plan-balance",
+    "path": "/display/exercises/plan?scenario=balance",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "laptop",
+    "case": "plan-manual",
+    "path": "/display/exercises/plan?scenario=manual",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "laptop",
+    "case": "plan-restricted",
+    "path": "/display/exercises/plan?scenario=restricted",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "laptop",
+    "case": "preview-strength",
+    "path": "/display/exercises/front_knee_strengthening/preview?scenario=strength",
+    "failures": [],
+    "voiceScripts": [
+      "Front Knee Strengthening. Sit tall or stand with a stable support surface within reach. Straighten your knee slowly, pause, then lower with control."
+    ],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "laptop",
+    "case": "preview-manual",
+    "path": "/display/exercises/sideways_walking/preview?scenario=manual",
+    "failures": [],
+    "voiceScripts": [
+      "Sideways Walking. Stand near a clear wall or stable support surface. Step sideways slowly along a clear path, then return."
+    ],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "laptop",
+    "case": "live-camera-strength",
+    "path": "/display/exercises/front_knee_strengthening/live?scenario=strength&count=3&target=6&set=1&remaining=3",
+    "failures": [],
+    "voiceScripts": [
+      "Straighten your knee slowly.",
+      "Straighten your knee slowly."
+    ],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 5
+  },
+  {
+    "viewport": "laptop",
+    "case": "live-camera-paused",
+    "path": "/display/exercises/front_knee_strengthening/live?scenario=strength&paused=1&count=2&target=6",
+    "failures": [],
+    "voiceScripts": [
+      "Paused. Start again when you feel ready.",
+      "Paused. Start again when you feel ready."
+    ],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 5
+  },
+  {
+    "viewport": "laptop",
+    "case": "live-rest",
+    "path": "/display/exercises/sit_to_stand/live?scenario=strength&state=rest&set=1&rest=30",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "laptop",
+    "case": "live-manual",
+    "path": "/display/exercises/sideways_walking/live?scenario=manual",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "laptop",
+    "case": "live-symptom",
+    "path": "/display/exercises/sideways_walking/live?scenario=manual&state=symptom&symptom=dizziness",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "laptop",
+    "case": "complete-normal",
+    "path": "/display/exercises/tandem_stance/complete?scenario=balance",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "laptop",
+    "case": "complete-skipped",
+    "path": "/display/exercises/sideways_walking/complete?scenario=manual&status=skipped",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "laptop",
+    "case": "session-complete",
+    "path": "/display/session/complete?scenario=both&completed=3&minutes=16&weekly=2",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "laptop",
+    "case": "session-partial",
+    "path": "/display/session/complete?scenario=both&status=partial&completed=1&minutes=7&weekly=1",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 900,
+      "width": 1440
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "tv",
+    "case": "plan-strength",
+    "path": "/display/exercises/plan?scenario=strength",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "tv",
+    "case": "plan-balance",
+    "path": "/display/exercises/plan?scenario=balance",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "tv",
+    "case": "plan-manual",
+    "path": "/display/exercises/plan?scenario=manual",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "tv",
+    "case": "plan-restricted",
+    "path": "/display/exercises/plan?scenario=restricted",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "tv",
+    "case": "preview-strength",
+    "path": "/display/exercises/front_knee_strengthening/preview?scenario=strength",
+    "failures": [],
+    "voiceScripts": [
+      "Front Knee Strengthening. Sit tall or stand with a stable support surface within reach. Straighten your knee slowly, pause, then lower with control."
+    ],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "tv",
+    "case": "preview-manual",
+    "path": "/display/exercises/sideways_walking/preview?scenario=manual",
+    "failures": [],
+    "voiceScripts": [
+      "Sideways Walking. Stand near a clear wall or stable support surface. Step sideways slowly along a clear path, then return."
+    ],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "tv",
+    "case": "live-camera-strength",
+    "path": "/display/exercises/front_knee_strengthening/live?scenario=strength&count=3&target=6&set=1&remaining=3",
+    "failures": [],
+    "voiceScripts": [
+      "Straighten your knee slowly.",
+      "Straighten your knee slowly."
+    ],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 5
+  },
+  {
+    "viewport": "tv",
+    "case": "live-camera-paused",
+    "path": "/display/exercises/front_knee_strengthening/live?scenario=strength&paused=1&count=2&target=6",
+    "failures": [],
+    "voiceScripts": [
+      "Paused. Start again when you feel ready.",
+      "Paused. Start again when you feel ready."
+    ],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 5
+  },
+  {
+    "viewport": "tv",
+    "case": "live-rest",
+    "path": "/display/exercises/sit_to_stand/live?scenario=strength&state=rest&set=1&rest=30",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "tv",
+    "case": "live-manual",
+    "path": "/display/exercises/sideways_walking/live?scenario=manual",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "tv",
+    "case": "live-symptom",
+    "path": "/display/exercises/sideways_walking/live?scenario=manual&state=symptom&symptom=dizziness",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "tv",
+    "case": "complete-normal",
+    "path": "/display/exercises/tandem_stance/complete?scenario=balance",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "tv",
+    "case": "complete-skipped",
+    "path": "/display/exercises/sideways_walking/complete?scenario=manual&status=skipped",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "tv",
+    "case": "session-complete",
+    "path": "/display/session/complete?scenario=both&completed=3&minutes=16&weekly=2",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "tv",
+    "case": "session-partial",
+    "path": "/display/session/complete?scenario=both&status=partial&completed=1&minutes=7&weekly=1",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1080,
+      "width": 1920
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "tablet",
+    "case": "plan-strength",
+    "path": "/display/exercises/plan?scenario=strength",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "tablet",
+    "case": "plan-balance",
+    "path": "/display/exercises/plan?scenario=balance",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "tablet",
+    "case": "plan-manual",
+    "path": "/display/exercises/plan?scenario=manual",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "tablet",
+    "case": "plan-restricted",
+    "path": "/display/exercises/plan?scenario=restricted",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "tablet",
+    "case": "preview-strength",
+    "path": "/display/exercises/front_knee_strengthening/preview?scenario=strength",
+    "failures": [],
+    "voiceScripts": [
+      "Front Knee Strengthening. Sit tall or stand with a stable support surface within reach. Straighten your knee slowly, pause, then lower with control."
+    ],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "tablet",
+    "case": "preview-manual",
+    "path": "/display/exercises/sideways_walking/preview?scenario=manual",
+    "failures": [],
+    "voiceScripts": [
+      "Sideways Walking. Stand near a clear wall or stable support surface. Step sideways slowly along a clear path, then return."
+    ],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "tablet",
+    "case": "live-camera-strength",
+    "path": "/display/exercises/front_knee_strengthening/live?scenario=strength&count=3&target=6&set=1&remaining=3",
+    "failures": [],
+    "voiceScripts": [
+      "Straighten your knee slowly.",
+      "Straighten your knee slowly."
+    ],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 5
+  },
+  {
+    "viewport": "tablet",
+    "case": "live-camera-paused",
+    "path": "/display/exercises/front_knee_strengthening/live?scenario=strength&paused=1&count=2&target=6",
+    "failures": [],
+    "voiceScripts": [
+      "Paused. Start again when you feel ready.",
+      "Paused. Start again when you feel ready."
+    ],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 5
+  },
+  {
+    "viewport": "tablet",
+    "case": "live-rest",
+    "path": "/display/exercises/sit_to_stand/live?scenario=strength&state=rest&set=1&rest=30",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "tablet",
+    "case": "live-manual",
+    "path": "/display/exercises/sideways_walking/live?scenario=manual",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "tablet",
+    "case": "live-symptom",
+    "path": "/display/exercises/sideways_walking/live?scenario=manual&state=symptom&symptom=dizziness",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "tablet",
+    "case": "complete-normal",
+    "path": "/display/exercises/tandem_stance/complete?scenario=balance",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "tablet",
+    "case": "complete-skipped",
+    "path": "/display/exercises/sideways_walking/complete?scenario=manual&status=skipped",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "tablet",
+    "case": "session-complete",
+    "path": "/display/session/complete?scenario=both&completed=3&minutes=16&weekly=2",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "tablet",
+    "case": "session-partial",
+    "path": "/display/session/complete?scenario=both&status=partial&completed=1&minutes=7&weekly=1",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 1180,
+      "width": 900
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "phone",
+    "case": "plan-strength",
+    "path": "/display/exercises/plan?scenario=strength",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "phone",
+    "case": "plan-balance",
+    "path": "/display/exercises/plan?scenario=balance",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "phone",
+    "case": "plan-manual",
+    "path": "/display/exercises/plan?scenario=manual",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "phone",
+    "case": "plan-restricted",
+    "path": "/display/exercises/plan?scenario=restricted",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "phone",
+    "case": "preview-strength",
+    "path": "/display/exercises/front_knee_strengthening/preview?scenario=strength",
+    "failures": [],
+    "voiceScripts": [
+      "Front Knee Strengthening. Sit tall or stand with a stable support surface within reach. Straighten your knee slowly, pause, then lower with control."
+    ],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "phone",
+    "case": "preview-manual",
+    "path": "/display/exercises/sideways_walking/preview?scenario=manual",
+    "failures": [],
+    "voiceScripts": [
+      "Sideways Walking. Stand near a clear wall or stable support surface. Step sideways slowly along a clear path, then return."
+    ],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "phone",
+    "case": "live-camera-strength",
+    "path": "/display/exercises/front_knee_strengthening/live?scenario=strength&count=3&target=6&set=1&remaining=3",
+    "failures": [],
+    "voiceScripts": [
+      "Straighten your knee slowly.",
+      "Straighten your knee slowly."
+    ],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 5
+  },
+  {
+    "viewport": "phone",
+    "case": "live-camera-paused",
+    "path": "/display/exercises/front_knee_strengthening/live?scenario=strength&paused=1&count=2&target=6",
+    "failures": [],
+    "voiceScripts": [
+      "Paused. Start again when you feel ready.",
+      "Paused. Start again when you feel ready."
+    ],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 5
+  },
+  {
+    "viewport": "phone",
+    "case": "live-rest",
+    "path": "/display/exercises/sit_to_stand/live?scenario=strength&state=rest&set=1&rest=30",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "phone",
+    "case": "live-manual",
+    "path": "/display/exercises/sideways_walking/live?scenario=manual",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 4
+  },
+  {
+    "viewport": "phone",
+    "case": "live-symptom",
+    "path": "/display/exercises/sideways_walking/live?scenario=manual&state=symptom&symptom=dizziness",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "phone",
+    "case": "complete-normal",
+    "path": "/display/exercises/tandem_stance/complete?scenario=balance",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "phone",
+    "case": "complete-skipped",
+    "path": "/display/exercises/sideways_walking/complete?scenario=manual&status=skipped",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 6
+  },
+  {
+    "viewport": "phone",
+    "case": "session-complete",
+    "path": "/display/session/complete?scenario=both&completed=3&minutes=16&weekly=2",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 3
+  },
+  {
+    "viewport": "phone",
+    "case": "session-partial",
+    "path": "/display/session/complete?scenario=both&status=partial&completed=1&minutes=7&weekly=1",
+    "failures": [],
+    "voiceScripts": [],
+    "viewportSize": {
+      "height": 844,
+      "width": 390
+    },
+    "buttonCount": 3
+  }
+]

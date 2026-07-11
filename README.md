@@ -21,27 +21,28 @@ The visual direction is:
 - PC-side MediaPipe PoseLandmarker execution
 - 33-point skeleton overlay on the received mobile camera frame
 - PC-side Chair Stand analysis rules ported from the Android/Kotlin analyzer
+- Structured analysis pipeline modules under `client/src/pipeline`
+- Deterministic Otago exercise recommendation engine
+- Deterministic Care Orchestration Agent
+- Internal engineering validation replay runner for anonymized landmark JSON
 - Background analysis in a Web Worker so the UI stays responsive
 - Realtime count / phase / full-body visibility / warning display
 - Final result broadcast back to the phone for local history storage
 - Local-first, no-auth flow
 
-## Analysis Rules Ported to PC
+## Analysis Pipeline
 
-The old mobile MediaPipe analyzer responsibilities were moved into `client/src/pose`.
+The camera and MediaPipe worker boundary still lives in `client/src/pose`, with legacy analyzers retained for rollback and regression checks. New testable analysis modules live under `client/src/pipeline`.
 
-Included rules:
+Current structured modules:
 
-- Full-body visibility check using shoulders, hips, knees, and ankles
-- Knee-angle based `seated → rising → standing` phase detection
-- Stable standing frame streak count for Chair Stand repetition counting
-- Stable seated frame streak reset for the next repetition
-- Half-stand final credit at the end of a 30-second session
-- Arm-support detection and official score 0 rule
-- Trunk lean score
-- Left/right symmetry score
-- Body-center sway stability score
-- Recommendation level mapping
+- Pose frame normalization, frame processing, quality state, and calibration
+- 30-second Chair Stand state machine using calibrated sitting-to-standing progress
+- 4-Stage Balance Test state machine with camera observability checks
+- STEADI scoring helpers
+- Functional Finding mapper that avoids muscle or disease diagnosis
+- Deterministic Otago exercise recommendation engine
+- Deterministic Care Orchestration Agent with decision trace
 
 ## Project Structure
 
@@ -49,6 +50,17 @@ Included rules:
 Steply-Web/
 ├─ server.js
 ├─ src/                         # Node API, QR session, WebSocket, ephemeral session cache
+├─ scripts/
+│  ├─ run-landmark-replay.mjs    # Replay saved landmark JSON and compare labels/results
+│  ├─ check-internal-validation.mjs
+│  └─ validation/landmarkReplayRunner.mjs
+├─ docs/
+│  ├─ ARCHITECTURE.md
+│  ├─ ASSESSMENT_LOGIC.md
+│  ├─ RECOMMENDATION_RULES.md
+│  ├─ AGENT_BEHAVIOR.md
+│  ├─ VALIDATION_REPORT.md
+│  └─ schemas/
 ├─ public/models/               # fallback model asset for Node static server
 ├─ client/
 │  ├─ index.html
@@ -60,12 +72,21 @@ Steply-Web/
 │     ├─ hooks/
 │     │  ├─ useSteplyDashboard.js
 │     │  └─ useRemotePoseAnalysis.js
+│     ├─ pipeline/
+│     │  ├─ pose/
+│     │  ├─ quality/
+│     │  ├─ calibration/
+│     │  ├─ assessment/
+│     │  ├─ scoring/
+│     │  ├─ findings/
+│     │  ├─ recommendation/
+│     │  ├─ agent/
+│     │  ├─ progress/
+│     │  └─ shared/config/
 │     ├─ pose/
 │     │  ├─ poseLandmarker.worker.js
-│     │  ├─ chairStandAnalyzer.js
 │     │  ├─ poseLandmarks.js
-│     │  ├─ steadiRules.js
-│     │  └─ recommendationRules.js
+│     │  └─ steadiRules.js               # CDC/STEADI reference helpers
 │     ├─ styles/
 │     └─ utils/
 └─ docs/PC_MEDIAPIPE_ANALYSIS_ARCHITECTURE.md
@@ -81,7 +102,7 @@ npm run dev
 
 This starts:
 
-- API server: `http://localhost:3000`
+- API server: `https://localhost:3000`
 - React Vite frontend: `http://localhost:5173`
 
 Open:
@@ -104,10 +125,42 @@ npm start
 Open:
 
 ```text
-http://localhost:3000
+https://localhost:3000
 ```
 
-For mobile QR linking, use the LAN IP printed in the terminal. The PC and mobile device must be on the same Wi-Fi / same network.
+For mobile QR linking, use the HTTPS LAN IP printed in the terminal. The PC and mobile device must be on the same Wi-Fi / same network.
+
+## Structured Pipeline Validation
+
+Run the internal engineering validation suite:
+
+```bash
+npm run validation:check
+```
+
+Replay saved anonymized landmark JSON:
+
+```bash
+node scripts/run-landmark-replay.mjs --input path/to/anonymized-landmarks.json --assert
+```
+
+Generate a replay summary without failing the process:
+
+```bash
+npm run validation:replay
+```
+
+Replay and label formats:
+
+- `docs/schemas/landmark-replay.schema.json`
+- `docs/schemas/chair-stand-label.schema.json`
+- `docs/schemas/balance-label.schema.json`
+
+Current activation status:
+
+- Production uses `STRUCTURED_V2` through `client/src/pipeline/shared/config/pipeline.config.js`.
+- Legacy analyzer, legacy adapter, old weak-area, and old Otago selection files have been removed from the runtime.
+- `docs/VALIDATION_REPORT.md` documents internal engineering validation only; it does not claim clinical validation.
 
 ## MediaPipe Runtime Note
 

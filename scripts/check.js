@@ -18,9 +18,16 @@ for (const file of files) {
   execFileSync('node', ['--check', file], { stdio: 'inherit' });
 }
 
-execFileSync('node', ['scripts/check-chair-stand-count.mjs'], { stdio: 'inherit' });
-execFileSync('node', ['scripts/check-four-stage-balance-protocol.mjs'], { stdio: 'inherit' });
-execFileSync('node', ['scripts/check-care-orchestration-agent.mjs'], { stdio: 'inherit' });
+execFileSync('node', ['scripts/check-care-agent-loop.mjs'], { stdio: 'inherit' });
+execFileSync('node', ['scripts/check-analysis-safety-boundaries.mjs'], { stdio: 'inherit' });
+execFileSync('node', ['scripts/check-structured-pipeline-types.mjs'], { stdio: 'inherit' });
+execFileSync('node', ['scripts/check-pose-input-calibration-quality.mjs'], { stdio: 'inherit' });
+execFileSync('node', ['scripts/check-chair-stand-state-machine.mjs'], { stdio: 'inherit' });
+execFileSync('node', ['scripts/check-balance-test-state-machine.mjs'], { stdio: 'inherit' });
+execFileSync('node', ['scripts/check-functional-findings.mjs'], { stdio: 'inherit' });
+execFileSync('node', ['scripts/check-otago-exercise-engine.mjs'], { stdio: 'inherit' });
+execFileSync('node', ['scripts/check-ui-structured-pipeline.mjs'], { stdio: 'inherit' });
+execFileSync('node', ['scripts/check-internal-validation.mjs'], { stdio: 'inherit' });
 
 function walk(dir) {
   for (const item of fs.readdirSync(dir)) {
@@ -59,9 +66,28 @@ async function checkMobileQrContract() {
   assert.strictEqual(Boolean(connected.error), false);
   const final = analysisService.saveFinalResult({
     sessionId: bundle.session.id,
+    analysisSessionId: 'check-analysis-session',
+    source: 'LIVE_POSE',
+    assessmentType: 'chair_stand',
+    isPersistable: true,
+    isClinicallyScorable: true,
+    status: 'VALID',
+    resultType: 'FINAL_RESULT',
+    analyzerFinalEvent: true,
     userId: profile.id,
     testType: 'chair_stand',
     primaryValue: 10,
+    startedAt: Date.now() - 30_000,
+    completedAt: Date.now(),
+    trackingQualitySummary: {
+      sampleCount: 5,
+      acceptedFrameCount: 5,
+      lowQualityFrameCount: 0,
+      cautionFrameCount: 0,
+      lowQualityRatio: 0,
+      trackingQualityScore: 0.9,
+      longestLowQualityStreak: 0,
+    },
   });
   assert.strictEqual(Boolean(final.error), false);
   assert.strictEqual(historyRepository.readHistory().items.length, 1);

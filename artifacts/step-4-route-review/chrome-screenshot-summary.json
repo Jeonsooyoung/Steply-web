@@ -1,0 +1,261 @@
+[
+  {
+    "fileName": "chrome-laptop-instruction-stage-1.png",
+    "ok": true,
+    "bytes": 143383,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-instruction-stage-2.png",
+    "ok": true,
+    "bytes": 144247,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-instruction-stage-3.png",
+    "ok": true,
+    "bytes": 142659,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-instruction-stage-4.png",
+    "ok": true,
+    "bytes": 141661,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-stage-1-positioning.png",
+    "ok": true,
+    "bytes": 126037,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-stage-2-positioning.png",
+    "ok": true,
+    "bytes": 123367,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-stage-3-positioning.png",
+    "ok": true,
+    "bytes": 125979,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-stage-4-positioning.png",
+    "ok": true,
+    "bytes": 127598,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-detected.png",
+    "ok": true,
+    "bytes": 125987,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-holding.png",
+    "ok": true,
+    "bytes": 121943,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-countdown-three.png",
+    "ok": true,
+    "bytes": 123218,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-camera-feet.png",
+    "ok": true,
+    "bytes": 127042,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-camera-area.png",
+    "ok": true,
+    "bytes": 128524,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-camera-face.png",
+    "ok": true,
+    "bytes": 126384,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-camera-dark.png",
+    "ok": true,
+    "bytes": 126700,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-camera-person.png",
+    "ok": true,
+    "bytes": 128302,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-foot-movement.png",
+    "ok": true,
+    "bytes": 127067,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-support-used.png",
+    "ok": true,
+    "bytes": 126370,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-success.png",
+    "ok": true,
+    "bytes": 126786,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-connection-loss.png",
+    "ok": true,
+    "bytes": 129191,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-live-paused.png",
+    "ok": true,
+    "bytes": 125358,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-result-next-position.png",
+    "ok": true,
+    "bytes": 99585,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-result-ended-stop.png",
+    "ok": true,
+    "bytes": 107453,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-result-support-stop.png",
+    "ok": true,
+    "bytes": 106257,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-laptop-result-complete.png",
+    "ok": true,
+    "bytes": 108091,
+    "width": 1366,
+    "height": 768
+  },
+  {
+    "fileName": "chrome-tv-instruction-tv.png",
+    "ok": true,
+    "bytes": 239123,
+    "width": 1920,
+    "height": 1080
+  },
+  {
+    "fileName": "chrome-tv-live-holding-tv.png",
+    "ok": true,
+    "bytes": 234466,
+    "width": 1920,
+    "height": 1080
+  },
+  {
+    "fileName": "chrome-tv-live-camera-tv.png",
+    "ok": true,
+    "bytes": 244755,
+    "width": 1920,
+    "height": 1080
+  },
+  {
+    "fileName": "chrome-tv-result-complete-tv.png",
+    "ok": true,
+    "bytes": 177657,
+    "width": 1920,
+    "height": 1080
+  },
+  {
+    "fileName": "chrome-tablet-instruction-tablet.png",
+    "ok": true,
+    "bytes": 112443,
+    "width": 768,
+    "height": 1024
+  },
+  {
+    "fileName": "chrome-tablet-live-positioning-tablet.png",
+    "ok": true,
+    "bytes": 102010,
+    "width": 768,
+    "height": 1024
+  },
+  {
+    "fileName": "chrome-tablet-live-support-tablet.png",
+    "ok": true,
+    "bytes": 101762,
+    "width": 768,
+    "height": 1024
+  },
+  {
+    "fileName": "chrome-tablet-result-next-tablet.png",
+    "ok": true,
+    "bytes": 87599,
+    "width": 768,
+    "height": 1024
+  },
+  {
+    "fileName": "chrome-phone-instruction-phone.png",
+    "ok": true,
+    "bytes": 63320,
+    "width": 390,
+    "height": 844
+  },
+  {
+    "fileName": "chrome-phone-live-lost-phone.png",
+    "ok": true,
+    "bytes": 65994,
+    "width": 390,
+    "height": 844
+  },
+  {
+    "fileName": "chrome-phone-live-success-phone.png",
+    "ok": true,
+    "bytes": 66394,
+    "width": 390,
+    "height": 844
+  },
+  {
+    "fileName": "chrome-phone-result-complete-phone.png",
+    "ok": true,
+    "bytes": 59837,
+    "width": 390,
+    "height": 844
+  }
+]

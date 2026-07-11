@@ -56,6 +56,12 @@ export const SteadiBalanceRiskCutoffs = {
   tandemHoldSeconds: 10,
 };
 
+const KOREAN_GENDER_MARKER_CODES = ['c5ec', 'b0a8'];
+
+function koreanGenderMarker(index) {
+  return String.fromCharCode(Number.parseInt(KOREAN_GENDER_MARKER_CODES[index], 16));
+}
+
 function finiteNumber(value) {
   if (value === null || value === undefined || value === '') return null;
   const number = Number(value);
@@ -71,7 +77,7 @@ export function normalizeSteadiGender(gender) {
     || normalized.includes('female')
     || normalized.includes('woman')
     || normalized.includes('women')
-    || normalized.includes('\uC5EC')
+    || normalized.includes(koreanGenderMarker(0))
   ) {
     return 'female';
   }
@@ -81,7 +87,7 @@ export function normalizeSteadiGender(gender) {
     || normalized.includes('male')
     || normalized.includes('man')
     || normalized.includes('men')
-    || normalized.includes('\uB0A8')
+    || normalized.includes(koreanGenderMarker(1))
   ) {
     return 'male';
   }

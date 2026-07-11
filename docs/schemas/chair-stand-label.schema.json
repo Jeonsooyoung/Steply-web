@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/chair-stand-label.schema.json",
+  "title": "Steply Chair Stand Human Label",
+  "type": "object",
+  "required": [
+    "testStartMs",
+    "fullSitTimestampsMs",
+    "fullStandTimestampsMs",
+    "completedRepCount",
+    "confirmedArmUse",
+    "invalidIntervals",
+    "valid"
+  ],
+  "properties": {
+    "testStartMs": {
+      "type": "number"
+    },
+    "fullSitTimestampsMs": {
+      "type": "array",
+      "items": { "type": "number" }
+    },
+    "fullStandTimestampsMs": {
+      "type": "array",
+      "items": { "type": "number" }
+    },
+    "completedRepCount": {
+      "type": "number",
+      "minimum": 0
+    },
+    "incompleteRepetitions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "startMs",
+          "endMs"
+        ],
+        "properties": {
+          "startMs": { "type": "number" },
+          "endMs": { "type": "number" },
+          "maxProgress": { "type": "number" },
+          "reasonCode": { "type": "string" }
+        }
+      }
+    },
+    "confirmedArmUse": {
+      "type": "boolean"
+    },
+    "invalidIntervals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "startMs",
+          "endMs",
+          "reasonCode"
+        ],
+        "properties": {
+          "startMs": { "type": "number" },
+          "endMs": { "type": "number" },
+          "reasonCode": { "type": "string" }
+        }
+      }
+    },
+    "valid": {
+      "type": "boolean"
+    },
+    "reviewerId": {
+      "type": "string"
+    },
+    "reviewedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

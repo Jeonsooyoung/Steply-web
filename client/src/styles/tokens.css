@@ -33,6 +33,33 @@
   --radius-input: 12px;
   --radius-notice: 8px;
   --rail-width: 336px;
+  --ds-background: #F7FAF8;
+  --ds-surface: #FFFFFF;
+  --ds-surface-soft: #EEF7F4;
+  --ds-text: #10243A;
+  --ds-text-muted: #4F6575;
+  --ds-primary: #087F75;
+  --ds-primary-strong: #075F58;
+  --ds-primary-soft: #DDF5F0;
+  --ds-warning: #A76707;
+  --ds-warning-soft: #FFF2D2;
+  --ds-danger: #B3261E;
+  --ds-danger-soft: #FFE1DD;
+  --ds-success: #15845B;
+  --ds-success-soft: #DFF3E9;
+  --ds-border: #C8D8D4;
+  --ds-shadow: 0 16px 40px rgba(19, 48, 62, 0.10);
+  --ds-focus: 0 0 0 4px rgba(8, 127, 117, 0.22);
+  --ds-radius: 8px;
+  --ds-radius-control: 14px;
+  --ds-touch-min: 60px;
+  --ds-primary-height: 72px;
+  --ds-title-size: clamp(2.5rem, 3.6vw, 3rem);
+  --ds-instruction-size: clamp(1.875rem, 3vw, 2.25rem);
+  --ds-card-title-size: clamp(1.5rem, 2vw, 1.75rem);
+  --ds-body-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  --ds-support-size: 1.125rem;
+  --ds-line-height: 1.42;
 
   /* 4.6 distance-view tokens: readable from 1.5-2m on a PC/TV display. */
   --distance-font-kicker: 1.125rem;

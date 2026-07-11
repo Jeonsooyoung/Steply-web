@@ -1,0 +1,413 @@
+{
+  "createdAt": "2026-07-11T05:15:28.963Z",
+  "base": "http://127.0.0.1:5177",
+  "results": [
+    {
+      "viewport": {
+        "name": "laptop",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "progress-five",
+      "path": "/display/progress?scenario=five",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1360,
+        "clientHeight": 900
+      },
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/playwright-laptop-progress-five.png",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "laptop",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "reports-weekly",
+      "path": "/display/reports?scenario=five&sharing=disabled",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1360,
+        "clientHeight": 900
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "laptop",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "professional-report",
+      "path": "/display/reports?view=professional&scenario=five",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1401,
+        "clientHeight": 900
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "laptop",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "settings-accessibility",
+      "path": "/display/settings?text=Extra%20Large&contrast=1&motion=reduced",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1767,
+        "clientHeight": 900
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "laptop",
+        "width": 1440,
+        "height": 900
+      },
+      "route": "settings-delete",
+      "path": "/display/settings?confirm=delete",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 1771,
+        "clientHeight": 900
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "tv",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "progress-five",
+      "path": "/display/progress?scenario=five",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1340,
+        "clientHeight": 1080
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "tv",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "reports-weekly",
+      "path": "/display/reports?scenario=five&sharing=disabled",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1313,
+        "clientHeight": 1080
+      },
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/playwright-tv-reports-weekly.png",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "tv",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "professional-report",
+      "path": "/display/reports?view=professional&scenario=five",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1354,
+        "clientHeight": 1080
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "tv",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "settings-accessibility",
+      "path": "/display/settings?text=Extra%20Large&contrast=1&motion=reduced",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1744,
+        "clientHeight": 1080
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "tv",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "settings-delete",
+      "path": "/display/settings?confirm=delete",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "scrollHeight": 1750,
+        "clientHeight": 1080
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "tablet",
+        "width": 900,
+        "height": 1180
+      },
+      "route": "progress-five",
+      "path": "/display/progress?scenario=five",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 900,
+        "clientWidth": 900,
+        "scrollHeight": 2293,
+        "clientHeight": 1180
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "tablet",
+        "width": 900,
+        "height": 1180
+      },
+      "route": "reports-weekly",
+      "path": "/display/reports?scenario=five&sharing=disabled",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 900,
+        "clientWidth": 900,
+        "scrollHeight": 1931,
+        "clientHeight": 1180
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "tablet",
+        "width": 900,
+        "height": 1180
+      },
+      "route": "professional-report",
+      "path": "/display/reports?view=professional&scenario=five",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 900,
+        "clientWidth": 900,
+        "scrollHeight": 2082,
+        "clientHeight": 1180
+      },
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/playwright-tablet-professional-report.png",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "tablet",
+        "width": 900,
+        "height": 1180
+      },
+      "route": "settings-accessibility",
+      "path": "/display/settings?text=Extra%20Large&contrast=1&motion=reduced",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 900,
+        "clientWidth": 900,
+        "scrollHeight": 2642,
+        "clientHeight": 1180
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "tablet",
+        "width": 900,
+        "height": 1180
+      },
+      "route": "settings-delete",
+      "path": "/display/settings?confirm=delete",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 900,
+        "clientWidth": 900,
+        "scrollHeight": 2620,
+        "clientHeight": 1180
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "route": "progress-five",
+      "path": "/display/progress?scenario=five",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 3453,
+        "clientHeight": 844
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "route": "reports-weekly",
+      "path": "/display/reports?scenario=five&sharing=disabled",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 2616,
+        "clientHeight": 844
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "route": "professional-report",
+      "path": "/display/reports?view=professional&scenario=five",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 2744,
+        "clientHeight": 844
+      },
+      "screenshot": null,
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "route": "settings-accessibility",
+      "path": "/display/settings?text=Extra%20Large&contrast=1&motion=reduced",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 2951,
+        "clientHeight": 844
+      },
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/playwright-phone-settings.png",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "route": "settings-delete",
+      "path": "/display/settings?confirm=delete",
+      "missing": [],
+      "internalMatch": null,
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 2929,
+        "clientHeight": 844
+      },
+      "screenshot": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/playwright-phone-delete-dialog.png",
+      "passed": true
+    }
+  ],
+  "screenshots": [
+    {
+      "viewport": "laptop",
+      "route": "progress-five",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/playwright-laptop-progress-five.png"
+    },
+    {
+      "viewport": "tv",
+      "route": "reports-weekly",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/playwright-tv-reports-weekly.png"
+    },
+    {
+      "viewport": "tablet",
+      "route": "professional-report",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/playwright-tablet-professional-report.png"
+    },
+    {
+      "viewport": "phone",
+      "route": "settings-accessibility",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/playwright-phone-settings.png"
+    },
+    {
+      "viewport": "phone",
+      "route": "settings-delete",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-8-route-review/playwright-phone-delete-dialog.png"
+    }
+  ]
+}

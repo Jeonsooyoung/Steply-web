@@ -3,6 +3,7 @@ import {
   TRACKING_QUALITY_ALLOW,
   TRACKING_QUALITY_MIN_RESULT,
   evaluateCameraReadiness,
+  evaluateFrameQuality,
 } from './trackingQuality';
 
 export const READY_HOLD_SECONDS = 3;
@@ -213,6 +214,10 @@ export function evaluateSetupReadiness({
   const readyScore = passedCount / Object.keys(checks).length;
   const isReady = cameraReadiness.isReady && direction.valid && distance.valid && visibility.valid;
   const mainMessage = isReady ? 'Great. Hold still gently for three seconds.' : warnings[0];
+  const qualityDecision = evaluateFrameQuality({
+    readiness: cameraReadiness,
+    source: 'setup-readiness',
+  });
 
   return {
     ...cameraReadiness,
@@ -221,6 +226,7 @@ export function evaluateSetupReadiness({
     mainMessage,
     message: mainMessage,
     warnings,
+    qualityDecision,
     checks,
     sample: {
       ...cameraReadiness.sample,

@@ -20,7 +20,7 @@ export function StartPanel({
           </div>
           <div className="home-hero__actions">
             <SteplyButton onClick={onStartAnalysis}>
-              Start Today’s Balance Mission
+              Start Today&apos;s Guided Check
             </SteplyButton>
           </div>
         </div>
@@ -47,20 +47,20 @@ export function StartPanel({
 
       <div className="home-pipeline">
         <SteplyCard className="home-pipeline-card">
-          <strong>Assessment</strong>
-          <span>Follow one calm balance mission.</span>
+          <strong>Safety Check</strong>
+          <span>Confirm you feel safe before moving.</span>
         </SteplyCard>
         <SteplyCard className="home-pipeline-card">
-          <strong>Weakness Analysis</strong>
-          <span>See one supportive movement insight.</span>
+          <strong>Camera Setup</strong>
+          <span>Place the camera for a clear full-body view.</span>
         </SteplyCard>
         <SteplyCard className="home-pipeline-card">
-          <strong>Exercise Recommendation</strong>
-          <span>Get the next safe exercise.</span>
+          <strong>Calibration</strong>
+          <span>Hold still while we set up the camera.</span>
         </SteplyCard>
         <SteplyCard className="home-pipeline-card">
-          <strong>Recommended Practice</strong>
-          <span>Follow the safe exercise plan.</span>
+          <strong>Result</strong>
+          <span>Review measured findings and the exercise plan.</span>
         </SteplyCard>
         <SteplyCard className="home-pipeline-card">
           <strong>Progress Tracking</strong>

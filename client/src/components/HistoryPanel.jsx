@@ -79,7 +79,7 @@ function ChairStandTrend({ points }) {
   const delta = trendDelta(points, 'repetitions');
   return (
     <TrendCard
-      title="30 sec Chair Stand"
+      title="30-Second Chair Stand Test"
       description="Repeated sit-to-stand counts across the most recent sessions."
       points={points}
       summary={(
@@ -118,7 +118,7 @@ function BalanceTrend({ points }) {
   const swayDelta = trendDelta(points, 'swayIndex', { lowerIsBetter: true });
   return (
     <TrendCard
-      title="4-Stage Balance"
+      title="4-Stage Balance Test"
       description="Tandem hold time and side-to-side sway from repeated balance checks."
       points={points}
       summary={(
@@ -177,8 +177,8 @@ export function HistoryPanel({ historyItems, historySource }) {
     <div className="history-panel distance-mode distance-mode--history">
       <div className="metric-row">
         <MetricCard value={totalPlotted || '-'} label="Sessions Charted" detail="Most recent movement records" />
-        <MetricCard value={latestChairReps ?? '-'} label="Latest Chair Stands" detail="30-second count" accent />
-        <MetricCard value={latestBalanceHold !== null ? `${formatNumber(latestBalanceHold, 1)}s` : '-'} label="Latest Tandem Hold" detail="4-stage balance" />
+        <MetricCard value={latestChairReps ?? '-'} label="Latest Chair Stands" detail="30-Second Chair Stand Test count" accent />
+        <MetricCard value={latestBalanceHold !== null ? `${formatNumber(latestBalanceHold, 1)}s` : '-'} label="Latest Tandem Hold" detail="4-Stage Balance Test" />
       </div>
 
       <SteplyCard className="trend-card" tone="sand">
@@ -192,7 +192,7 @@ export function HistoryPanel({ historyItems, historySource }) {
         {historySource ? (
           <p className="history-source-note">
             Source: {historySource.label || historySource.type}
-            {historySource.persistent ? '' : ' · display only'}
+            {historySource.persistent ? '' : ' - display only'}
           </p>
         ) : null}
       </SteplyCard>

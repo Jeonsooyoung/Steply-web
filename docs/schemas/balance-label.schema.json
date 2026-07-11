@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/balance-label.schema.json",
+  "title": "Steply 4-Stage Balance Human Label",
+  "type": "object",
+  "required": [
+    "targetStage",
+    "actualHoldDurationSeconds",
+    "valid"
+  ],
+  "properties": {
+    "targetStage": {
+      "enum": [
+        "SIDE_BY_SIDE",
+        "SEMI_TANDEM",
+        "TANDEM",
+        "ONE_LEG"
+      ]
+    },
+    "positionAcquiredMs": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "holdStartMs": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "footMovement": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "timestampMs",
+          "side"
+        ],
+        "properties": {
+          "timestampMs": { "type": "number" },
+          "side": {
+            "enum": [
+              "left",
+              "right",
+              "both",
+              "unknown"
+            ]
+          },
+          "reasonCode": { "type": "string" }
+        }
+      }
+    },
+    "supportUse": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "timestampMs"
+        ],
+        "properties": {
+          "timestampMs": { "type": "number" },
+          "side": {
+            "enum": [
+              "left",
+              "right",
+              "both",
+              "unknown"
+            ]
+          },
+          "roiId": { "type": "string" }
+        }
+      }
+    },
+    "holdEndMs": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "actualHoldDurationSeconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "valid": {
+      "type": "boolean"
+    },
+    "ambiguous": {
+      "type": "boolean"
+    },
+    "failureReason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "trackingLossIntervals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "startMs",
+          "endMs"
+        ],
+        "properties": {
+          "startMs": { "type": "number" },
+          "endMs": { "type": "number" },
+          "reasonCode": { "type": "string" }
+        }
+      }
+    },
+    "reviewerId": {
+      "type": "string"
+    },
+    "reviewedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

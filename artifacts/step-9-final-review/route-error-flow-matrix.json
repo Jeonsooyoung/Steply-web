@@ -1,0 +1,618 @@
+{
+  "createdAt": "2026-07-11T05:27:30.981Z",
+  "base": "http://127.0.0.1:5176",
+  "results": [
+    {
+      "name": "Display connection",
+      "route": "/display/connect?state=connected",
+      "url": "/display/connect?state=connected",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Connect Your Phone | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Phone connection",
+      "route": "/camera/connect",
+      "url": "/camera/connect",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Connect to Steply | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Profile selection",
+      "route": "/display/profile",
+      "url": "/display/profile",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Who is using Steply today? | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Home",
+      "route": "/display/home",
+      "url": "/display/home",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Good morning | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Today's session",
+      "route": "/display/session/plan",
+      "url": "/display/session/plan",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Session | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Screening q1",
+      "route": "/display/session/screening",
+      "url": "/display/session/screening",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Health Check | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Screening fall count",
+      "route": "/display/session/screening?q=fall-count&fallen=yes",
+      "url": "/display/session/screening?q=fall-count&fallen=yes",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Health Check | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Screening injury",
+      "route": "/display/session/screening?q=fall-injury&fallen=yes&fallCount=once",
+      "url": "/display/session/screening?q=fall-injury&fallen=yes&fallCount=once",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Health Check | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Screening q2",
+      "route": "/display/session/screening?q=2&fallen=no",
+      "url": "/display/session/screening?q=2&fallen=no",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Health Check | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Screening q3",
+      "route": "/display/session/screening?q=3&fallen=no&unsteady=no",
+      "url": "/display/session/screening?q=3&fallen=no&unsteady=no",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Health Check | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Screening summary",
+      "route": "/display/session/screening?q=summary&fallen=no&unsteady=no&worried=no",
+      "url": "/display/session/screening?q=summary&fallen=no&unsteady=no&worried=no",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Health Check | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Safety check",
+      "route": "/display/session/safety?checked=all",
+      "url": "/display/session/safety?checked=all",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Safety Setup | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Camera setup",
+      "route": "/display/session/camera-setup?quality=ready",
+      "url": "/display/session/camera-setup?quality=ready",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Camera Setup | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Calibration",
+      "route": "/display/session/calibration?result=success",
+      "url": "/display/session/calibration?result=success",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Stand Still for a Moment | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "4-Stage instruction",
+      "route": "/display/assessment/balance/instruction",
+      "url": "/display/assessment/balance/instruction",
+      "missing": [],
+      "internalMatch": null,
+      "title": "4-Stage Balance Test | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "4-Stage live",
+      "route": "/display/assessment/balance/live?stage=3&state=holding&remaining=7",
+      "url": "/display/assessment/balance/live?stage=3&state=holding&remaining=7",
+      "missing": [],
+      "internalMatch": null,
+      "title": "4-Stage Balance Test | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "4-Stage result",
+      "route": "/display/assessment/balance/stage-result?stage=4&result=success&complete=1&time=10",
+      "url": "/display/assessment/balance/stage-result?stage=4&result=success&complete=1&time=10",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Balance Stage Result | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Chair instruction",
+      "route": "/display/assessment/chair/instruction?ready=1&calibrated=1",
+      "url": "/display/assessment/chair/instruction?ready=1&calibrated=1",
+      "missing": [],
+      "internalMatch": null,
+      "title": "30-Second Chair Stand Test | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Chair live",
+      "route": "/display/assessment/chair/live?state=complete&reps=11&remaining=0&ready=1",
+      "url": "/display/assessment/chair/live?state=complete&reps=11&remaining=0&ready=1",
+      "missing": [],
+      "internalMatch": null,
+      "title": "30-Second Chair Stand Test | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Chair result",
+      "route": "/display/assessment/chair/result?reps=11",
+      "url": "/display/assessment/chair/result?reps=11",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Chair Stand Test Result | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Analysis",
+      "route": "/display/session/analyzing?stage=3",
+      "url": "/display/session/analyzing?stage=3",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Reviewing Your Movement | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Results summary",
+      "route": "/display/results/summary",
+      "url": "/display/results/summary",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Movement Check | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Exercise plan",
+      "route": "/display/exercises/plan?scenario=both",
+      "url": "/display/exercises/plan?scenario=both",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Exercise Plan | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Exercise session",
+      "route": "/display/exercises/tandem_stance/live?count=1&target=2",
+      "url": "/display/exercises/tandem_stance/live?count=1&target=2",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Exercise in progress | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Exercise completion",
+      "route": "/display/exercises/tandem_stance/complete?status=completed",
+      "url": "/display/exercises/tandem_stance/complete?status=completed",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Exercise Complete | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Session completion",
+      "route": "/display/session/complete?status=completed",
+      "url": "/display/session/complete?status=completed",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Session Is Complete | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Progress",
+      "route": "/display/progress?scenario=five",
+      "url": "/display/progress?scenario=five",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Progress | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Weekly report",
+      "route": "/display/reports?scenario=five&sharing=disabled",
+      "url": "/display/reports?scenario=five&sharing=disabled",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Weekly Report | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Exercise-only session",
+      "route": "/display/exercises/plan?scenario=manual",
+      "url": "/display/exercises/plan?scenario=manual",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Exercise Plan | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Early reassessment",
+      "route": "/display/home?support=moderate",
+      "url": "/display/home?support=moderate",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Good morning | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Updated exercise plan",
+      "route": "/display/exercises/plan?scenario=supported",
+      "url": "/display/exercises/plan?scenario=supported",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Exercise Plan | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Camera permission denied",
+      "route": "/camera/permission?denied=1",
+      "url": "/camera/permission?denied=1",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Allow camera access | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Phone connection lost",
+      "route": "/display/error/phone-connection-lost",
+      "url": "/display/error/phone-connection-lost",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Session Notice | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Full body not visible",
+      "route": "/display/session/camera-setup?quality=body",
+      "url": "/display/session/camera-setup?quality=body",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Camera Setup | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Feet not visible",
+      "route": "/display/session/camera-setup?quality=feet",
+      "url": "/display/session/camera-setup?quality=feet",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Camera Setup | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Low lighting",
+      "route": "/display/session/camera-setup?quality=lighting",
+      "url": "/display/session/camera-setup?quality=lighting",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Camera Setup | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Incorrect camera angle",
+      "route": "/display/session/camera-setup?quality=angle",
+      "url": "/display/session/camera-setup?quality=angle",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Camera Setup | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Second person detected",
+      "route": "/display/session/camera-setup?quality=person",
+      "url": "/display/session/camera-setup?quality=person",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Camera Setup | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Invalid assessment",
+      "route": "/display/error/invalid-assessment",
+      "url": "/display/error/invalid-assessment",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Session Notice | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Safety stop",
+      "route": "/display/error/safety-stop",
+      "url": "/display/error/safety-stop",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Session Notice | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Professional assessment required",
+      "route": "/display/error/professional-assessment-required",
+      "url": "/display/error/professional-assessment-required",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Session Notice | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Invalid trend exclusion",
+      "route": "/display/progress?scenario=invalid",
+      "url": "/display/progress?scenario=invalid",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Progress | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Restricted exercise plan",
+      "route": "/display/exercises/plan?restricted=1",
+      "url": "/display/exercises/plan?restricted=1",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Today's Exercise Plan | Steply",
+      "titlePass": true,
+      "overflow": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "passed": true
+    },
+    {
+      "name": "Session plan primary navigates to screening",
+      "route": "/display/session/plan",
+      "missing": [],
+      "internalMatch": null,
+      "title": "Health Check | Steply",
+      "titlePass": true,
+      "overflow": {},
+      "passed": true
+    }
+  ]
+}

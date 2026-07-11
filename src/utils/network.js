@@ -2,8 +2,8 @@ const os = require('os');
 const { PORT, CLIENT_PORT } = require('../config/env');
 
 const VIRTUAL_INTERFACE_PATTERN = /virtual|vmware|virtualbox|vbox|hyper-v|vethernet|docker|wsl|loopback|npcap|bluetooth|tailscale|zerotier/i;
-const WIFI_INTERFACE_PATTERN = /wi-?fi|wireless|wlan|무선/i;
-const ETHERNET_INTERFACE_PATTERN = /ethernet|이더넷|lan/i;
+const WIFI_INTERFACE_PATTERN = /wi-?fi|wireless|wlan|\uBB34\uC120/i;
+const ETHERNET_INTERFACE_PATTERN = /ethernet|\uC774\uB354\uB137|lan/i;
 
 // Common host-only / VM / Docker ranges that should not be put in the QR payload.
 // The actual phone must connect to the PC's real Wi-Fi/LAN address, not these adapters.

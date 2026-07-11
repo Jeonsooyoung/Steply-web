@@ -786,7 +786,28 @@
   line-height: 1;
   font-variant-numeric: tabular-nums;
   text-align: right;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.assessment-action-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.assessment-action-bar .steply-button {
+  min-height: 64px;
+  font-size: clamp(20px, 1.7vw, 26px);
+}
+
+.voice-guidance-status {
+  display: inline-block;
+  margin-top: 14px;
+  color: var(--text-secondary);
+  font-size: var(--distance-font-small);
+  font-weight: 800;
+  line-height: 1.3;
 }
 
 /* Timer and metrics */

@@ -10,32 +10,70 @@ import { ProgressPanel } from './components/ProgressPanel';
 import { ContextNav } from './components/ContextNav';
 import { CareDashboard } from './components/CareDashboard';
 import { ReportsPanel } from './components/ReportsPanel';
-import { buildDemoFinalResult, centerParticipants } from './data/serviceModels';
+import { SteplyButton, SteplyCard } from './components/SteplyPrimitives';
+import { centerParticipants } from './data/serviceModels';
 import { buildDemoHistoryItems } from './data/demoHistory';
 import { SteplyV1TestTypes } from './data/movementTests';
+import { FoundationRouteApp } from './routes/RouteScaffold';
+import { isSteplyFoundationPath, matchSteplyRoute } from './routes/steplyRoutes';
+import { canGenerateExerciseRecommendation } from './pose/assessmentResultMetadata';
+import {
+  UserScreenIds,
+  activeStepFromScreen,
+  buildUserSessionFlow,
+  canShowExerciseFromResult,
+  screenFromActiveStep,
+} from './pipeline/ui/sessionFlow.js';
 import './styles/app.css';
 
-function emergencyExerciseResult(dashboard) {
-  const state = dashboard.poseAnalysis?.analysisState || {};
-  const testType = dashboard.selectedTest || 'four_stage_balance';
-  const primaryValue = state.primaryValue ?? state.repetitionCount ?? 0;
-  const primaryLabel = state.primaryLabel || (testType === 'four_stage_balance' ? 'Hold Time' : 'Chair Stands');
-  const recommendationLevel = state.isFullBodyVisible ? 'practice_needed' : 'recheck';
+const LEGACY_SCREEN_ROUTES = {
+  setup: '/display/session/camera-setup',
+  mission: '/display/session/plan',
+  result: '/display/results/summary',
+  exercise: '/display/exercises/plan',
+  progress: '/display/progress',
+  care: '/display/reports',
+  participant: '/display/reports?view=professional',
+  family: '/display/reports',
+  professional: '/display/reports?view=professional',
+};
 
-  return {
-    testType,
-    primaryValue,
-    primaryLabel,
-    repetitionCount: primaryValue,
-    durationSeconds: state.durationSeconds || dashboard.poseAnalysis?.durationSeconds || 30,
-    confidence: state.confidence || 0,
-    trunkLeanScore: state.trunkLeanScore || 0,
-    symmetryScore: state.symmetryScore || 0,
-    stabilityScore: state.stabilityScore || 0,
-    recommendationLevel,
-    summaryMessage: `${primaryLabel} ${primaryValue} measured.`,
-    completedAt: Date.now(),
-  };
+function routeWithParams(path, params) {
+  const [pathname, routeSearch = ''] = path.split('?');
+  const nextParams = new URLSearchParams(routeSearch);
+  if (params.get('demoUi') === '1') nextParams.set('demoUi', '1');
+  if (params.get('demoHistory') === '1' && pathname === '/display/progress') {
+    nextParams.set('demoHistory', '1');
+  }
+  const requestedTest = params.get('test');
+  if (requestedTest && (pathname.includes('assessment') || pathname.includes('camera-setup'))) {
+    nextParams.set('test', requestedTest);
+  }
+  const search = nextParams.toString();
+  return search ? `${pathname}?${search}` : pathname;
+}
+
+function normalizeLegacyEntryLocation() {
+  if (typeof window === 'undefined') return;
+
+  const { pathname, search } = window.location;
+  const normalizedPath = pathname.endsWith('/') && pathname.length > 1 ? pathname.slice(0, -1) : pathname;
+  const params = new URLSearchParams(search);
+  const legacyScreen = params.get('screen');
+
+  let targetPath = null;
+  if (normalizedPath === '/' || normalizedPath === '/index.html') {
+    targetPath = LEGACY_SCREEN_ROUTES[legacyScreen] || '/display/connect';
+  } else if (normalizedPath === '/display') {
+    targetPath = '/display/home';
+  } else if (normalizedPath === '/camera') {
+    targetPath = '/camera/connect';
+  } else if (!isSteplyFoundationPath(normalizedPath)) {
+    targetPath = '/display/home';
+  }
+
+  if (!targetPath) return;
+  window.history.replaceState(window.history.state, '', routeWithParams(targetPath, params));
 }
 
 function screenConfigFromUrl() {
@@ -44,7 +82,7 @@ function screenConfigFromUrl() {
       screen: '',
       demoMode: false,
       context: 'home',
-      activeStep: 'start',
+      activeStep: activeStepFromScreen(UserScreenIds.Start),
       reportMode: 'family',
       participantId: null,
       missionPreview: false,
@@ -61,7 +99,7 @@ function screenConfigFromUrl() {
     screen,
     demoMode,
     context: 'home',
-    activeStep: 'start',
+    activeStep: activeStepFromScreen(UserScreenIds.Start),
     reportMode: 'family',
     participantId: null,
     missionPreview: false,
@@ -71,16 +109,15 @@ function screenConfigFromUrl() {
   };
 
   if (screen === 'setup') {
-    config.activeStep = 'analysis';
+    config.activeStep = activeStepFromScreen(UserScreenIds.CameraSetup);
   } else if (screen === 'mission') {
-    config.activeStep = 'analysis';
-    config.missionPreview = true;
+    config.activeStep = activeStepFromScreen(UserScreenIds.Assessment);
   } else if (screen === 'result') {
-    config.activeStep = 'result';
+    config.activeStep = activeStepFromScreen(UserScreenIds.Result);
   } else if (screen === 'exercise') {
-    config.activeStep = 'exercise';
+    config.activeStep = activeStepFromScreen(UserScreenIds.Exercise);
   } else if (screen === 'progress') {
-    config.activeStep = 'progress';
+    config.activeStep = activeStepFromScreen(UserScreenIds.Progress);
   } else if (screen === 'care') {
     config.context = 'care';
   } else if (screen === 'participant') {
@@ -97,78 +134,22 @@ function screenConfigFromUrl() {
   return config;
 }
 
-function shouldShowExercisePanel(dashboard) {
-  const state = dashboard.poseAnalysis?.analysisState || {};
-  const durationSeconds = state.durationSeconds || dashboard.poseAnalysis?.durationSeconds || 30;
-  const timedOut = durationSeconds > 0 && (state.elapsedSeconds || 0) >= durationSeconds;
+function shouldShowExercisePanel(dashboard, finalResult) {
+  return screenFromActiveStep(dashboard.activeStep) === UserScreenIds.Exercise
+    && canGenerateExerciseRecommendation(finalResult || {})
+    && canShowExerciseFromResult(finalResult);
+}
 
-  return dashboard.activeStep === 'exercise'
-    || dashboard.poseAnalysis?.workerStatus === 'finished'
-    || Boolean(dashboard.poseAnalysis?.analysisResult)
-    || timedOut;
+function isAssessmentFlowScreen(screen) {
+  return [
+    UserScreenIds.CameraSetup,
+    UserScreenIds.Calibration,
+    UserScreenIds.Assessment,
+  ].includes(screen);
 }
 
 function shouldShowAnalysisPanel(dashboard, hasStartedTest) {
-  return hasStartedTest && dashboard.activeStep === 'analysis';
-}
-
-function previewStateForTest(selectedTest, elapsedSeconds) {
-  if (selectedTest === 'chair_stand') {
-    return {
-      durationSeconds: 30,
-      primaryLabel: 'Chair Stands',
-      primaryValue: Math.min(12, Math.max(0, Math.floor((elapsedSeconds - 2) / 2))),
-      phase: elapsedSeconds % 4 < 2 ? 'rising' : 'seated',
-      postureMessage: 'Stand fully, then sit down with control.',
-    };
-  }
-  return {
-    durationSeconds: 40,
-    primaryLabel: 'Hold Time',
-    primaryValue: Math.min(10, elapsedSeconds),
-    phase: 'standing',
-    postureMessage: 'Hold this position gently.',
-  };
-}
-
-function usePreviewPoseAnalysis(basePoseAnalysis, missionPreviewActive, selectedTest) {
-  const [previewElapsed, setPreviewElapsed] = useState(12);
-
-  useEffect(() => {
-    if (!missionPreviewActive) {
-      setPreviewElapsed(12);
-      return undefined;
-    }
-    const intervalId = window.setInterval(() => {
-      setPreviewElapsed((current) => (current >= 27 ? 12 : current + 1));
-    }, 1000);
-    return () => window.clearInterval(intervalId);
-  }, [missionPreviewActive]);
-
-  return useMemo(() => {
-    if (!missionPreviewActive) return basePoseAnalysis;
-    const previewState = previewStateForTest(selectedTest, previewElapsed);
-
-    return {
-      ...basePoseAnalysis,
-      isRunning: true,
-      workerStatus: 'analyzing',
-      durationSeconds: previewState.durationSeconds,
-      analysisState: {
-        ...(basePoseAnalysis?.analysisState || {}),
-        durationSeconds: previewState.durationSeconds,
-        elapsedSeconds: previewElapsed,
-        primaryLabel: previewState.primaryLabel,
-        primaryValue: previewState.primaryValue,
-        confidence: 0.92,
-        isFullBodyVisible: true,
-        warningMessage: '',
-        postureMessage: previewState.postureMessage,
-        stabilityScore: 0.78,
-        phase: previewState.phase,
-      },
-    };
-  }, [basePoseAnalysis, missionPreviewActive, previewElapsed, selectedTest]);
+  return hasStartedTest && isAssessmentFlowScreen(screenFromActiveStep(dashboard.activeStep));
 }
 
 function QrConnectionGate({ dashboard }) {
@@ -232,13 +213,72 @@ function QrConnectionGate({ dashboard }) {
   );
 }
 
+function SafetyCheckPanel({ onContinue, onExit }) {
+  return (
+    <div className="panel-grid panel-grid--start safety-check-screen distance-mode distance-mode--analysis">
+      <SteplyCard className="home-hero safety-check-card">
+        <div className="home-hero__content">
+          <div>
+            <div className="eyebrow">Safety Check</div>
+            <h1>Before you start</h1>
+            <p>Use a stable chair or support nearby. Stop right away if you feel pain, chest discomfort, or strong dizziness.</p>
+          </div>
+          <div className="home-hero__actions">
+            <SteplyButton onClick={onContinue}>I Feel Safe to Start</SteplyButton>
+            <SteplyButton variant="secondary" onClick={onExit}>Exit</SteplyButton>
+          </div>
+        </div>
+      </SteplyCard>
+
+      <div className="home-pipeline safety-check-list">
+        <SteplyCard className="home-pipeline-card">
+          <strong>Support nearby</strong>
+          <span>Keep a stable chair, counter, or wall within reach.</span>
+        </SteplyCard>
+        <SteplyCard className="home-pipeline-card">
+          <strong>Clear space</strong>
+          <span>Move loose rugs, cords, or obstacles away from your feet.</span>
+        </SteplyCard>
+        <SteplyCard className="home-pipeline-card">
+          <strong>Stop anytime</strong>
+          <span>The Stop button stays in the same place during the check.</span>
+        </SteplyCard>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
-  const dashboard = useSteplyDashboard();
+  normalizeLegacyEntryLocation();
   const initialConfigRef = useRef(screenConfigFromUrl());
   const initialConfig = initialConfigRef.current;
+  const dashboard = useSteplyDashboard({ demoMode: initialConfig.demoMode });
+  const foundationRoute = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const matchedRoute = matchSteplyRoute(window.location.pathname);
+    if (matchedRoute) return matchedRoute;
+    if (!isSteplyFoundationPath(window.location.pathname)) return null;
+    const isCameraRoute = window.location.pathname.startsWith('/camera');
+    return {
+      id: isCameraRoute ? 'camera_not_found' : 'display_not_found',
+      namespace: isCameraRoute ? 'camera' : 'display',
+      path: window.location.pathname,
+      title: 'Screen not found',
+      eyebrow: 'Steply',
+      instruction: 'This Steply screen is not available yet.',
+      description: 'Return to the home screen and choose another step.',
+      primaryAction: 'Return home',
+      secondaryAction: 'Go back',
+      icon: '!',
+      status: 'Screen unavailable',
+      cards: ['Route checked', 'No clinical logic changed'],
+      params: {},
+    };
+  }, []);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [hasStartedTest, setHasStartedTest] = useState(
-    initialConfig.activeStep === 'analysis' || initialConfig.missionPreview,
+    screenFromActiveStep(initialConfig.activeStep) === UserScreenIds.SafetyCheck
+      || isAssessmentFlowScreen(screenFromActiveStep(initialConfig.activeStep)),
   );
   const [activeContext, setActiveContext] = useState(initialConfig.context);
   const [reportMode, setReportMode] = useState(initialConfig.reportMode);
@@ -247,10 +287,10 @@ export default function App() {
   const previousSessionIdRef = useRef(dashboard.session?.id);
   const hasRequestedInitialQrRef = useRef(false);
 
-  const displayPoseAnalysis = usePreviewPoseAnalysis(dashboard.poseAnalysis, missionPreviewActive, dashboard.selectedTest);
+  const displayPoseAnalysis = dashboard.poseAnalysis;
   const isMobileLinked = Boolean(dashboard.session?.profile);
   const isMobileConnected = Boolean(isMobileLinked || dashboard.remoteCameraFrame?.src);
-  const shouldRequireQrLink = !initialConfig.demoMode && !isMobileLinked;
+  const shouldAutoCreateConnectQr = foundationRoute?.id === 'display_connect' && !initialConfig.demoMode && !isMobileLinked;
   const demoHistoryItems = useMemo(() => buildDemoHistoryItems(), []);
   const displayHistoryItems = initialConfig.demoMode && dashboard.historyItems.length === 0
     ? demoHistoryItems
@@ -258,13 +298,18 @@ export default function App() {
   const displayHistorySource = initialConfig.demoMode && dashboard.historyItems.length === 0
     ? { type: 'visual_review_fixture', label: 'UI-ready visual review data', persistent: false }
     : dashboard.historySource;
-  const demoFinalResult = useMemo(
-    () => buildDemoFinalResult(initialConfig.selectedTest || dashboard.selectedTest || 'four_stage_balance'),
-    [dashboard.selectedTest, initialConfig.selectedTest],
-  );
-  const displayFinalResult = dashboard.finalResult || dashboard.poseAnalysis?.analysisResult || (
-    initialConfig.demoMode ? demoFinalResult : null
-  );
+  const displayFinalResult = dashboard.finalResult || dashboard.poseAnalysis?.analysisResult || null;
+  const currentScreen = screenFromActiveStep(dashboard.activeStep);
+  const sessionFlow = useMemo(() => buildUserSessionFlow({
+    currentScreen,
+    finalResult: displayFinalResult,
+    selectedTest: dashboard.selectedTest,
+  }), [currentScreen, dashboard.selectedTest, displayFinalResult]);
+
+  useEffect(() => {
+    document.documentElement.lang = 'en-US';
+    document.documentElement.setAttribute('data-steply-locale', 'en-US');
+  }, []);
 
   useEffect(() => {
     dashboard.setActiveStep(initialConfig.activeStep);
@@ -277,11 +322,11 @@ export default function App() {
   }, [dashboard.activeStep, activeContext, reportMode, participantId]);
 
   useEffect(() => {
-    if (!shouldRequireQrLink) return;
+    if (!shouldAutoCreateConnectQr) return;
     if (dashboard.sessionBundle || dashboard.busy || hasRequestedInitialQrRef.current) return;
     hasRequestedInitialQrRef.current = true;
     dashboard.handleCreateSession();
-  }, [dashboard.busy, dashboard.handleCreateSession, dashboard.sessionBundle, shouldRequireQrLink]);
+  }, [dashboard.busy, dashboard.handleCreateSession, dashboard.sessionBundle, shouldAutoCreateConnectQr]);
 
   useEffect(() => {
     if (isMobileLinked) hasRequestedInitialQrRef.current = false;
@@ -302,7 +347,7 @@ export default function App() {
     setActiveContext('home');
     setHasStartedTest(true);
     setMissionPreviewActive(false);
-    dashboard.setActiveStep('analysis');
+    dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.SafetyCheck));
   };
 
   const handleNavigate = (view) => {
@@ -310,7 +355,7 @@ export default function App() {
       setActiveContext('home');
       setMissionPreviewActive(false);
       setHasStartedTest(false);
-      dashboard.setActiveStep('start');
+      dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.Start));
       return;
     }
     if (view === 'mission') {
@@ -321,14 +366,14 @@ export default function App() {
       setActiveContext('home');
       setMissionPreviewActive(false);
       setHasStartedTest(true);
-      dashboard.setActiveStep('exercise');
+      dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.Exercise));
       return;
     }
     if (view === 'progress') {
       setActiveContext('home');
       setMissionPreviewActive(false);
       setHasStartedTest(false);
-      dashboard.setActiveStep('progress');
+      dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.Progress));
       return;
     }
     if (view === 'care') {
@@ -345,7 +390,7 @@ export default function App() {
   const handleContextChange = (context) => {
     setActiveContext(context);
     if (context === 'home') {
-      dashboard.setActiveStep('start');
+      dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.Start));
       setParticipantId(null);
       setMissionPreviewActive(false);
       setHasStartedTest(false);
@@ -361,19 +406,19 @@ export default function App() {
   const isExercisePanelVisible = activeContext === 'home' && shouldShowExercisePanel({
     ...dashboard,
     poseAnalysis: displayPoseAnalysis,
-  });
+  }, displayFinalResult);
   const activeView = activeContext === 'care'
     ? 'care'
     : activeContext === 'reports'
       ? 'reports'
-      : dashboard.activeStep === 'exercise'
+      : currentScreen === UserScreenIds.Exercise
         ? 'exercise'
-        : isExercisePanelVisible || dashboard.activeStep === 'analysis'
+        : isExercisePanelVisible || currentScreen === UserScreenIds.SafetyCheck || isAssessmentFlowScreen(currentScreen)
           ? 'mission'
-          : dashboard.activeStep === 'progress'
+          : currentScreen === UserScreenIds.Progress || currentScreen === UserScreenIds.Completion
             ? 'progress'
             : 'home';
-  const shouldShowJourneyFlow = activeContext !== 'home';
+  const shouldShowJourneyFlow = activeContext !== 'home' || currentScreen !== UserScreenIds.Start;
 
   const pageHeader = activeContext === 'home'
     ? {
@@ -399,7 +444,23 @@ export default function App() {
       poseAnalysis: displayPoseAnalysis,
     };
 
-    if (dashboard.activeStep === 'progress') {
+    if (currentScreen === UserScreenIds.SafetyCheck) {
+      return (
+        <SafetyCheckPanel
+          onContinue={() => {
+            setHasStartedTest(true);
+            dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.CameraSetup));
+          }}
+          onExit={() => {
+            setHasStartedTest(false);
+            dashboard.poseAnalysis?.resetAnalysis?.('safety_exit');
+            dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.Start));
+          }}
+        />
+      );
+    }
+
+    if (currentScreen === UserScreenIds.Progress || currentScreen === UserScreenIds.Completion) {
       return (
         <ProgressPanel
           historyItems={displayHistoryItems}
@@ -408,24 +469,41 @@ export default function App() {
       );
     }
 
-    if (dashboard.activeStep === 'result') {
+    if (currentScreen === UserScreenIds.Result) {
       return (
         <ResultPanel
           finalResult={displayFinalResult}
           liveResult={dashboard.liveResult}
           onGoExercises={() => {
-            dashboard.setActiveStep('exercise');
+            dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.Exercise));
           }}
           onDemoFinal={dashboard.handleSaveFinal}
+          onTryAgain={() => {
+            dashboard.poseAnalysis?.resetAnalysis?.('try_again');
+            setHasStartedTest(true);
+            dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.SafetyCheck));
+          }}
+          onCameraSetup={() => {
+            dashboard.poseAnalysis?.resetAnalysis?.('camera_setup');
+            setHasStartedTest(true);
+            dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.CameraSetup));
+          }}
+          onExitAssessment={() => {
+            dashboard.poseAnalysis?.resetAnalysis?.('exit_assessment');
+            setHasStartedTest(false);
+            setMissionPreviewActive(false);
+            dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.Start));
+          }}
         />
       );
     }
 
-    if (shouldShowExercisePanel(panelDashboard)) {
+    if (shouldShowExercisePanel(panelDashboard, displayFinalResult)) {
       return (
         <ExercisePanel
-          finalResult={displayFinalResult || emergencyExerciseResult(panelDashboard)}
-          onViewProgress={() => dashboard.setActiveStep('progress')}
+          finalResult={displayFinalResult}
+          onViewProgress={() => dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.Completion))}
+          onStop={() => dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.Result))}
         />
       );
     }
@@ -439,11 +517,17 @@ export default function App() {
           onSelectTest={dashboard.handleSelectTest}
           poseAnalysis={displayPoseAnalysis}
           missionPreviewActive={missionPreviewActive}
-          onPreviewMissionStart={initialConfig.demoMode ? () => setMissionPreviewActive(true) : null}
-          onPreviewResult={initialConfig.demoMode ? () => {
+          onStop={() => {
+            dashboard.poseAnalysis?.resetAnalysis?.('stop_button');
+            setHasStartedTest(false);
             setMissionPreviewActive(false);
-            dashboard.setActiveStep('result');
-          } : null}
+            dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.Start));
+          }}
+          onRetry={() => {
+            dashboard.poseAnalysis?.resetAnalysis?.('retry_button');
+            setHasStartedTest(true);
+            dashboard.setActiveStep(activeStepFromScreen(UserScreenIds.CameraSetup));
+          }}
         />
       );
     }
@@ -467,76 +551,9 @@ export default function App() {
     return renderHomePanel();
   };
 
-  if (shouldRequireQrLink) {
-    return <QrConnectionGate dashboard={dashboard} />;
+  if (foundationRoute) {
+    return <FoundationRouteApp route={foundationRoute} dashboard={dashboard} />;
   }
 
-  return (
-    <div className={`steply-shell steply-shell--main service-shell service-shell--${activeContext} service-shell--view-${activeView} ${isExercisePanelVisible ? 'service-shell--panel-exercise' : ''}`}>
-      <main className="dashboard-main service-main">
-        <header className="top-bar service-top-bar">
-          <div>
-            <div className="eyebrow">{pageHeader.eyebrow}</div>
-            <h1>{pageHeader.title}</h1>
-            <p>{pageHeader.description}</p>
-          </div>
-          <div className="top-bar__status" aria-label="service status">
-            <span className={isMobileConnected ? 'status-dot' : 'status-dot status-dot--waiting'} />
-            {isMobileConnected ? 'Phone camera linked' : 'Ready for phone camera'}
-          </div>
-        </header>
-
-        {activeContext !== 'home' ? (
-          <ContextNav
-            activeContext={activeContext}
-            activeView={activeView}
-            onContextChange={handleContextChange}
-            onNavigate={handleNavigate}
-            onOpenCameraLink={() => setIsQrModalOpen(true)}
-            isMobileConnected={isMobileConnected}
-          />
-        ) : null}
-
-        {shouldShowJourneyFlow ? (
-          <JourneyFlow activeStep={dashboard.activeStep} compact={activeContext === 'home'} />
-        ) : null}
-
-        <div className="screen-stage" key={`${activeContext}-${dashboard.activeStep}-${reportMode}-${participantId || 'dashboard'}`}>
-          {renderActiveContext()}
-        </div>
-      </main>
-
-      {isQrModalOpen ? (
-        <div className="qr-link-modal" role="dialog" aria-modal="true" aria-labelledby="qr-link-modal-title">
-          <button
-            type="button"
-            className="qr-link-modal__backdrop"
-            aria-label="Close phone camera link"
-            onClick={() => setIsQrModalOpen(false)}
-          />
-          <div className="qr-link-modal__panel">
-            <div className="qr-link-modal__header">
-              <div>
-                <div className="eyebrow">Phone Camera</div>
-                <h2 id="qr-link-modal-title">Connect the phone camera</h2>
-                <p>Scan the QR code with the mobile app to link the profile and stream the camera to this screen.</p>
-              </div>
-            </div>
-
-            <SessionRail
-              className="session-rail--modal"
-              compact
-              sessionBundle={dashboard.sessionBundle}
-              networkInfo={dashboard.networkInfo}
-              onCreateSession={dashboard.handleCreateSession}
-              onCopyPayload={dashboard.handleCopyPayload}
-              onRefreshSession={dashboard.handleRefreshSession}
-              busy={dashboard.busy}
-              error={dashboard.error || dashboard.poseAnalysis?.error}
-            />
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
+  return <FoundationRouteApp route={matchSteplyRoute('/display/home')} dashboard={dashboard} />;
 }

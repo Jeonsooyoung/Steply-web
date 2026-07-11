@@ -415,7 +415,8 @@
   color: var(--text-primary);
   font-size: clamp(30px, 2.45vw, 44px);
   line-height: 1.1;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .timer-guidance-card p {
@@ -424,7 +425,15 @@
   font-size: clamp(23px, 1.85vw, 34px);
   font-weight: 700;
   line-height: 1.16;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.screen-stop-button {
+  min-width: 132px;
+  min-height: 64px;
+  border-color: color-mix(in srgb, var(--error) 36%, var(--outline));
+  color: var(--error);
 }
 
 .timer-guidance-card .mission-start-button {
@@ -437,11 +446,6 @@
 .service-shell--home:not(.service-shell--view-home) .senior-primary-nav .senior-support-link {
   min-height: 56px;
   font-size: 16px;
-}
-
-.status-dot--waiting {
-  background: var(--warning);
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--warning) 18%, transparent), 0 0 18px color-mix(in srgb, var(--warning) 30%, transparent);
 }
 
 .service-navigation {
@@ -1334,7 +1338,7 @@
 
 .device-ownership-steps,
 .program-adjustment-list,
-.weak-area-chip-list {
+.finding-chip-list {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -1342,7 +1346,7 @@
 
 .device-ownership-steps span,
 .program-adjustment-list span,
-.weak-area-chip-list span {
+.finding-chip-list span {
   padding: 10px 13px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--primary-container) 78%, white);

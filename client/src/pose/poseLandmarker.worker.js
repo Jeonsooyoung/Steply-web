@@ -6,7 +6,40 @@ import { createPoseSmootherForTest } from './poseSmoother';
 import {
   TRACKING_QUALITY_MIN_RESULT,
   evaluateCameraReadiness,
+  evaluateFrameQuality,
 } from './trackingQuality';
+import {
+  AssessmentResultTypes,
+  AssessmentStatuses,
+  ResultSources,
+  assessmentTypeForTestType,
+  withAssessmentMetadata,
+} from './assessmentResultMetadata';
+import { poseFrameFromWorkerDetection } from '../pipeline/pose/poseFrameAdapter.js';
+import { createPoseFrameProcessor } from '../pipeline/pose/frameProcessor.js';
+import {
+  evaluateFrameQuality as evaluateStructuredFrameQuality,
+  legacyQualityDecisionToQualityStatus,
+} from '../pipeline/quality/qualityStatusAdapter.js';
+import { evaluatePoseFrameQuality } from '../pipeline/quality/frameQualityMetrics.js';
+import { createQualityStateMachine } from '../pipeline/quality/qualityStateMachine.js';
+import {
+  bodyProgressFromCalibration,
+  createPersonalCalibrationState,
+  updatePersonalCalibration,
+} from '../pipeline/calibration/personalCalibration.js';
+import {
+  AssessmentEventTypes as StructuredAssessmentEventTypes,
+  QualityStates as StructuredQualityStates,
+  assessmentTypeFromLegacyTestType,
+} from '../pipeline/shared/types/index.js';
+import {
+  validateAssessmentResult,
+  validateFinalAssessmentResponse,
+  validateFrameAnalysisResult,
+} from '../pipeline/shared/validation/runtimeValidation.js';
+import { createAssessmentEvent } from '../pipeline/assessment/events.js';
+import { poseConfig } from '../pipeline/shared/config/pose.config.js';
 import wasmModuleLoaderUrl from '../vendor/mediapipe/wasm/vision_wasm_module_internal.js?url';
 import wasmModuleBinaryUrl from '../vendor/mediapipe/wasm/vision_wasm_module_internal.wasm?url';
 
@@ -65,6 +98,15 @@ let brightnessContext = null;
 let pendingPreviewFrame = null;
 let pendingAnalysisFrame = null;
 let framePumpScheduled = false;
+let seenFrameIds = new Set();
+let frameQueueStats = null;
+let structuredFrameProcessor = createPoseFrameProcessor({
+  config: poseConfig.processing,
+  maxInputFrameAgeMs: MAX_INPUT_FRAME_AGE_MS,
+  minFrameIntervalMs: MIN_FRAME_INTERVAL_MS,
+});
+let structuredQualityStateMachine = createQualityStateMachine();
+let structuredCalibrationState = null;
 
 function normalizeBasePath(path) {
   return String(path || '').replace(/\/$/, '');
@@ -73,10 +115,100 @@ function normalizeBasePath(path) {
 function debug(event, details = {}) {
   postMessage({
     type: 'debug',
+    sessionId: session?.id || null,
     event,
     details,
     at: Date.now(),
   });
+}
+
+function monotonicNowMs() {
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+    return Math.round((performance.timeOrigin || 0) + performance.now());
+  }
+  return Date.now();
+}
+
+function structuredAssessmentType() {
+  return assessmentTypeFromLegacyTestType(selectedTest);
+}
+
+function resetStructuredSessionState({ sessionId = null, startedAt = null } = {}) {
+  structuredFrameProcessor.reset({ sessionId });
+  structuredQualityStateMachine.reset({ startedAt });
+  structuredCalibrationState = createPersonalCalibrationState({
+    sessionId: sessionId || 'preview',
+    assessmentType: structuredAssessmentType(),
+    createdAtMs: startedAt || Date.now(),
+  });
+}
+
+function resetFrameQueueStats() {
+  seenFrameIds = new Set();
+  frameQueueStats = {
+    receivedFrameCount: 0,
+    processedFrameCount: 0,
+    droppedFrameCount: 0,
+    duplicateFrameCount: 0,
+    staleSessionFrameCount: 0,
+    totalProcessingLatencyMs: 0,
+  };
+  structuredFrameProcessor.reset({ sessionId: session?.id || null });
+}
+
+function frameQueueTelemetry() {
+  const processed = frameQueueStats?.processedFrameCount || 0;
+  const structuredQueue = structuredFrameProcessor.snapshot();
+  return {
+    receivedFrameCount: frameQueueStats?.receivedFrameCount || 0,
+    processedFrameCount: processed,
+    droppedFrameCount: frameQueueStats?.droppedFrameCount || 0,
+    duplicateFrameCount: frameQueueStats?.duplicateFrameCount || 0,
+    staleSessionFrameCount: frameQueueStats?.staleSessionFrameCount || 0,
+    averageProcessingLatency: processed
+      ? frameQueueStats.totalProcessingLatencyMs / processed
+      : null,
+    structuredQueue,
+  };
+}
+
+function noteFrameProcessed(detected, analyzedAt = Date.now()) {
+  if (!frameQueueStats) resetFrameQueueStats();
+  frameQueueStats.processedFrameCount += 1;
+  frameQueueStats.totalProcessingLatencyMs += Math.max(0, analyzedAt - (detected?.inputReceivedAt || analyzedAt));
+  structuredFrameProcessor.markProcessed({
+    receivedAtMs: detected?.inputReceivedAt,
+    completedAtMs: analyzedAt,
+  });
+}
+
+function frameIdFromMessage(message = {}) {
+  return String(
+    message.frameId
+      || message.cameraFrameSequence
+      || message.sequence
+      || message.mobileSequence
+      || message.receivedAt
+      || '',
+  );
+}
+
+function isAnalysisFrameMessage(message = {}) {
+  return message.type === 'frame' || message.type === 'PROCESS_FRAME';
+}
+
+function isPreviewFrameMessage(message = {}) {
+  return message.type === 'preview-frame' || message.type === 'PROCESS_PREVIEW_FRAME';
+}
+
+function messageSessionId(message = {}) {
+  return message.sessionId || message.analysisSessionId || null;
+}
+
+function isMessageForActiveSession(message = {}) {
+  if (!session?.active) return true;
+  const incomingSessionId = messageSessionId(message);
+  return Boolean(incomingSessionId && incomingSessionId === session.id);
 }
 
 function defaultWasmPath() {
@@ -267,8 +399,8 @@ function closeLandmarker() {
 }
 
 function nextMediaPipeTimestampMs(candidateTimestampMs) {
-  const candidate = Number.isFinite(candidateTimestampMs) ? candidateTimestampMs : Date.now();
-  latestMediaPipeTimestampMs = Math.max(candidate, latestMediaPipeTimestampMs + 1);
+  const candidate = Number.isFinite(candidateTimestampMs) ? candidateTimestampMs : monotonicNowMs();
+  latestMediaPipeTimestampMs = structuredFrameProcessor.nextMediaPipeTimestamp(candidate);
   return latestMediaPipeTimestampMs;
 }
 
@@ -471,6 +603,7 @@ function setSelectedTest(nextSelectedTest) {
   resetBrightnessSampling();
   resetBrightnessCalibration();
   resetPipelineCadence();
+  resetStructuredSessionState({ sessionId: session?.id || 'preview', startedAt: Date.now() });
 }
 
 function inputReceivedAt(message, fallback = Date.now()) {
@@ -494,13 +627,18 @@ function isStaleDetectedFrame(detected, now = Date.now()) {
 
 function postFrameSkipped({ message, detected, source, reason, now = Date.now() }) {
   const receivedAt = detected?.inputReceivedAt ?? inputReceivedAt(message, now);
+  if (!frameQueueStats) resetFrameQueueStats();
+  frameQueueStats.droppedFrameCount += 1;
   postMessage({
     type: 'frame-skipped',
+    sessionId: messageSessionId(message) || session?.id || null,
+    frameId: frameIdFromMessage(message),
     source,
     reason,
     receivedAt,
     ageMs: frameAgeMs(receivedAt, now),
     maxFrameAgeMs: MAX_INPUT_FRAME_AGE_MS,
+    frameQueue: frameQueueTelemetry(),
     at: now,
   });
 }
@@ -562,21 +700,11 @@ function sessionTrackingQualitySummary() {
 }
 
 function shouldBlockFrame(readiness) {
-  return (
-    !readiness?.fullBodyVisible
-    || !readiness?.feetVisible
-    || !readiness?.singlePersonDetected
-    || !readiness?.brightnessOk
-    || (readiness?.trackingQualityScore ?? 0) < TRACKING_QUALITY_MIN_RESULT
-  );
+  return evaluateFrameQuality({ readiness }).legacy.generalBlocked;
 }
 
 function shouldBlockMovementFrame(readiness) {
-  return (
-    !readiness?.fullBodyVisible
-    || !readiness?.feetVisible
-    || !readiness?.singlePersonDetected
-  );
+  return evaluateFrameQuality({ readiness }).legacy.movementBlocked;
 }
 
 function shouldInvalidateSession(summary) {
@@ -637,6 +765,51 @@ function stateForCameraIssue(timestampMs, readiness) {
     phase: 'camera_check',
     trackingPaused: true,
   };
+}
+
+function calibrationMessage(calibrationStatus = {}) {
+  const reasons = calibrationStatus.progress?.failureReasons || [];
+  const codes = reasons.map((reason) => reason.code);
+  if (codes.includes('FOOT_PLACEMENT_NOT_OBSERVABLE')) {
+    return 'Turn slightly so the camera can see your foot placement.';
+  }
+  if (codes.includes('FOOT_LANDMARK_CONFIDENCE_LOW') || codes.includes('BALANCE_FOOT_BASELINE_NOT_STABLE')) {
+    return 'Make sure both feet are clearly visible.';
+  }
+  if (codes.includes('SITTING_REFERENCE_NOT_STABLE')) {
+    return 'Sit fully on the chair and hold still while we set up the camera.';
+  }
+  if (codes.includes('FOLDED_ARM_REFERENCE_NOT_READY')) {
+    return 'Fold your arms across your chest and hold still.';
+  }
+  return 'Hold still while we set up the camera.';
+}
+
+function stateForCalibrationIssue(timestampMs, structuredPayload = {}) {
+  const current = analyzer.getCurrentState(timestampMs);
+  const message = calibrationMessage(structuredPayload.calibrationStatus);
+  return {
+    ...current,
+    confidence: structuredPayload.poseFrame?.confidence?.overall ?? current.confidence ?? 0,
+    trackingQualityScore: structuredPayload.qualityStatus?.scores?.overall ?? current.trackingQualityScore ?? 0,
+    qualityStatus: structuredPayload.qualityStatus || null,
+    calibrationProfile: structuredPayload.calibrationProfile || null,
+    calibrationStatus: structuredPayload.calibrationStatus || null,
+    normalizedBodyProgress: structuredPayload.normalizedBodyProgress || null,
+    warningMessage: message,
+    postureMessage: message,
+    phase: 'calibration',
+    calibrationReady: false,
+    trackingPaused: true,
+  };
+}
+
+function structuredQualityBlocksAnalysis(qualityStatus) {
+  return [
+    StructuredQualityStates.NotReady,
+    StructuredQualityStates.Paused,
+    StructuredQualityStates.Invalid,
+  ].includes(qualityStatus?.state);
 }
 
 function buildCachedAnalysisQualityPayload({ smoothed, detected }) {
@@ -778,12 +951,13 @@ async function detectPoseFromFrame(message) {
   await initLandmarker(message.config || {});
   const receivedAt = inputReceivedAt(message);
   const bitmap = await imageBitmapFromFrame(message.frame);
-  const timestampMs = nextMediaPipeTimestampMs(receivedAt);
+  const timestampMs = nextMediaPipeTimestampMs(monotonicNowMs());
   const inferenceStartedAt = Date.now();
   const result = landmarker.detectForVideo(bitmap, timestampMs);
   const inferenceEndedAt = Date.now();
   const rawLandmarks = result.landmarks?.[0] || [];
   const landmarks = normalizeLandmarks(rawLandmarks);
+  const worldLandmarks = result.worldLandmarks?.[0] || result.poseWorldLandmarks?.[0] || [];
   const visibilityValues = rawLandmarks
     .map((point) => point.visibility)
     .filter((value) => Number.isFinite(value));
@@ -793,22 +967,214 @@ async function detectPoseFromFrame(message) {
 
   return {
     bitmap,
+    sessionId: messageSessionId(message) || session?.id || 'preview',
+    frameId: frameIdFromMessage(message) || `${receivedAt}`,
     timestampMs,
     inputReceivedAt: receivedAt,
     cameraFrameSequence: message.cameraFrameSequence ?? message.sequence ?? null,
     mobileSequence: message.mobileSequence ?? null,
     landmarks,
+    worldLandmarks,
+    mirrored: Boolean(message.mirrored || message.cameraMirrored || message.config?.mirrored),
     poseCount: result.landmarks?.length || 0,
     confidence,
     inferenceDurationMs: inferenceEndedAt - inferenceStartedAt,
   };
 }
 
-function postPoseFrame({ source, detected, bitmap, sequence = null, analyzedAt = Date.now() }) {
+function buildStructuredFramePayload({
+  detected,
+  bitmap,
+  analyzedAt = Date.now(),
+  landmarks = detected?.landmarks || [],
+  readiness = null,
+  qualityDecision = null,
+  brightness = null,
+} = {}) {
+  const poseFrameResult = poseFrameFromWorkerDetection({
+    detected,
+    image: { width: bitmap?.width, height: bitmap?.height, mirrored: Boolean(detected?.mirrored) },
+    normalizedLandmarks: landmarks,
+    worldLandmarks: detected?.worldLandmarks || null,
+    completedAtMs: analyzedAt,
+    mirrored: Boolean(detected?.mirrored),
+  });
+  const poseFrame = poseFrameResult.validation.ok ? poseFrameResult.value : null;
+  if (!poseFrame) {
+    debug('STRUCTURED_POSE_FRAME_VALIDATION_FAILED', {
+      frameId: detected?.frameId || null,
+      failures: poseFrameResult.validation.failures,
+    });
+    return {
+      poseFrame: poseFrameResult.value,
+      qualityStatus: null,
+      assessmentEvents: [],
+      frameAnalysisResult: null,
+      structuredValidation: {
+        poseFrame: poseFrameResult.validation,
+      },
+    };
+  }
+
+  const legacyQualityStatusResult = qualityDecision || readiness
+    ? legacyQualityDecisionToQualityStatus({
+      sessionId: poseFrame.sessionId,
+      frameId: poseFrame.frameId,
+      timestampMs: poseFrame.timestampMs,
+      decision: qualityDecision,
+      readiness,
+      poseFrame,
+    })
+    : evaluateStructuredFrameQuality(poseFrame);
+  const assessmentType = structuredAssessmentType();
+  const qualityMetrics = evaluatePoseFrameQuality(poseFrame, {
+    assessmentType,
+    brightness,
+  });
+  const qualityStatusResult = structuredQualityStateMachine.update({
+    frame: poseFrame,
+    metrics: qualityMetrics,
+    timestampMs: poseFrame.timestampMs,
+  });
+  const qualityStatus = qualityStatusResult.validation.ok ? qualityStatusResult.value : null;
+  if (!qualityStatus) {
+    debug('STRUCTURED_QUALITY_STATUS_VALIDATION_FAILED', {
+      frameId: detected?.frameId || null,
+      failures: qualityStatusResult.validation.failures,
+    });
+  }
+
+  const eventType = poseFrame.detectedPersonCount > 0
+    ? StructuredAssessmentEventTypes.PoseAcquired
+    : StructuredAssessmentEventTypes.PoseLost;
+  const eventResult = assessmentType ? createAssessmentEvent({
+    sessionId: poseFrame.sessionId,
+    assessmentType,
+    type: qualityStatus?.state === 'PAUSED' || qualityStatus?.state === 'BLOCKED'
+      ? StructuredAssessmentEventTypes.QualityPaused
+      : eventType,
+    timestampMs: poseFrame.timestampMs,
+    frameId: poseFrame.frameId,
+    confidence: poseFrame.confidence.overall,
+  }) : null;
+  const assessmentEvents = eventResult?.validation.ok ? [eventResult.value] : [];
+  const calibrationResult = updatePersonalCalibration(structuredCalibrationState, {
+    poseFrame,
+    qualityStatus,
+  });
+  structuredCalibrationState = calibrationResult.state;
+  const normalizedBodyProgress = calibrationResult.profile
+    ? bodyProgressFromCalibration(poseFrame, calibrationResult.profile)
+    : null;
+  const frameAnalysisResult = qualityStatus ? {
+    sessionId: poseFrame.sessionId,
+    frameId: poseFrame.frameId,
+    timestampMs: poseFrame.timestampMs,
+    poseFrame,
+    qualityStatus,
+    assessmentEvents,
+    isFinal: false,
+  } : null;
+  const frameValidation = frameAnalysisResult
+    ? validateFrameAnalysisResult(frameAnalysisResult)
+    : { ok: false, failures: [{ code: 'MISSING_QUALITY_STATUS', message: 'FrameAnalysisResult requires QualityStatus.' }] };
+  if (!frameValidation.ok) {
+    debug('STRUCTURED_FRAME_RESULT_VALIDATION_FAILED', {
+      frameId: detected?.frameId || null,
+      failures: frameValidation.failures,
+    });
+  }
+  return {
+    poseFrame,
+    qualityStatus,
+    assessmentEvents,
+    frameAnalysisResult: frameValidation.ok ? frameAnalysisResult : null,
+    calibrationProfile: calibrationResult.profile,
+    calibrationStatus: {
+      status: calibrationResult.profile?.status || 'IN_PROGRESS',
+      canStartAssessment: Boolean(calibrationResult.canStartAssessment),
+      progress: calibrationResult.progress || null,
+      validation: calibrationResult.validation || null,
+    },
+    normalizedBodyProgress,
+    debugOverlay: {
+      fps: frameQueueTelemetry().structuredQueue?.targetFps || null,
+      processingLatencyMs: poseFrame.processing.latencyMs,
+      qualityState: qualityStatus?.state || null,
+      calibrationProgress: calibrationResult.progress || null,
+      coordinateOrientation: calibrationResult.profile?.coordinateOrientation || null,
+      cameraView: qualityMetrics.camera?.view || null,
+      pauseReason: qualityStatus?.reasons?.[0]?.code || null,
+      landmarkConfidence: poseFrame.confidence,
+      footPlacementObservable: qualityMetrics.footPlacementObservable,
+      unsupportedMultiPersonInterventionDetection: true,
+    },
+    structuredValidation: {
+      poseFrame: poseFrameResult.validation,
+      qualityStatus: qualityStatusResult.validation,
+      legacyQualityStatus: legacyQualityStatusResult.validation,
+      calibration: calibrationResult.validation || null,
+      frameAnalysisResult: frameValidation,
+    },
+  };
+}
+
+function buildStructuredFinalResponse(result) {
+  const structuredAssessmentResult = result.structuredAssessmentResult || result.finalResponse?.result || null;
+  if (!structuredAssessmentResult) return null;
+  const assessmentValidation = validateAssessmentResult(structuredAssessmentResult);
+  if (!assessmentValidation.ok) {
+    debug('STRUCTURED_FINAL_RESULT_VALIDATION_FAILED', {
+      sessionId: result.sessionId,
+      selectedTest,
+      failures: assessmentValidation.failures,
+    });
+  }
+  const finalResponse = {
+    sessionId: result.sessionId,
+    result: structuredAssessmentResult,
+    isFinal: true,
+  };
+  const responseValidation = validateFinalAssessmentResponse(finalResponse);
+  if (!responseValidation.ok) {
+    debug('STRUCTURED_FINAL_RESPONSE_VALIDATION_FAILED', {
+      sessionId: result.sessionId,
+      selectedTest,
+      failures: responseValidation.failures,
+    });
+  }
+  return {
+    structuredAssessmentResult,
+    finalResponse: responseValidation.ok ? finalResponse : null,
+    structuredValidation: {
+      assessmentResult: assessmentValidation,
+      finalResponse: responseValidation,
+    },
+  };
+}
+
+function postWorkerFrameResult(payload) {
   postMessage({
-    type: 'pose-frame',
+    ...payload,
+    type: 'FRAME_RESULT',
+    resultType: AssessmentResultTypes.Frame,
+    sessionId: payload.sessionId || session?.id || null,
+    frameId: payload.frameId || null,
+    payload,
+  });
+}
+
+function postPoseFrame({ source, detected, bitmap, sequence = null, analyzedAt = Date.now() }) {
+  const structured = buildStructuredFramePayload({
+    detected,
+    bitmap,
+    analyzedAt,
+  });
+  postWorkerFrameResult({
     source,
     sequence,
+    sessionId: detected.sessionId || session?.id || null,
+    frameId: detected.frameId,
     cameraFrameSequence: detected.cameraFrameSequence,
     mobileSequence: detected.mobileSequence,
     landmarks: detected.landmarks,
@@ -817,6 +1183,7 @@ function postPoseFrame({ source, detected, bitmap, sequence = null, analyzedAt =
     frameSize: { width: bitmap.width, height: bitmap.height },
     receivedAt: detected.inputReceivedAt,
     analyzedAt,
+    ...structured,
   });
 }
 
@@ -878,14 +1245,31 @@ async function handlePreviewFrame(message) {
       });
       return;
     }
-    postMessage({
-      type: 'preview-frame',
+    const qualityDecision = evaluateFrameQuality({
+      readiness: qualityPayload.cameraReadiness,
+      frameId: detected.frameId,
+      source: 'preview-frame',
+    });
+    const structured = buildStructuredFramePayload({
+      detected,
+      bitmap,
+      analyzedAt,
+      landmarks: qualityPayload.landmarks,
+      readiness: qualityPayload.cameraReadiness,
+      qualityDecision,
+      brightness: brightnessContext.brightness,
+    });
+    postWorkerFrameResult({
+      source: 'preview-frame',
+      sessionId: detected.sessionId,
+      frameId: detected.frameId,
       landmarks: qualityPayload.landmarks,
       rawLandmarks: qualityPayload.rawLandmarks,
       confidence: detected.confidence,
       trackingQualityScore: qualityPayload.trackingQualityScore,
       trackingQuality: qualityPayload.trackingQuality,
       cameraReadiness: qualityPayload.cameraReadiness,
+      qualityDecision,
       brightness: brightnessContext.brightness,
       brightnessCalibration: brightnessContext.brightnessCalibration,
       smoothing: qualityPayload.smoothing,
@@ -894,6 +1278,8 @@ async function handlePreviewFrame(message) {
       cameraFrameSequence: detected.cameraFrameSequence,
       mobileSequence: detected.mobileSequence,
       analyzedAt,
+      frameQueue: frameQueueTelemetry(),
+      ...structured,
     });
   } catch (error) {
     if (/Packet timestamp mismatch|WaitUntilIdle failed|CalculatorGraph::Run\(\) failed/.test(error.message || '')) {
@@ -904,7 +1290,9 @@ async function handlePreviewFrame(message) {
       stack: error.stack || null,
     });
     postMessage({
-      type: 'error',
+      type: 'ANALYSIS_ERROR',
+      sessionId: messageSessionId(message) || session?.id || null,
+      errorCode: 'PREVIEW_FRAME_FAILED',
       error: error.message || 'Pose preview failed.',
       recoverable: true,
       source: 'preview-frame',
@@ -921,6 +1309,17 @@ async function handleFrame(message) {
   const now = Date.now();
   latestFrameAt = now;
   if (!session?.active) return;
+  if (!isMessageForActiveSession(message)) {
+    if (!frameQueueStats) resetFrameQueueStats();
+    frameQueueStats.staleSessionFrameCount += 1;
+    postFrameSkipped({
+      message,
+      source: 'analysis-frame',
+      reason: 'stale-session-before-inference',
+      now,
+    });
+    return;
+  }
   if (isStaleFrameMessage(message, now)) {
     postFrameSkipped({
       message,
@@ -975,7 +1374,7 @@ async function handleFrame(message) {
         trackingQualityScore: detected.confidence,
         cameraReadiness: null,
       };
-      let state = analyzer.addFrame(poseFrame);
+      let state = analyzer.addFrame({ poseFrame: null, calibrationProfile: null, qualityStatus: null });
       state = {
         ...state,
         trackingQualityScore: detected.confidence,
@@ -1003,9 +1402,26 @@ async function handleFrame(message) {
         analyzedAt,
         inferenceDurationMs: detected.inferenceDurationMs,
       });
+      noteFrameProcessed(detected, analyzedAt);
+      const qualityDecision = evaluateFrameQuality({
+        readiness: null,
+        frameId: detected.frameId,
+        source: 'analysis-frame',
+      });
+      const structured = buildStructuredFramePayload({
+        detected,
+        bitmap,
+        analyzedAt,
+        landmarks: detected.landmarks,
+        readiness: null,
+        qualityDecision,
+        brightness: null,
+      });
 
-      postMessage({
-        type: 'analysis-frame',
+      postWorkerFrameResult({
+        source: 'analysis-frame',
+        sessionId: detected.sessionId,
+        frameId: detected.frameId,
         sequence: frameSequence,
         state,
         landmarks: detected.landmarks,
@@ -1022,7 +1438,10 @@ async function handleFrame(message) {
         cameraFrameSequence: detected.cameraFrameSequence,
         mobileSequence: detected.mobileSequence,
         analyzedAt,
-        processing,
+        processing: { ...processing, frameQueue: frameQueueTelemetry() },
+        qualityDecision,
+        frameQueue: frameQueueTelemetry(),
+        ...structured,
       });
 
       if (session?.active && shouldFinishSessionFromState(state)) {
@@ -1064,11 +1483,49 @@ async function handleFrame(message) {
       qualityPayload = buildCachedAnalysisQualityPayload({ smoothed, detected });
     }
 
-    const blockedFrame = shouldBlockMovementFrame(qualityPayload.cameraReadiness);
+    const qualityDecision = evaluateFrameQuality({
+      readiness: qualityPayload.cameraReadiness,
+      frameId: detected.frameId,
+      source: 'analysis-frame',
+    });
+    if (qualityDecision.disagreement) {
+      debug('QUALITY_GATE_DISAGREEMENT', {
+        frameId: detected.frameId,
+        generalGateResult: qualityDecision.legacy.generalGateResult,
+        movementGateResult: qualityDecision.legacy.movementGateResult,
+      });
+    }
+    const structured = buildStructuredFramePayload({
+      detected,
+      bitmap,
+      analyzedAt: Date.now(),
+      landmarks: qualityPayload.landmarks,
+      readiness: qualityPayload.cameraReadiness,
+      qualityDecision,
+      brightness: brightnessStats,
+    });
+    const blockedFrame = qualityDecision.legacy.movementBlocked
+      || structuredQualityBlocksAnalysis(structured.qualityStatus);
+    const calibrationBlocked = !structured.calibrationStatus?.canStartAssessment;
     let poseFrame = null;
     let state = null;
-    if (blockedFrame) {
-      state = stateForCameraIssue(timestampMs, qualityPayload.cameraReadiness);
+    if (calibrationBlocked) {
+      state = stateForCalibrationIssue(timestampMs, structured);
+    } else if (blockedFrame) {
+      state = analyzer.addFrame({
+        poseFrame: structured.poseFrame,
+        calibrationProfile: structured.calibrationProfile,
+        qualityStatus: structured.qualityStatus,
+      });
+      state = {
+        ...stateForCameraIssue(timestampMs, qualityPayload.cameraReadiness),
+        ...state,
+        qualityStatus: structured.qualityStatus,
+        calibrationProfile: structured.calibrationProfile,
+        calibrationStatus: structured.calibrationStatus,
+        normalizedBodyProgress: structured.normalizedBodyProgress || null,
+        trackingPaused: true,
+      };
     } else {
       const steadiFrame = steadiLandmarkSeries.push({
         sequence: nextSequence,
@@ -1090,7 +1547,11 @@ async function handleFrame(message) {
         brightness: brightnessStats,
         brightnessCalibration: brightnessCalibrationStats,
       };
-      state = analyzer.addFrame(poseFrame);
+      state = analyzer.addFrame({
+        poseFrame: structured.poseFrame,
+        calibrationProfile: structured.calibrationProfile,
+        qualityStatus: structured.qualityStatus,
+      });
       state = {
         ...state,
         trackingQualityScore: qualityPayload.trackingQualityScore,
@@ -1117,9 +1578,12 @@ async function handleFrame(message) {
       analyzedAt,
       inferenceDurationMs: detected.inferenceDurationMs,
     });
+    noteFrameProcessed(detected, analyzedAt);
 
-    postMessage({
-      type: 'analysis-frame',
+    postWorkerFrameResult({
+      source: 'analysis-frame',
+      sessionId: detected.sessionId,
+      frameId: detected.frameId,
       sequence: frameSequence,
       state,
       landmarks: poseFrame?.landmarks || qualityPayload.landmarks,
@@ -1136,10 +1600,13 @@ async function handleFrame(message) {
       cameraFrameSequence: detected.cameraFrameSequence,
       mobileSequence: detected.mobileSequence,
       analyzedAt,
-      processing,
+      processing: { ...processing, frameQueue: frameQueueTelemetry() },
+      qualityDecision,
+      frameQueue: frameQueueTelemetry(),
+      ...structured,
     });
 
-    if (session?.active && shouldFinishSessionFromState(state)) {
+    if (session?.active && !calibrationBlocked && !blockedFrame && shouldFinishSessionFromState(state)) {
       debug('session-auto-finish', {
         selectedTest,
         elapsedSeconds: state.elapsedSeconds,
@@ -1157,7 +1624,9 @@ async function handleFrame(message) {
       stack: error.stack || null,
     });
     postMessage({
-      type: 'error',
+      type: 'ANALYSIS_ERROR',
+      sessionId: messageSessionId(message) || session?.id || null,
+      errorCode: 'ANALYSIS_FRAME_FAILED',
       error: error.message || 'Pose analysis failed.',
       recoverable: true,
       source: 'camera-frame',
@@ -1251,7 +1720,14 @@ function scheduleFramePump(delayMs = 0) {
         message: error.message || 'Pose frame pump failed.',
         stack: error.stack || null,
       });
-      postMessage({ type: 'error', error: error.message || 'Pose frame pump failed.', recoverable: true, at: Date.now() });
+      postMessage({
+        type: 'ANALYSIS_ERROR',
+        sessionId: session?.id || null,
+        errorCode: 'FRAME_PUMP_FAILED',
+        error: error.message || 'Pose frame pump failed.',
+        recoverable: true,
+        at: Date.now(),
+      });
     });
   }, Math.max(0, delayMs));
 }
@@ -1259,6 +1735,56 @@ function scheduleFramePump(delayMs = 0) {
 function queueFrameMessage(message) {
   const source = message.type === 'frame' ? 'analysis-frame' : 'preview-frame';
   const now = Date.now();
+  if (!frameQueueStats) resetFrameQueueStats();
+  frameQueueStats.receivedFrameCount += 1;
+  const frameDecision = structuredFrameProcessor.enqueue(message, {
+    sessionId: messageSessionId(message) || (message.type === 'frame' ? session?.id : 'preview'),
+    active: message.type === 'frame' && Boolean(session?.active),
+  });
+  if (frameDecision.action === 'DROP') {
+    postFrameSkipped({
+      message,
+      source,
+      reason: frameDecision.reason,
+      now,
+    });
+    return;
+  }
+  if (frameDecision.supersededFrame) {
+    debug('structured-frame-superseded', {
+      droppedFrameId: frameIdFromMessage(frameDecision.supersededFrame),
+      nextFrameId: frameIdFromMessage(message),
+      frameQueue: frameQueueTelemetry(),
+    });
+  }
+  if (message.type === 'frame' && !isMessageForActiveSession(message)) {
+    frameQueueStats.staleSessionFrameCount += 1;
+    postFrameSkipped({
+      message,
+      source,
+      reason: 'stale-session',
+      now,
+    });
+    return;
+  }
+  const frameId = frameIdFromMessage(message);
+  if (frameId) {
+    const scopedFrameId = `${messageSessionId(message) || 'preview'}:${frameId}`;
+    if (seenFrameIds.has(scopedFrameId)) {
+      frameQueueStats.duplicateFrameCount += 1;
+      postFrameSkipped({
+        message,
+        source,
+        reason: 'duplicate-frame',
+        now,
+      });
+      return;
+    }
+    seenFrameIds.add(scopedFrameId);
+    if (seenFrameIds.size > 120) {
+      seenFrameIds = new Set([...seenFrameIds].slice(-80));
+    }
+  }
   if (isStaleFrameMessage(message, now)) {
     postFrameSkipped({
       message,
@@ -1269,8 +1795,24 @@ function queueFrameMessage(message) {
     return;
   }
   if (message.type === 'frame') {
+    if (pendingAnalysisFrame) {
+      frameQueueStats.droppedFrameCount += 1;
+      debug('analysis-frame-superseded', {
+        droppedFrameId: frameIdFromMessage(pendingAnalysisFrame),
+        nextFrameId: frameId,
+        frameQueue: frameQueueTelemetry(),
+      });
+    }
     pendingAnalysisFrame = message;
   } else {
+    if (pendingPreviewFrame) {
+      frameQueueStats.droppedFrameCount += 1;
+      debug('preview-frame-superseded', {
+        droppedFrameId: frameIdFromMessage(pendingPreviewFrame),
+        nextFrameId: frameId,
+        frameQueue: frameQueueTelemetry(),
+      });
+    }
     pendingPreviewFrame = message;
   }
   scheduleFramePump();
@@ -1281,13 +1823,16 @@ function startSession(message) {
   setSelectedTest(message.selectedTest || 'chair_stand');
   clearQueuedFrameMessages();
   analyzer = createMovementAnalyzer(selectedTest);
+  const sessionId = messageSessionId(message) || `analysis-${startedAt}`;
   session = {
+    id: sessionId,
     active: true,
     userId: message.userId || 'remote-user',
     selectedTest,
     startedAt,
+    manualTest: false,
   };
-  analyzer.startSession(session.userId, startedAt);
+  analyzer.startSession(session.userId, startedAt, sessionId);
   frameSequence = 0;
   steadiLandmarkSeries.reset();
   poseSmoother.reset();
@@ -1297,21 +1842,47 @@ function startSession(message) {
   resetPipelineCadence();
   resetSessionQuality();
   resetProcessingTelemetry();
-  postMessage({ type: 'session-started', startedAt, state: analyzer.getCurrentState(startedAt) });
+  resetFrameQueueStats();
+  resetStructuredSessionState({ sessionId, startedAt });
+  postMessage({
+    type: 'SESSION_READY',
+    sessionId,
+    startedAt,
+    state: analyzer.getCurrentState(startedAt),
+  });
 }
 
 function finishSession(message) {
   if (!session?.active) return;
+  if (messageSessionId(message) && messageSessionId(message) !== session.id) {
+    if (!frameQueueStats) resetFrameQueueStats();
+    frameQueueStats.staleSessionFrameCount += 1;
+    debug('stale-finalize-session-ignored', {
+      receivedSessionId: messageSessionId(message),
+      activeSessionId: session.id,
+    });
+    return;
+  }
   const completedAt = message.completedAt || Date.now();
   const qualitySummary = sessionTrackingQualitySummary();
   const fastRawAnalysis = usesFastRawAnalysis();
   const invalidSession = !fastRawAnalysis && shouldInvalidateSession(qualitySummary);
-  const analyzerResult = invalidSession ? null : analyzer.finishSession(completedAt);
+  const source = session.manualTest ? ResultSources.ManualTest : ResultSources.LivePose;
+  const analyzerResult = analyzer.finishSession(completedAt, {
+    qualitySummary,
+    forceInvalid: invalidSession,
+    invalidReason: invalidSession ? 'TRACKING_QUALITY_TOO_LOW' : null,
+    source,
+  });
   const resultTrackingQualityScore = qualitySummary.sampleCount
     ? qualitySummary.trackingQualityScore
     : analyzerResult?.confidence ?? 0;
-  const result = invalidSession
-    ? invalidTrackingResult(completedAt, qualitySummary)
+  const rawResult = invalidSession
+    ? {
+      ...invalidTrackingResult(completedAt, qualitySummary),
+      structuredAssessmentResult: analyzerResult?.structuredAssessmentResult || null,
+      structuredAssessmentValidation: analyzerResult?.structuredAssessmentValidation || null,
+    }
     : {
       ...analyzerResult,
       trackingQualityScore: resultTrackingQualityScore,
@@ -1325,12 +1896,46 @@ function finishSession(message) {
         fastRawAnalysis,
       },
     };
+  const status = invalidSession ? AssessmentStatuses.Invalid : AssessmentStatuses.Valid;
+  const result = withAssessmentMetadata({
+    ...rawResult,
+    finalHalfStandCreditStatus: rawResult.finalHalfStandCreditStatus,
+  }, {
+    source,
+    sessionId: session.id,
+    analysisSessionId: session.id,
+    testType: selectedTest,
+    assessmentType: assessmentTypeForTestType(selectedTest),
+    isPersistable: source === ResultSources.LivePose && status === AssessmentStatuses.Valid,
+    isClinicallyScorable: source === ResultSources.LivePose && status === AssessmentStatuses.Valid,
+    status,
+    resultType: AssessmentResultTypes.Final,
+    analyzerFinalEvent: true,
+    generatedAt: Date.now(),
+  });
+  const structuredFinal = buildStructuredFinalResponse(result);
   session = session ? { ...session, active: false, completedAt } : null;
-  postMessage({ type: 'session-finished', completedAt, result, state: analyzer.getCurrentState(completedAt) });
+  postMessage({
+    type: 'FINAL_RESULT',
+    sessionId: result.sessionId,
+    completedAt,
+    payload: {
+      ...result,
+      ...(structuredFinal || {}),
+    },
+    result: {
+      ...result,
+      ...(structuredFinal || {}),
+    },
+    ...(structuredFinal || {}),
+    state: analyzer.getCurrentState(completedAt),
+  });
 }
 
-function resetSession() {
+function resetSession(message = {}) {
+  const resetSessionId = messageSessionId(message) || session?.id || null;
   clearQueuedFrameMessages();
+  closeLandmarker();
   analyzer = createMovementAnalyzer(selectedTest);
   analyzer.reset();
   session = null;
@@ -1347,33 +1952,60 @@ function resetSession() {
   resetSessionQuality();
   isAnalyzingFrame = false;
   resetProcessingTelemetry();
-  postMessage({ type: 'session-reset', state: analyzer.getCurrentState(Date.now()) });
+  resetFrameQueueStats();
+  resetStructuredSessionState({ sessionId: resetSessionId || 'preview', startedAt: Date.now() });
+  postMessage({
+    type: 'SESSION_CANCELLED',
+    sessionId: resetSessionId,
+    reason: message.reason || 'reset',
+    state: analyzer.getCurrentState(Date.now()),
+  });
 }
 
 self.onmessage = async (event) => {
   const message = event.data || {};
   try {
-    if (message.type === 'debug-probe') {
+    if (message.type === 'debug-probe' || message.type === 'DEBUG_PROBE') {
       await probeWasmBasePath(message.wasmPath || defaultWasmPath());
     }
     if (message.selectedTest) setSelectedTest(message.selectedTest);
-    if (message.type === 'init') await initLandmarker(message.config || {});
-    if (message.type === 'preview-frame') queueFrameMessage(message);
-    if (message.type === 'start-session') startSession(message);
-    if (message.type === 'frame') queueFrameMessage(message);
-    if (message.type === 'manual-repetition') {
-      const state = analyzer.addManualRepetition();
-      postMessage({ type: 'analysis-frame', sequence: frameSequence, state, landmarks: [], receivedAt: Date.now(), analyzedAt: Date.now() });
+    if (message.type === 'init' || message.type === 'INIT') await initLandmarker(message.config || {});
+    if (isPreviewFrameMessage(message)) {
+      queueFrameMessage({ ...message, type: 'preview-frame' });
     }
-    if (message.type === 'finish-session') finishSession(message);
-    if (message.type === 'reset-session') resetSession();
+    if (message.type === 'start-session' || message.type === 'START_SESSION') startSession(message);
+    if (isAnalysisFrameMessage(message)) {
+      queueFrameMessage({ ...message, type: 'frame' });
+    }
+    if (message.type === 'manual-repetition' || message.type === 'MANUAL_REPETITION') {
+      if (session) session.manualTest = true;
+      const state = analyzer.addManualRepetition();
+      postWorkerFrameResult({
+        source: 'analysis-frame',
+        sessionId: session?.id || messageSessionId(message) || null,
+        frameId: `manual-${Date.now()}`,
+        sequence: frameSequence,
+        state,
+        landmarks: [],
+        receivedAt: Date.now(),
+        analyzedAt: Date.now(),
+      });
+    }
+    if (message.type === 'finish-session' || message.type === 'FINALIZE_SESSION') finishSession(message);
+    if (message.type === 'reset-session' || message.type === 'RESET_SESSION' || message.type === 'CANCEL_SESSION') resetSession(message);
   } catch (error) {
     debug('worker-message-failed', {
       messageType: message.type,
       message: error.message || 'Pose worker failed.',
       stack: error.stack || null,
     });
-    postMessage({ type: 'error', error: error.message || 'Pose worker failed.', at: Date.now() });
+    postMessage({
+      type: 'ANALYSIS_ERROR',
+      sessionId: messageSessionId(message) || session?.id || null,
+      errorCode: 'WORKER_MESSAGE_FAILED',
+      error: error.message || 'Pose worker failed.',
+      at: Date.now(),
+    });
   }
 };
 

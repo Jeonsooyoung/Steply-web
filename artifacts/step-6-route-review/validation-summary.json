@@ -1,0 +1,131 @@
+{
+  "generatedAt": "2026-07-11T04:25:22.848Z",
+  "routeCount": 15,
+  "viewportCount": 4,
+  "checks": 60,
+  "failureCount": 0,
+  "screenshotCount": 24,
+  "failures": [],
+  "screenshots": [
+    {
+      "viewport": "laptop",
+      "case": "analysis-start",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/laptop-analysis-start.png"
+    },
+    {
+      "viewport": "laptop",
+      "case": "summary-low-improved",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/laptop-summary-low-improved.png"
+    },
+    {
+      "viewport": "laptop",
+      "case": "summary-strength-only",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/laptop-summary-strength-only.png"
+    },
+    {
+      "viewport": "laptop",
+      "case": "summary-balance-only",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/laptop-summary-balance-only.png"
+    },
+    {
+      "viewport": "laptop",
+      "case": "summary-arm-use",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/laptop-summary-arm-use.png"
+    },
+    {
+      "viewport": "laptop",
+      "case": "summary-professional-restrictions",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/laptop-summary-professional-restrictions.png"
+    },
+    {
+      "viewport": "laptop",
+      "case": "details-low",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/laptop-details-low.png"
+    },
+    {
+      "viewport": "laptop",
+      "case": "details-invalid",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/laptop-details-invalid.png"
+    },
+    {
+      "viewport": "tv",
+      "case": "analysis-done",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/tv-analysis-done.png"
+    },
+    {
+      "viewport": "tv",
+      "case": "summary-both-declining",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/tv-summary-both-declining.png"
+    },
+    {
+      "viewport": "tv",
+      "case": "summary-professional-restrictions",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/tv-summary-professional-restrictions.png"
+    },
+    {
+      "viewport": "tv",
+      "case": "details-high",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/tv-details-high.png"
+    },
+    {
+      "viewport": "tablet",
+      "case": "analysis-quality",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/tablet-analysis-quality.png"
+    },
+    {
+      "viewport": "tablet",
+      "case": "summary-strength-only",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/tablet-summary-strength-only.png"
+    },
+    {
+      "viewport": "tablet",
+      "case": "summary-both-declining",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/tablet-summary-both-declining.png"
+    },
+    {
+      "viewport": "tablet",
+      "case": "summary-missing-previous",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/tablet-summary-missing-previous.png"
+    },
+    {
+      "viewport": "tablet",
+      "case": "summary-professional-restrictions",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/tablet-summary-professional-restrictions.png"
+    },
+    {
+      "viewport": "tablet",
+      "case": "details-high",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/tablet-details-high.png"
+    },
+    {
+      "viewport": "phone",
+      "case": "analysis-done",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/phone-analysis-done.png"
+    },
+    {
+      "viewport": "phone",
+      "case": "summary-low-improved",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/phone-summary-low-improved.png"
+    },
+    {
+      "viewport": "phone",
+      "case": "summary-arm-use",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/phone-summary-arm-use.png"
+    },
+    {
+      "viewport": "phone",
+      "case": "summary-invalid",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/phone-summary-invalid.png"
+    },
+    {
+      "viewport": "phone",
+      "case": "summary-professional-restrictions",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/phone-summary-professional-restrictions.png"
+    },
+    {
+      "viewport": "phone",
+      "case": "details-high",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/phone-details-high.png"
+    }
+  ]
+}

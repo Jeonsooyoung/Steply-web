@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { recommendationExercises } from '../data/recommendationExercises';
-import { recommendationTemplatesForResult, testLabel } from '../pose/recommendationRules';
+import { canGenerateExerciseRecommendation } from '../pose/assessmentResultMetadata';
+import { testLabel } from '../pipeline/ui/assessmentCopy.js';
 import { SteplyButton, SteplyCard } from './SteplyPrimitives';
 
 const guidanceByExerciseKey = {
@@ -15,6 +15,14 @@ const guidanceByExerciseKey = {
   knee_extension: {
     steps: ['Sit tall on a chair.', 'Straighten one knee.', 'Lower your foot slowly.'],
     watch: 'Keep your thigh supported by the chair.',
+  },
+  front_knee_strengthening: {
+    steps: ['Sit tall on a chair.', 'Straighten one knee.', 'Lower your foot slowly.'],
+    watch: 'Keep your thigh supported by the chair.',
+  },
+  back_knee_strengthening: {
+    steps: ['Stand tall and hold support.', 'Bend one knee so your heel moves back.', 'Lower your foot slowly.'],
+    watch: 'Keep the movement small and controlled.',
   },
   sit_to_stand_practice: {
     steps: ['Sit near the front of the chair.', 'Stand up tall.', 'Sit down slowly.'],
@@ -37,6 +45,10 @@ const guidanceByExerciseKey = {
     watch: 'Make the movement smaller if knees drift inward.',
   },
   mini_knee_bends: {
+    steps: ['Hold support.', 'Bend the knees a little.', 'Stand tall again.'],
+    watch: 'Keep the bend small and comfortable.',
+  },
+  knee_bends: {
     steps: ['Hold support.', 'Bend the knees a little.', 'Stand tall again.'],
     watch: 'Keep the bend small and comfortable.',
   },
@@ -80,6 +92,10 @@ const guidanceByExerciseKey = {
     steps: ['Hold a chair.', 'Rise onto your toes.', 'Lower your heels slowly.'],
     watch: 'Keep both hands close to support.',
   },
+  calf_raises: {
+    steps: ['Hold a chair.', 'Rise onto your toes.', 'Lower your heels slowly.'],
+    watch: 'Keep both hands close to support.',
+  },
   toe_raises: {
     steps: ['Hold support.', 'Lift the front of both feet.', 'Lower slowly.'],
     watch: 'Keep your heels on the floor.',
@@ -115,14 +131,17 @@ function normalizedTitleKey(title = '') {
 }
 
 function exerciseKeyFor(template = {}) {
-  return template.exerciseKey || template.id || normalizedTitleKey(template.title || template.name);
+  return template.exerciseKey
+    || normalizedTitleKey(template.exerciseId || '')
+    || template.id
+    || normalizedTitleKey(template.displayName || template.title || template.name);
 }
 
 function guidanceForExercise(template = {}) {
   const key = exerciseKeyFor(template);
   if (guidanceByExerciseKey[key]) return guidanceByExerciseKey[key];
 
-  const text = `${template.title || ''} ${template.name || ''} ${template.description || ''}`.toLowerCase();
+  const text = `${template.exerciseId || ''} ${template.displayName || ''} ${template.title || ''} ${template.name || ''} ${template.description || ''}`.toLowerCase();
   if (text.includes('chair') || text.includes('sit')) return guidanceByExerciseKey.sit_to_stand_practice;
   if (text.includes('knee')) return guidanceByExerciseKey.knee_extension;
   if (text.includes('weight')) return guidanceByExerciseKey.weight_shift_drill;
@@ -136,25 +155,58 @@ function guidanceForExercise(template = {}) {
   };
 }
 
+const safetyMessageText = {
+  'safety.caregiverNearbyRecommended': 'Please complete this exercise with a family member or trained staff nearby.',
+  'safety.useSupportedSitToStandOnly': 'Use only the supported sit-to-stand version for now.',
+  MODERATE_RISK_STABLE_SUPPORT_AND_CAREGIVER_RECOMMENDED: 'Please complete this exercise with a family member or trained staff nearby.',
+  ARM_SUPPORT_REQUIRED_USE_SUPPORTED_SIT_TO_STAND_ONLY: 'Use only the supported sit-to-stand version for now.',
+  HIGH_RISK_PROFESSIONAL_REVIEW_REQUIRED: 'A professional review is recommended before continuing.',
+};
+
+function safetyTextForExercise(template = {}) {
+  const fromKeys = (template.safetyMessageKeys || [])
+    .map((key) => safetyMessageText[key])
+    .filter(Boolean);
+  if (fromKeys.length) return fromKeys.join(' ');
+  if (template.supportRequirement === 'STABLE_SUPPORT') return 'Use a stable chair, counter, or rail for support.';
+  if (template.supervisionRequirement === 'CAREGIVER_RECOMMENDED') {
+    return 'Please complete this exercise with a family member or trained staff nearby.';
+  }
+  if (template.supervisionRequirement === 'PROFESSIONAL_REVIEW_REQUIRED') {
+    return 'A professional review is recommended before continuing.';
+  }
+  return template.safety || template.safetyNote || template.safetyInstruction || 'Stop if there is pain, dizziness, or discomfort.';
+}
+
+function planSafetyText(value) {
+  return safetyMessageText[value] || value;
+}
+
 function exerciseId(template, index) {
   return `${exerciseKeyFor(template) || 'exercise'}-${index}`;
 }
 
-function buildExerciseSourceList(recommendationTemplates) {
-  const mergedTemplates = recommendationTemplates.length
-    ? [...recommendationTemplates, ...recommendationExercises]
-    : recommendationExercises;
-  const seen = new Set();
+function exercisePlanFrom(result = {}) {
+  return result.structuredPipeline?.exercisePlan
+    || result.recommendationPlan
+    || result.carePipeline?.agent?.loop?.finalState?.currentExercisePlan
+    || null;
+}
 
-  return mergedTemplates.filter((template) => {
-    const key = exerciseKeyFor(template) || template.title || template.name;
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+function selectedExercisesFrom(result = {}) {
+  const plan = exercisePlanFrom(result);
+  const selected = plan?.selectedExercises || plan?.recommendedExercises || [];
+  return Array.isArray(selected) ? selected : [];
+}
+
+function hasProfessionalReviewGate(result = {}) {
+  const plan = exercisePlanFrom(result);
+  return Boolean(plan?.requiresProfessionalReview);
 }
 
 function repetitionsFromExercise(exercise) {
+  const structuredReps = Number(exercise?.repetitions);
+  if (Number.isFinite(structuredReps) && structuredReps > 0) return Math.round(structuredReps);
   const fromDefault = Number(exercise?.defaultReps);
   if (Number.isFinite(fromDefault) && fromDefault > 0) return Math.round(fromDefault);
   const fromType = Number.parseInt(exercise?.type, 10);
@@ -175,7 +227,7 @@ function targetSummaryForExercise(exercise) {
   }
 
   const reps = repetitionsFromExercise(exercise);
-  const sets = Number(exercise?.defaultSets);
+  const sets = Number(exercise?.sets ?? exercise?.defaultSets);
   return {
     value: reps,
     unit: Number.isFinite(sets) && sets > 1 ? `${sets} sets` : 'reps',
@@ -186,10 +238,13 @@ function targetSummaryForExercise(exercise) {
 function minutesForExercise(template = {}) {
   const fromTemplate = Number(template.minutes);
   if (Number.isFinite(fromTemplate) && fromTemplate > 0) return Math.round(fromTemplate);
-  return Math.max(1, Math.round((template.durationSeconds || 60) / 60));
+  const sets = Number(template.sets);
+  return Math.max(1, Math.round((template.durationSeconds || (Number.isFinite(sets) ? sets * 60 : 60)) / 60));
 }
 
 function typeForExercise(template = {}) {
+  if (template.level && template.category) return `${String(template.level).toLowerCase()} ${template.category}`;
+  if (template.level) return String(template.level).toLowerCase();
   if (template.type) return template.type;
   if (Number(template.defaultHoldSec) > 0) return 'Hold';
   if (Number(template.defaultReps) > 0) return `${Math.round(Number(template.defaultReps))} reps`;
@@ -198,14 +253,17 @@ function typeForExercise(template = {}) {
 
 function toExerciseCard(template, index) {
   const guidance = guidanceForExercise(template);
-  const title = template.title || template.name || 'Gentle supported practice';
+  const title = template.displayName || template.title || template.name || 'Gentle supported practice';
   return {
     ...template,
     id: exerciseId(template, index),
     number: index + 1,
     title,
-    description: template.description || template.seniorInstruction || 'Practice this movement gently with support nearby.',
-    safety: template.safety || template.safetyNote || template.safetyInstruction || 'Stop if there is pain, dizziness, or discomfort.',
+    description: template.description
+      || template.reasonMessages?.[0]
+      || template.seniorInstruction
+      || 'Practice this movement gently with support nearby.',
+    safety: safetyTextForExercise(template),
     minutes: minutesForExercise(template),
     type: typeForExercise(template),
     guidance,
@@ -215,18 +273,19 @@ function toExerciseCard(template, index) {
 export function ExercisePanel({
   finalResult,
   onViewProgress,
+  onStop,
 }) {
-  const recommendationTemplates = useMemo(
-    () => (finalResult ? recommendationTemplatesForResult(finalResult) : []),
+  const professionalReview = hasProfessionalReviewGate(finalResult || {});
+  const sourceExercises = useMemo(
+    () => (finalResult ? selectedExercisesFrom(finalResult) : []),
     [finalResult],
   );
-  const sourceExercises = useMemo(
-    () => buildExerciseSourceList(recommendationTemplates),
-    [recommendationTemplates],
-  );
+  const canRecommend = canGenerateExerciseRecommendation(finalResult || {})
+    && sourceExercises.length > 0
+    && !professionalReview;
   const dynamicExercises = useMemo(
-    () => sourceExercises.map(toExerciseCard),
-    [sourceExercises],
+    () => (canRecommend ? sourceExercises.map(toExerciseCard) : []),
+    [canRecommend, sourceExercises],
   );
   const visibleExercises = useMemo(() => dynamicExercises.slice(0, 3), [dynamicExercises]);
   const recommendationSignature = dynamicExercises
@@ -238,7 +297,10 @@ export function ExercisePanel({
     || null;
   const sourceTestLabel = finalResult?.testLabel || testLabel(finalResult?.testType);
   const activeTarget = targetSummaryForExercise(activeExercise);
-  const safetyGateText = finalResult?.recommendationPlan?.gameDisabledReason || null;
+  const safetyGateText = finalResult?.recommendationPlan?.gameDisabledReason
+    || planSafetyText(finalResult?.recommendationPlan?.safetyNotices?.[0])
+    || planSafetyText(finalResult?.structuredPipeline?.exercisePlan?.safetyNotices?.[0])
+    || null;
 
   useEffect(() => {
     setActiveExerciseId((current) => {
@@ -246,6 +308,34 @@ export function ExercisePanel({
       return visibleExercises[0]?.id || '';
     });
   }, [recommendationSignature, dynamicExercises, visibleExercises]);
+
+  if (!canRecommend) {
+    return (
+      <div className="exercise-recommendation-screen distance-mode distance-mode--exercise">
+        <SteplyCard className="exercise-recommendation-hero">
+          <div>
+            <div className="eyebrow">Exercise Recommendation</div>
+            <h2>{professionalReview ? 'Professional review recommended' : 'No exercise plan is available'}</h2>
+            <p>
+              {professionalReview
+                ? 'A professional review is recommended before continuing.'
+                : 'Complete a valid live measurement before starting an exercise plan.'}
+            </p>
+          </div>
+          {onStop ? (
+            <div className="exercise-recommendation-hero__actions">
+              <SteplyButton className="screen-stop-button" variant="secondary" onClick={onStop}>Stop</SteplyButton>
+            </div>
+          ) : null}
+        </SteplyCard>
+        <SteplyCard className="feedback-stack feedback-stack--analysis guided-status-card">
+          <div className="eyebrow">Plan Status</div>
+          <h3>Exercise is paused</h3>
+          <p>{professionalReview ? 'A professional review is recommended before continuing.' : 'No selected exercise was returned by the structured plan.'}</p>
+        </SteplyCard>
+      </div>
+    );
+  }
 
   return (
     <div className="exercise-recommendation-screen distance-mode distance-mode--exercise">
@@ -255,6 +345,11 @@ export function ExercisePanel({
           <h2>{activeExercise?.title || sourceTestLabel || 'Recommended practice'}</h2>
           <p>{activeExercise?.description || 'Choose a recommended exercise and follow the safe practice notes.'}</p>
         </div>
+        {onStop ? (
+          <div className="exercise-recommendation-hero__actions">
+            <SteplyButton className="screen-stop-button" variant="secondary" onClick={onStop}>Stop</SteplyButton>
+          </div>
+        ) : null}
       </SteplyCard>
 
       <div className="exercise-recommendation-options" aria-label="Exercise recommendations">
@@ -320,13 +415,18 @@ export function ExercisePanel({
         </SteplyCard>
       </div>
 
-      {onViewProgress ? (
-        <div className="exercise-recommendation-actions">
+      <div className="exercise-recommendation-actions">
+        {onViewProgress ? (
           <SteplyButton onClick={onViewProgress}>
             View My Progress
           </SteplyButton>
-        </div>
-      ) : null}
+        ) : null}
+        {onStop ? (
+          <SteplyButton className="screen-stop-button" variant="secondary" onClick={onStop}>
+            Stop
+          </SteplyButton>
+        ) : null}
+      </div>
     </div>
   );
 }

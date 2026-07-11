@@ -1,0 +1,2070 @@
+{
+  "schemaVersion": "steply_internal_validation_summary.v1",
+  "generatedAt": "2026-07-11T05:01:02.557Z",
+  "dataSet": {
+    "source": "synthetic_internal_fixture",
+    "realOrAuthorizedHumanCases": 0,
+    "syntheticCases": 8,
+    "fixtureCaseIds": [
+      "chair_normal_three_reps",
+      "chair_half_rise_not_counted",
+      "chair_confirmed_arm_support_invalid",
+      "chair_tracking_loss_recovery",
+      "balance_tandem_pass",
+      "balance_tandem_ambiguous_front_view",
+      "balance_one_leg_touchdown_fail",
+      "balance_tracking_loss_recovery_pass"
+    ],
+    "coverageTags": [
+      "ambiguous_rejection",
+      "arm_support",
+      "correct_position",
+      "incomplete_repetition",
+      "normal",
+      "oblique_camera",
+      "one_leg",
+      "partial_occlusion",
+      "pause_resume",
+      "protocol_invalid",
+      "repetition_count",
+      "tandem",
+      "timestamp_dwell",
+      "touchdown",
+      "tracking_loss",
+      "wrong_camera_angle",
+      "wrong_performance"
+    ]
+  },
+  "replay": {
+    "schemaVersion": "steply_internal_validation_summary.v1",
+    "caseCount": 8,
+    "failedCaseCount": 0,
+    "results": [
+      {
+        "caseId": "chair_normal_three_reps",
+        "assessmentType": "CHAIR_STAND_30S",
+        "actual": {
+          "state": "COMPLETED",
+          "completedRepCount": 3,
+          "invalid": false,
+          "confirmedArmUse": false,
+          "incompleteRepetitionCount": 0,
+          "pauseCount": 0,
+          "eventTypes": [
+            "SIT_CONFIRMED",
+            "RISING_STARTED",
+            "STAND_CONFIRMED",
+            "DESCENDING_STARTED",
+            "REP_COMPLETED",
+            "SIT_CONFIRMED",
+            "RISING_STARTED",
+            "STAND_CONFIRMED",
+            "DESCENDING_STARTED",
+            "REP_COMPLETED",
+            "SIT_CONFIRMED",
+            "RISING_STARTED",
+            "STAND_CONFIRMED",
+            "DESCENDING_STARTED",
+            "REP_COMPLETED",
+            "SIT_CONFIRMED",
+            "ASSESSMENT_COMPLETED"
+          ],
+          "events": [
+            {
+              "eventId": "event-a8f7e78a-eeb7-44f9-b5fd-f3347251c801",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "SIT_CONFIRMED",
+              "timestampMs": 300,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "WAITING_FOR_SIT",
+                "to": "SIT"
+              }
+            },
+            {
+              "eventId": "event-1d99a65a-6ef7-430c-bc52-313298bf8e78",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "RISING_STARTED",
+              "timestampMs": 600,
+              "frameId": 7,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SIT",
+                "to": "RISING"
+              }
+            },
+            {
+              "eventId": "event-63143754-f725-4b55-9904-b6c87508324d",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "STAND_CONFIRMED",
+              "timestampMs": 1200,
+              "frameId": 13,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "RISING",
+                "to": "STAND"
+              }
+            },
+            {
+              "eventId": "event-23cced89-c47b-46bc-af15-7c5d3ce163f1",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "DESCENDING_STARTED",
+              "timestampMs": 1700,
+              "frameId": 18,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "STAND",
+                "to": "DESCENDING"
+              }
+            },
+            {
+              "eventId": "event-358a10a8-b22f-46a6-bf5e-bcd8aa54b492",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "REP_COMPLETED",
+              "timestampMs": 2400,
+              "frameId": 25,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 1800
+              },
+              "reasonCode": "REP_1"
+            },
+            {
+              "eventId": "event-d40c88b7-4961-4639-9954-8a4ab2523253",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "SIT_CONFIRMED",
+              "timestampMs": 2400,
+              "frameId": 25,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "DESCENDING",
+                "to": "SIT"
+              }
+            },
+            {
+              "eventId": "event-ef14bc3b-5902-4a2f-a8bb-eabfcad11fae",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "RISING_STARTED",
+              "timestampMs": 2800,
+              "frameId": 29,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SIT",
+                "to": "RISING"
+              }
+            },
+            {
+              "eventId": "event-e81894dd-164f-453b-b043-ac64bfda3163",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "STAND_CONFIRMED",
+              "timestampMs": 3400,
+              "frameId": 35,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "RISING",
+                "to": "STAND"
+              }
+            },
+            {
+              "eventId": "event-63484cf7-82d3-481b-beb9-a17bcc497bd5",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "DESCENDING_STARTED",
+              "timestampMs": 3900,
+              "frameId": 40,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "STAND",
+                "to": "DESCENDING"
+              }
+            },
+            {
+              "eventId": "event-7f284eac-cea0-470c-86ba-26c882508f49",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "REP_COMPLETED",
+              "timestampMs": 4600,
+              "frameId": 47,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 1800
+              },
+              "reasonCode": "REP_2"
+            },
+            {
+              "eventId": "event-40bfdd08-a869-4bfe-a1e7-fb1fa185540c",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "SIT_CONFIRMED",
+              "timestampMs": 4600,
+              "frameId": 47,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "DESCENDING",
+                "to": "SIT"
+              }
+            },
+            {
+              "eventId": "event-b033bd70-5dc3-4990-ac81-26e4ec528af1",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "RISING_STARTED",
+              "timestampMs": 5000,
+              "frameId": 51,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SIT",
+                "to": "RISING"
+              }
+            },
+            {
+              "eventId": "event-3030530f-e425-47b7-871c-735b23a82d26",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "STAND_CONFIRMED",
+              "timestampMs": 5600,
+              "frameId": 57,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "RISING",
+                "to": "STAND"
+              }
+            },
+            {
+              "eventId": "event-3676ac88-12ac-4c8d-ac55-54224f778799",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "DESCENDING_STARTED",
+              "timestampMs": 6100,
+              "frameId": 62,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "STAND",
+                "to": "DESCENDING"
+              }
+            },
+            {
+              "eventId": "event-ef0f339b-9310-4223-853f-ecde3ba57b57",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "REP_COMPLETED",
+              "timestampMs": 6800,
+              "frameId": 69,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 1800
+              },
+              "reasonCode": "REP_3"
+            },
+            {
+              "eventId": "event-4fd505be-3c15-4d54-aac4-77c4e7bc124d",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "SIT_CONFIRMED",
+              "timestampMs": 6800,
+              "frameId": 69,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "DESCENDING",
+                "to": "SIT"
+              }
+            },
+            {
+              "eventId": "event-135a770b-bbc5-4bde-818d-efb988571671",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "ASSESSMENT_COMPLETED",
+              "timestampMs": 7000,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 7000,
+                "requiredDurationMs": 30000
+              },
+              "reasonCode": "COMPLETED"
+            }
+          ]
+        },
+        "expected": {
+          "completedRepCount": 3,
+          "invalid": false,
+          "confirmedArmUse": false
+        },
+        "comparisons": {
+          "repCountExact": true,
+          "countAbsoluteError": 0,
+          "standEvent": {
+            "matched": 3,
+            "precision": 1,
+            "recall": 1
+          },
+          "sitEvent": {
+            "matched": 4,
+            "precision": 1,
+            "recall": 1
+          },
+          "armUseFalsePositive": false,
+          "invalidExpected": false,
+          "invalidDetected": null,
+          "eventSequence": {
+            "ok": true,
+            "missing": [],
+            "actualTypes": [
+              "SIT_CONFIRMED",
+              "RISING_STARTED",
+              "STAND_CONFIRMED",
+              "DESCENDING_STARTED",
+              "REP_COMPLETED",
+              "SIT_CONFIRMED",
+              "RISING_STARTED",
+              "STAND_CONFIRMED",
+              "DESCENDING_STARTED",
+              "REP_COMPLETED",
+              "SIT_CONFIRMED",
+              "RISING_STARTED",
+              "STAND_CONFIRMED",
+              "DESCENDING_STARTED",
+              "REP_COMPLETED",
+              "SIT_CONFIRMED",
+              "ASSESSMENT_COMPLETED"
+            ],
+            "expectedSequence": [
+              "SIT_CONFIRMED",
+              "RISING_STARTED",
+              "STAND_CONFIRMED",
+              "DESCENDING_STARTED",
+              "REP_COMPLETED"
+            ]
+          }
+        }
+      },
+      {
+        "caseId": "chair_half_rise_not_counted",
+        "assessmentType": "CHAIR_STAND_30S",
+        "actual": {
+          "state": "COMPLETED",
+          "completedRepCount": 0,
+          "invalid": false,
+          "confirmedArmUse": false,
+          "incompleteRepetitionCount": 1,
+          "pauseCount": 0,
+          "eventTypes": [
+            "SIT_CONFIRMED",
+            "RISING_STARTED",
+            "DESCENDING_STARTED",
+            "SIT_CONFIRMED",
+            "ASSESSMENT_COMPLETED"
+          ],
+          "events": [
+            {
+              "eventId": "event-ae998bac-2dc0-4cda-8d35-e1556ee30f97",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "SIT_CONFIRMED",
+              "timestampMs": 300,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "WAITING_FOR_SIT",
+                "to": "SIT"
+              }
+            },
+            {
+              "eventId": "event-e5e7c50f-fbdd-459c-b1da-4411714ec19d",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "RISING_STARTED",
+              "timestampMs": 700,
+              "frameId": 8,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SIT",
+                "to": "RISING"
+              }
+            },
+            {
+              "eventId": "event-23e804d6-d6e3-4d2e-8194-89eda2846831",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "DESCENDING_STARTED",
+              "timestampMs": 1000,
+              "frameId": 11,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "RISING",
+                "to": "DESCENDING"
+              },
+              "reasonCode": "DESCENDING_BEFORE_STAND"
+            },
+            {
+              "eventId": "event-54f627bf-003c-4b4b-a042-6211a21a1be7",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "SIT_CONFIRMED",
+              "timestampMs": 1600,
+              "frameId": 17,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "DESCENDING",
+                "to": "SIT"
+              }
+            },
+            {
+              "eventId": "event-d649e7a3-f216-4b6b-954c-d35e02e4f595",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "ASSESSMENT_COMPLETED",
+              "timestampMs": 1900,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 1900,
+                "requiredDurationMs": 30000
+              },
+              "reasonCode": "COMPLETED"
+            }
+          ]
+        },
+        "expected": {
+          "completedRepCount": 0,
+          "invalid": false,
+          "confirmedArmUse": false
+        },
+        "comparisons": {
+          "repCountExact": true,
+          "countAbsoluteError": 0,
+          "standEvent": {
+            "matched": 0,
+            "precision": 1,
+            "recall": 1
+          },
+          "sitEvent": {
+            "matched": 2,
+            "precision": 1,
+            "recall": 1
+          },
+          "armUseFalsePositive": false,
+          "invalidExpected": false,
+          "invalidDetected": null,
+          "eventSequence": {
+            "ok": true,
+            "missing": [],
+            "actualTypes": [
+              "SIT_CONFIRMED",
+              "RISING_STARTED",
+              "DESCENDING_STARTED",
+              "SIT_CONFIRMED",
+              "ASSESSMENT_COMPLETED"
+            ],
+            "expectedSequence": []
+          }
+        }
+      },
+      {
+        "caseId": "chair_confirmed_arm_support_invalid",
+        "assessmentType": "CHAIR_STAND_30S",
+        "actual": {
+          "state": "INVALID",
+          "completedRepCount": 0,
+          "invalid": true,
+          "confirmedArmUse": true,
+          "incompleteRepetitionCount": 0,
+          "pauseCount": 0,
+          "eventTypes": [
+            "SIT_CONFIRMED",
+            "ARM_USE_CONFIRMED",
+            "ASSESSMENT_INVALID"
+          ],
+          "events": [
+            {
+              "eventId": "event-acb074ee-96cf-4c6b-aa9e-104b61907d80",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "SIT_CONFIRMED",
+              "timestampMs": 300,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "WAITING_FOR_SIT",
+                "to": "SIT"
+              }
+            },
+            {
+              "eventId": "event-43bef71c-63f7-4dfc-b607-a04fbb0676ba",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "ARM_USE_CONFIRMED",
+              "timestampMs": 500,
+              "frameId": 6,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "FOLDED_ARMS",
+                "to": "ARM_SUPPORT_USED"
+              },
+              "reasonCode": "ARM_SUPPORT_USED"
+            },
+            {
+              "eventId": "event-1cf964b4-6511-4520-99cf-111af334e709",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "ASSESSMENT_INVALID",
+              "timestampMs": 500,
+              "frameId": 6,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SIT",
+                "to": "INVALID"
+              },
+              "reasonCode": "ARM_USE_CONFIRMED"
+            }
+          ]
+        },
+        "expected": {
+          "completedRepCount": 0,
+          "invalid": true,
+          "confirmedArmUse": true
+        },
+        "comparisons": {
+          "repCountExact": true,
+          "countAbsoluteError": 0,
+          "standEvent": {
+            "matched": 0,
+            "precision": 1,
+            "recall": 1
+          },
+          "sitEvent": {
+            "matched": 1,
+            "precision": 1,
+            "recall": 1
+          },
+          "armUseFalsePositive": false,
+          "invalidExpected": true,
+          "invalidDetected": true,
+          "eventSequence": {
+            "ok": true,
+            "missing": [],
+            "actualTypes": [
+              "SIT_CONFIRMED",
+              "ARM_USE_CONFIRMED",
+              "ASSESSMENT_INVALID"
+            ],
+            "expectedSequence": []
+          }
+        }
+      },
+      {
+        "caseId": "chair_tracking_loss_recovery",
+        "assessmentType": "CHAIR_STAND_30S",
+        "actual": {
+          "state": "COMPLETED",
+          "completedRepCount": 1,
+          "invalid": false,
+          "confirmedArmUse": false,
+          "incompleteRepetitionCount": 0,
+          "pauseCount": 1,
+          "eventTypes": [
+            "SIT_CONFIRMED",
+            "RISING_STARTED",
+            "QUALITY_PAUSED",
+            "QUALITY_RESUMED",
+            "STAND_CONFIRMED",
+            "DESCENDING_STARTED",
+            "REP_COMPLETED",
+            "SIT_CONFIRMED",
+            "ASSESSMENT_COMPLETED"
+          ],
+          "events": [
+            {
+              "eventId": "event-f12c39bc-e476-4768-bf53-8988fcce0191",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "SIT_CONFIRMED",
+              "timestampMs": 300,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "WAITING_FOR_SIT",
+                "to": "SIT"
+              }
+            },
+            {
+              "eventId": "event-a3d17841-1f3e-4f45-af79-f68f76bb5365",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "RISING_STARTED",
+              "timestampMs": 700,
+              "frameId": 8,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SIT",
+                "to": "RISING"
+              }
+            },
+            {
+              "eventId": "event-f39749aa-6013-487e-907e-89f45135ec18",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "QUALITY_PAUSED",
+              "timestampMs": 900,
+              "frameId": 10,
+              "confidence": 0.2,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "RISING",
+                "to": "PAUSED"
+              },
+              "reasonCode": "TRACKING_LOST"
+            },
+            {
+              "eventId": "event-4ad1a541-3461-449f-a7e4-defb54e53a97",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "QUALITY_RESUMED",
+              "timestampMs": 1200,
+              "frameId": 13,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "PAUSED",
+                "to": "RISING"
+              }
+            },
+            {
+              "eventId": "event-b277ef36-30b2-4470-a4ba-cea02e1f59f7",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "STAND_CONFIRMED",
+              "timestampMs": 1800,
+              "frameId": 19,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "RISING",
+                "to": "STAND"
+              }
+            },
+            {
+              "eventId": "event-fcc1266d-8ae4-483e-a960-7447ddb41c3e",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "DESCENDING_STARTED",
+              "timestampMs": 2300,
+              "frameId": 24,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "STAND",
+                "to": "DESCENDING"
+              }
+            },
+            {
+              "eventId": "event-0dbb18df-ab5e-4536-9a47-b2ffc81ef4b4",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "REP_COMPLETED",
+              "timestampMs": 3000,
+              "frameId": 31,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 2300
+              },
+              "reasonCode": "REP_1"
+            },
+            {
+              "eventId": "event-b7d4d09c-ddf7-4f87-89fb-00e5a26327e8",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "SIT_CONFIRMED",
+              "timestampMs": 3000,
+              "frameId": 31,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "DESCENDING",
+                "to": "SIT"
+              }
+            },
+            {
+              "eventId": "event-8b892987-8a8d-4e59-922f-639c4702a6f7",
+              "sessionId": "chair-validation-session",
+              "assessmentType": "CHAIR_STAND_30S",
+              "type": "ASSESSMENT_COMPLETED",
+              "timestampMs": 3200,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 3200,
+                "requiredDurationMs": 30000
+              },
+              "reasonCode": "COMPLETED"
+            }
+          ]
+        },
+        "expected": {
+          "completedRepCount": 1,
+          "invalid": false,
+          "confirmedArmUse": false
+        },
+        "comparisons": {
+          "repCountExact": true,
+          "countAbsoluteError": 0,
+          "standEvent": {
+            "matched": 1,
+            "precision": 1,
+            "recall": 1
+          },
+          "sitEvent": {
+            "matched": 2,
+            "precision": 1,
+            "recall": 1
+          },
+          "armUseFalsePositive": false,
+          "invalidExpected": false,
+          "invalidDetected": null,
+          "eventSequence": {
+            "ok": true,
+            "missing": [],
+            "actualTypes": [
+              "SIT_CONFIRMED",
+              "RISING_STARTED",
+              "QUALITY_PAUSED",
+              "QUALITY_RESUMED",
+              "STAND_CONFIRMED",
+              "DESCENDING_STARTED",
+              "REP_COMPLETED",
+              "SIT_CONFIRMED",
+              "ASSESSMENT_COMPLETED"
+            ],
+            "expectedSequence": []
+          }
+        }
+      },
+      {
+        "caseId": "balance_tandem_pass",
+        "assessmentType": "FOUR_STAGE_BALANCE",
+        "actual": {
+          "state": "PASSED",
+          "stage": "TANDEM",
+          "targetStageStatus": "PASSED",
+          "targetStage": "TANDEM",
+          "passed": true,
+          "failed": false,
+          "failureReason": null,
+          "holdDurationSeconds": 10,
+          "trackingLost": false,
+          "eventTypes": [
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "HOLD_COMPLETED",
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "HOLD_COMPLETED",
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "HOLD_COMPLETED"
+          ],
+          "events": [
+            {
+              "eventId": "event-ab778582-1499-4a5b-9eb1-2bed338803e2",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 0,
+              "frameId": 1,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-a7a523cb-906a-4fba-8690-0494b22284ca",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 750,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-f5e863c6-1a27-475f-90ec-160d1bc2e99d",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 750,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-bd565b6b-0b85-4f7e-93ab-4b28aad40fa7",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_COMPLETED",
+              "timestampMs": 10750,
+              "frameId": 44,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 10000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-c580a755-f662-431f-a314-6185519571b7",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 12250,
+              "frameId": 50,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-e6d2a08c-0bc9-4b70-b631-3cd1f4a521fa",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 13000,
+              "frameId": 53,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-b0da8aac-5017-4ffb-8c31-e207347ae168",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 13000,
+              "frameId": 53,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-3e54c7be-55e5-4f38-a729-03fcadc1c573",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_COMPLETED",
+              "timestampMs": 23000,
+              "frameId": 93,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 10000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-392be6af-cbb3-4b7f-ae4e-e22d7afbb258",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 24500,
+              "frameId": 99,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-9b8ceebb-778f-449e-9bf6-b43f4c9854bf",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 25250,
+              "frameId": 102,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "TANDEM"
+            },
+            {
+              "eventId": "event-516a4c07-a62e-412c-ab89-08f7fdb0ff3d",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 25250,
+              "frameId": 102,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "TANDEM"
+            },
+            {
+              "eventId": "event-3d1a707b-04cc-4454-ab70-cf9ef7274f1e",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_COMPLETED",
+              "timestampMs": 35250,
+              "frameId": 142,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 10000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "TANDEM"
+            }
+          ]
+        },
+        "expected": {
+          "targetStage": "TANDEM",
+          "valid": true,
+          "ambiguous": false,
+          "holdDurationSeconds": 10,
+          "failureReason": null,
+          "trackingLossExpected": false
+        },
+        "comparisons": {
+          "stageClassificationCorrect": true,
+          "ambiguousRejected": null,
+          "holdTimeAbsoluteErrorSeconds": 0,
+          "falsePass": false,
+          "falseFail": false,
+          "trackingLossSeparatedFromFailure": null,
+          "eventSequence": {
+            "ok": true,
+            "missing": [],
+            "actualTypes": [
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "HOLD_COMPLETED",
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "HOLD_COMPLETED",
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "HOLD_COMPLETED"
+            ],
+            "expectedSequence": []
+          }
+        }
+      },
+      {
+        "caseId": "balance_tandem_ambiguous_front_view",
+        "assessmentType": "FOUR_STAGE_BALANCE",
+        "actual": {
+          "state": "ACQUIRING_POSITION",
+          "stage": "TANDEM",
+          "targetStageStatus": "NOT_ATTEMPTED",
+          "targetStage": "TANDEM",
+          "passed": false,
+          "failed": false,
+          "failureReason": null,
+          "holdDurationSeconds": 0,
+          "trackingLost": false,
+          "eventTypes": [
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "HOLD_COMPLETED",
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "HOLD_COMPLETED",
+            "POSE_ACQUIRED"
+          ],
+          "events": [
+            {
+              "eventId": "event-232f661b-f907-402a-b148-100fb7e0f53c",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 0,
+              "frameId": 1,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-c56cdb1f-d2b3-4a7d-b10d-6bb9c7390c90",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 750,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-d5666b56-22c4-4ffd-bac2-ff5884d54342",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 750,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-99d5c755-3329-4dae-8a74-68f6a7c1b182",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_COMPLETED",
+              "timestampMs": 10750,
+              "frameId": 44,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 10000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-41b20168-f44c-4d23-8105-b9348665a787",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 12250,
+              "frameId": 50,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-bf3495cd-b99f-4d72-88dc-01a75636f743",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 13000,
+              "frameId": 53,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-67afb0bb-da41-4855-aa68-28f0345a0148",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 13000,
+              "frameId": 53,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-238a0da0-d8f4-4c79-b95d-4d33f7b2b513",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_COMPLETED",
+              "timestampMs": 23000,
+              "frameId": 93,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 10000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-d9888f0f-95e6-4683-9a20-8133227d217f",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 24500,
+              "frameId": 99,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            }
+          ]
+        },
+        "expected": {
+          "targetStage": "TANDEM",
+          "valid": false,
+          "ambiguous": true,
+          "holdDurationSeconds": 0,
+          "failureReason": "CAMERA_NOT_OBSERVABLE",
+          "trackingLossExpected": false
+        },
+        "comparisons": {
+          "stageClassificationCorrect": false,
+          "ambiguousRejected": true,
+          "holdTimeAbsoluteErrorSeconds": 0,
+          "falsePass": false,
+          "falseFail": false,
+          "trackingLossSeparatedFromFailure": null,
+          "eventSequence": {
+            "ok": true,
+            "missing": [],
+            "actualTypes": [
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "HOLD_COMPLETED",
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "HOLD_COMPLETED",
+              "POSE_ACQUIRED"
+            ],
+            "expectedSequence": []
+          }
+        }
+      },
+      {
+        "caseId": "balance_one_leg_touchdown_fail",
+        "assessmentType": "FOUR_STAGE_BALANCE",
+        "actual": {
+          "state": "FAILED",
+          "stage": "ONE_LEG",
+          "targetStageStatus": "FAILED",
+          "targetStage": "ONE_LEG",
+          "passed": false,
+          "failed": true,
+          "failureReason": "LIFTED_FOOT_TOUCHED_DOWN",
+          "holdDurationSeconds": 1,
+          "trackingLost": false,
+          "eventTypes": [
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "HOLD_COMPLETED",
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "HOLD_COMPLETED",
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "HOLD_COMPLETED",
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "LIFTED_FOOT_TOUCHED_DOWN",
+            "HOLD_FAILED"
+          ],
+          "events": [
+            {
+              "eventId": "event-66f2d519-7cce-4051-8f04-6a9258c7e382",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 0,
+              "frameId": 1,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-a93c4be2-7a23-4f3b-8305-1d8cc26e2453",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 750,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-b76e8b7b-9c0f-48fc-8a28-9ff42aa9b877",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 750,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-5bc85238-ad33-4d8a-bbee-21b396784cbd",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_COMPLETED",
+              "timestampMs": 10750,
+              "frameId": 44,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 10000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-ca68a693-b999-46dd-ba2e-65ccd3912577",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 12250,
+              "frameId": 50,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-644f2083-5773-4c00-97c6-19cf25159fc0",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 13000,
+              "frameId": 53,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-999d8a85-3794-4780-b314-039ba17f04ff",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 13000,
+              "frameId": 53,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-17cf9253-200e-48a6-a5b8-f85c272b7e57",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_COMPLETED",
+              "timestampMs": 23000,
+              "frameId": 93,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 10000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-fbab21be-11c9-4f70-8656-a800aec29358",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 24500,
+              "frameId": 99,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-6231d401-1fa7-43ee-b12b-fcc1ac72fcdb",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 25250,
+              "frameId": 102,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "TANDEM"
+            },
+            {
+              "eventId": "event-8da28674-21f6-44dc-8969-46a191598cbb",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 25250,
+              "frameId": 102,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "TANDEM"
+            },
+            {
+              "eventId": "event-bbe51fdf-dde4-45d7-ad40-7b8f9224559c",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_COMPLETED",
+              "timestampMs": 35250,
+              "frameId": 142,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 10000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "TANDEM"
+            },
+            {
+              "eventId": "event-45778585-64c5-468b-a1e4-5d1c38bc9d41",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 36750,
+              "frameId": 148,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-d0046bc8-c11e-45c6-97ef-8c1dbf837c0a",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 37500,
+              "frameId": 151,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "ONE_LEG"
+            },
+            {
+              "eventId": "event-395dc3d7-c9a0-4111-a920-596486643bba",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 37500,
+              "frameId": 151,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "ONE_LEG"
+            },
+            {
+              "eventId": "event-3148ff31-b3ff-464a-93e6-af8d45fb09ae",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "LIFTED_FOOT_TOUCHED_DOWN",
+              "timestampMs": 38500,
+              "frameId": 155,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DISTANCE",
+                "normalizedValue": 4.634627357684203e-16,
+                "requiredMax": 0.62
+              },
+              "reasonCode": "LIFTED_FOOT_TOUCHED_DOWN"
+            },
+            {
+              "eventId": "event-cce0b99b-d5d2-45da-ba64-c169f0a58eed",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_FAILED",
+              "timestampMs": 38500,
+              "frameId": 155,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 1000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "LIFTED_FOOT_TOUCHED_DOWN"
+            }
+          ]
+        },
+        "expected": {
+          "targetStage": "ONE_LEG",
+          "valid": false,
+          "ambiguous": false,
+          "holdDurationSeconds": 1.25,
+          "failureReason": "LIFTED_FOOT_TOUCHED_DOWN",
+          "trackingLossExpected": false
+        },
+        "comparisons": {
+          "stageClassificationCorrect": true,
+          "ambiguousRejected": null,
+          "holdTimeAbsoluteErrorSeconds": 0.25,
+          "falsePass": false,
+          "falseFail": false,
+          "trackingLossSeparatedFromFailure": null,
+          "eventSequence": {
+            "ok": true,
+            "missing": [],
+            "actualTypes": [
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "HOLD_COMPLETED",
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "HOLD_COMPLETED",
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "HOLD_COMPLETED",
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "LIFTED_FOOT_TOUCHED_DOWN",
+              "HOLD_FAILED"
+            ],
+            "expectedSequence": []
+          }
+        }
+      },
+      {
+        "caseId": "balance_tracking_loss_recovery_pass",
+        "assessmentType": "FOUR_STAGE_BALANCE",
+        "actual": {
+          "state": "PASSED",
+          "stage": "TANDEM",
+          "targetStageStatus": "PASSED",
+          "targetStage": "TANDEM",
+          "passed": true,
+          "failed": false,
+          "failureReason": null,
+          "holdDurationSeconds": 10,
+          "trackingLost": true,
+          "eventTypes": [
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "HOLD_COMPLETED",
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "HOLD_COMPLETED",
+            "POSE_ACQUIRED",
+            "POSITION_CONFIRMED",
+            "HOLD_STARTED",
+            "TRACKING_LOST",
+            "QUALITY_RESUMED",
+            "HOLD_COMPLETED"
+          ],
+          "events": [
+            {
+              "eventId": "event-3fe08a33-89c0-4ba8-98c6-a2f0b54ff91e",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 0,
+              "frameId": 1,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-bb0fd734-eef3-4e9c-84d0-31e6d2375b00",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 750,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-22ebb3b5-f7d2-46e2-b972-d49f360cdd54",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 750,
+              "frameId": 4,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-df0086fc-d4fc-4d83-b3e9-502056a16d05",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_COMPLETED",
+              "timestampMs": 10750,
+              "frameId": 44,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 10000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SIDE_BY_SIDE"
+            },
+            {
+              "eventId": "event-67588326-74aa-4122-a9f9-4296696d6456",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 12250,
+              "frameId": 50,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-a5512004-78cc-466f-a7cb-9a5a7c1eda4a",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 13000,
+              "frameId": 53,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-78f1114c-750b-4448-9bac-96d9fdbd31e2",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 13000,
+              "frameId": 53,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-40a13051-032c-4feb-b1c1-89c80d76eea0",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_COMPLETED",
+              "timestampMs": 23000,
+              "frameId": 93,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 10000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "SEMI_TANDEM"
+            },
+            {
+              "eventId": "event-1a5b75e7-7b83-4ac5-9bc6-3263464d30b6",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSE_ACQUIRED",
+              "timestampMs": 24500,
+              "frameId": 99,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "SETUP",
+                "to": "ACQUIRING_POSITION"
+              },
+              "reasonCode": "SETUP_READY"
+            },
+            {
+              "eventId": "event-8f929438-1f6c-4064-947a-3f884ee3a2e7",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "POSITION_CONFIRMED",
+              "timestampMs": 25250,
+              "frameId": 102,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "ACQUIRING_POSITION",
+                "to": "POSITION_CONFIRMED"
+              },
+              "reasonCode": "TANDEM"
+            },
+            {
+              "eventId": "event-fa26fd01-728f-4c15-89cd-7258a5e8971b",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_STARTED",
+              "timestampMs": 25250,
+              "frameId": 102,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 0,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "TANDEM"
+            },
+            {
+              "eventId": "event-27272b04-4582-40c8-9a41-67ed38fc3df9",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "TRACKING_LOST",
+              "timestampMs": 28500,
+              "frameId": 115,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "QUALITY",
+                "qualityState": "PAUSED",
+                "reasons": [
+                  {
+                    "code": "TRACKING_LOST"
+                  }
+                ]
+              },
+              "reasonCode": "TRACKING_LOST"
+            },
+            {
+              "eventId": "event-4dac26f3-6deb-42a4-92f3-fdf812205c21",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "QUALITY_RESUMED",
+              "timestampMs": 29750,
+              "frameId": 120,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "STATE_TRANSITION",
+                "from": "PAUSED",
+                "to": "HOLDING"
+              },
+              "reasonCode": "TRACKING_RECOVERED"
+            },
+            {
+              "eventId": "event-ab21507c-8b98-4eef-8944-79dc2ebb0316",
+              "sessionId": "balance-validation-session",
+              "assessmentType": "FOUR_STAGE_BALANCE",
+              "type": "HOLD_COMPLETED",
+              "timestampMs": 36500,
+              "frameId": 147,
+              "confidence": 0.92,
+              "evidence": {
+                "kind": "DURATION",
+                "durationMs": 10000,
+                "requiredDurationMs": 10000
+              },
+              "reasonCode": "TANDEM"
+            }
+          ]
+        },
+        "expected": {
+          "targetStage": "TANDEM",
+          "valid": true,
+          "ambiguous": false,
+          "holdDurationSeconds": 10,
+          "failureReason": null,
+          "trackingLossExpected": true
+        },
+        "comparisons": {
+          "stageClassificationCorrect": true,
+          "ambiguousRejected": null,
+          "holdTimeAbsoluteErrorSeconds": 0,
+          "falsePass": false,
+          "falseFail": false,
+          "trackingLossSeparatedFromFailure": true,
+          "eventSequence": {
+            "ok": true,
+            "missing": [],
+            "actualTypes": [
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "HOLD_COMPLETED",
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "HOLD_COMPLETED",
+              "POSE_ACQUIRED",
+              "POSITION_CONFIRMED",
+              "HOLD_STARTED",
+              "TRACKING_LOST",
+              "QUALITY_RESUMED",
+              "HOLD_COMPLETED"
+            ],
+            "expectedSequence": []
+          }
+        }
+      }
+    ],
+    "metrics": {
+      "chairStand": {
+        "caseCount": 4,
+        "repCountExactMatchRate": 1,
+        "meanAbsoluteCountError": 0,
+        "standEventPrecision": 1,
+        "standEventRecall": 1,
+        "sitEventPrecision": 1,
+        "sitEventRecall": 1,
+        "armUseFalsePositiveRate": 0,
+        "invalidTestDetectionRate": 1
+      },
+      "balance": {
+        "caseCount": 4,
+        "stageClassificationAccuracy": 1,
+        "ambiguousPositionRejectionRate": 1,
+        "holdTimeMeanAbsoluteErrorSeconds": 0.0625,
+        "falsePassRate": 0,
+        "falseFailRate": 0,
+        "trackingLossVsActualFailureAccuracy": 1
+      }
+    },
+    "playbackTiming": {
+      "timestampsPreserved": true,
+      "replaySpeed": 1,
+      "originalDurationMs": 152650,
+      "scheduledPlaybackDurationMs": 152650
+    },
+    "transform": {
+      "dropRate": 0.02,
+      "confidenceScale": 1,
+      "mirror": false,
+      "cameraDegradation": "none",
+      "seed": "validation-drop-smoke",
+      "replaySpeed": 1,
+      "timestampsPreserved": true
+    }
+  },
+  "recommendation": {
+    "caseCount": 4,
+    "expectedExercisePlanExactMatchRate": 1,
+    "riskCapViolationCount": 0,
+    "unexplainedRecommendationCount": 0,
+    "results": [
+      {
+        "scenarioId": "chair_below_reference_low",
+        "actualExercises": [
+          "front_knee_strengthening",
+          "knee_bends",
+          "sit_to_stand"
+        ],
+        "expectedExercises": [
+          "front_knee_strengthening",
+          "knee_bends",
+          "sit_to_stand"
+        ],
+        "exactMatch": true,
+        "riskCapViolationCount": 0,
+        "unexplainedRecommendationCount": 0,
+        "professionalReviewExpected": false,
+        "professionalReviewActual": false
+      },
+      {
+        "scenarioId": "arm_support_moderate",
+        "actualExercises": [
+          "sit_to_stand",
+          "front_knee_strengthening"
+        ],
+        "expectedExercises": [
+          "sit_to_stand",
+          "front_knee_strengthening"
+        ],
+        "exactMatch": true,
+        "riskCapViolationCount": 0,
+        "unexplainedRecommendationCount": 0,
+        "professionalReviewExpected": false,
+        "professionalReviewActual": false
+      },
+      {
+        "scenarioId": "tandem_difficulty_low",
+        "actualExercises": [
+          "tandem_stance",
+          "calf_raises",
+          "toe_raises"
+        ],
+        "expectedExercises": [
+          "tandem_stance",
+          "calf_raises",
+          "toe_raises"
+        ],
+        "exactMatch": true,
+        "riskCapViolationCount": 0,
+        "unexplainedRecommendationCount": 0,
+        "professionalReviewExpected": false,
+        "professionalReviewActual": false
+      },
+      {
+        "scenarioId": "high_risk_blocks_plan",
+        "actualExercises": [],
+        "expectedExercises": [],
+        "exactMatch": true,
+        "riskCapViolationCount": 0,
+        "unexplainedRecommendationCount": 0,
+        "professionalReviewExpected": true,
+        "professionalReviewActual": true
+      }
+    ]
+  },
+  "agent": {
+    "caseCount": 6,
+    "expectedPolicyMatchRate": 1,
+    "guardrailViolationCount": 0,
+    "duplicateActionCount": 0,
+    "toolFailureFallbackSuccessRate": 1,
+    "escalationOmissionCount": 0,
+    "results": [
+      {
+        "scenarioId": "normal_user",
+        "expectedPolicy": "EXERCISE_PRACTICE",
+        "actualPolicy": "EXERCISE_PRACTICE",
+        "policyMatch": true,
+        "guardrailViolationCount": 0,
+        "duplicateActionCount": 0,
+        "fallbackExpected": false,
+        "fallbackUsed": false,
+        "fallbackSuccess": null,
+        "escalationOmitted": false
+      },
+      {
+        "scenarioId": "invalid_assessment_three_times",
+        "expectedPolicy": "REPEATED_INVALID_ASSESSMENTS",
+        "actualPolicy": "REPEATED_INVALID_ASSESSMENTS",
+        "policyMatch": true,
+        "guardrailViolationCount": 0,
+        "duplicateActionCount": 0,
+        "fallbackExpected": false,
+        "fallbackUsed": false,
+        "fallbackSuccess": null,
+        "escalationOmitted": false
+      },
+      {
+        "scenarioId": "declining_tandem_hold",
+        "expectedPolicy": "DECLINING_SCORE_TREND",
+        "actualPolicy": "DECLINING_SCORE_TREND",
+        "policyMatch": true,
+        "guardrailViolationCount": 0,
+        "duplicateActionCount": 0,
+        "fallbackExpected": false,
+        "fallbackUsed": false,
+        "fallbackSuccess": null,
+        "escalationOmitted": false
+      },
+      {
+        "scenarioId": "high_risk",
+        "expectedPolicy": "SAFETY_EVENT",
+        "actualPolicy": "SAFETY_EVENT",
+        "policyMatch": true,
+        "guardrailViolationCount": 0,
+        "duplicateActionCount": 0,
+        "fallbackExpected": false,
+        "fallbackUsed": false,
+        "fallbackSuccess": null,
+        "escalationOmitted": false
+      },
+      {
+        "scenarioId": "progression_eligible",
+        "expectedPolicy": "PROGRESSION_AVAILABLE",
+        "actualPolicy": "PROGRESSION_AVAILABLE",
+        "policyMatch": true,
+        "guardrailViolationCount": 0,
+        "duplicateActionCount": 0,
+        "fallbackExpected": false,
+        "fallbackUsed": false,
+        "fallbackSuccess": null,
+        "escalationOmitted": false
+      },
+      {
+        "scenarioId": "tool_failure_fallback",
+        "expectedPolicy": "TOOL_FAILURE_FALLBACK",
+        "actualPolicy": "TOOL_FAILURE_FALLBACK",
+        "policyMatch": true,
+        "guardrailViolationCount": 0,
+        "duplicateActionCount": 0,
+        "fallbackExpected": true,
+        "fallbackUsed": true,
+        "fallbackSuccess": true,
+        "escalationOmitted": false
+      }
+    ]
+  },
+  "replacementDecision": {
+    "canReplaceExistingPipeline": false,
+    "recommendedActivation": "Keep STRUCTURED_V2 behind the development feature flag until authorized replay data is collected.",
+    "gates": [
+      {
+        "id": "structured_pipeline_tests",
+        "passed": true,
+        "reason": "Integrated npm check includes structured state machine, findings, recommendation, agent, and UI checks."
+      },
+      {
+        "id": "replay_reproducible",
+        "passed": true,
+        "reason": "Default replay fixtures produced expected deterministic results."
+      },
+      {
+        "id": "core_user_flow",
+        "passed": true,
+        "reason": "Structured UI check verifies valid and invalid result screen flow."
+      },
+      {
+        "id": "invalid_safe_handling",
+        "passed": true,
+        "reason": "Invalid fixture does not produce normal exercise flow in UI checks."
+      },
+      {
+        "id": "recommendation_guardrails",
+        "passed": true,
+        "reason": "Recommendation validation found no risk cap violation."
+      },
+      {
+        "id": "agent_simulation",
+        "passed": true,
+        "reason": "Agent validation matched expected policies without unsafe guardrail violations."
+      },
+      {
+        "id": "feature_flag_rollback",
+        "passed": true,
+        "reason": "pipeline.config.js keeps production default on SAFE_LEGACY_ADAPTER and STRUCTURED_V2 dev-only."
+      },
+      {
+        "id": "authorized_human_dataset",
+        "passed": false,
+        "reason": "No real or explicitly authorized human landmark dataset is present in the repository."
+      }
+    ]
+  }
+}

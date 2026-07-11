@@ -1,0 +1,27 @@
+export const QUALITY_CONFIG_VERSION = 'quality_config.v1';
+
+export const qualityConfig = {
+  version: QUALITY_CONFIG_VERSION,
+  trackingQualityAllow: 0.8,
+  trackingQualityMinResult: 0.6,
+  minVisibility: 0.55,
+  minBodyHeight: 0.38,
+  maxBodyHeight: 0.9,
+  maxCenterJumpRatio: 0.11,
+  maxSizeChangeRatio: 0.22,
+  sessionMinAcceptedFrames: 3,
+  sessionLowQualityRatioLimit: 0.35,
+  shortLossHoldMs: 250,
+  pauseAfterLossMs: 750,
+  invalidAfterLossMs: 3_000,
+  resumeStableMs: 500,
+  maxAccumulatedPauseRatio: 0.35,
+  minOverallConfidence: 0.6,
+  minLowerBodyConfidence: 0.55,
+  minFeetConfidence: 0.55,
+  minBodyInFrameScore: 0.78,
+  minCameraOrientationScore: 0.45,
+  minLightingScore: 0.35,
+  lowLightBrightness: 0.16,
+  footPlacementObservableMinScore: 0.55,
+};

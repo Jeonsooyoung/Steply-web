@@ -110,12 +110,31 @@
   -webkit-backdrop-filter: blur(16px) saturate(1.16);
 }
 
+.demo-data-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: var(--border-soft);
+  border-radius: 6px;
+  padding: 3px 7px;
+  background: var(--surface);
+  color: var(--warning);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
 .status-dot {
   width: 12px;
   height: 12px;
   border-radius: 50%;
   background: var(--success);
   box-shadow: 0 0 0 5px color-mix(in srgb, var(--success) 18%, transparent), 0 0 18px color-mix(in srgb, var(--success) 42%, transparent);
+}
+
+.status-dot--waiting {
+  background: var(--warning);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--warning) 18%, transparent), 0 0 18px color-mix(in srgb, var(--warning) 30%, transparent);
 }
 
 .eyebrow {

@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/landmark-replay.schema.json",
+  "title": "Steply Landmark Replay Fixture",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "caseId",
+    "assessmentType",
+    "calibrationProfile",
+    "frames",
+    "label"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "steply_landmark_replay.v1"
+    },
+    "caseId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "assessmentType": {
+      "enum": [
+        "CHAIR_STAND_30S",
+        "FOUR_STAGE_BALANCE"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "description": "Example: anonymized_internal_landmarks, synthetic_internal_fixture."
+    },
+    "generatedBy": {
+      "type": "string"
+    },
+    "calibrationProfile": {
+      "type": "object",
+      "description": "CalibrationProfile captured or generated for the replay case."
+    },
+    "supportRoi": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number" },
+        "height": { "type": "number" }
+      },
+      "required": ["x", "y", "width", "height"]
+    },
+    "frames": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "poseFrame",
+          "qualityStatus"
+        ],
+        "properties": {
+          "poseFrame": {
+            "type": "object",
+            "required": [
+              "frameId",
+              "timestampMs",
+              "normalizedLandmarks",
+              "confidence"
+            ],
+            "properties": {
+              "sessionId": { "type": "string" },
+              "frameId": {
+                "type": [
+                  "integer",
+                  "string"
+                ]
+              },
+              "timestampMs": { "type": "number" },
+              "image": {
+                "type": "object",
+                "properties": {
+                  "width": { "type": "number" },
+                  "height": { "type": "number" },
+                  "mirrored": { "type": "boolean" }
+                }
+              },
+              "normalizedLandmarks": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/landmark"
+                }
+              },
+              "worldLandmarks": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/landmark"
+                }
+              },
+              "confidence": {
+                "type": "object",
+                "properties": {
+                  "overall": { "type": "number" },
+                  "lowerBody": { "type": "number" },
+                  "feet": { "type": "number" },
+                  "upperBody": { "type": "number" }
+                }
+              },
+              "detectedPersonCount": { "type": "integer" },
+              "processing": {
+                "type": "object",
+                "properties": {
+                  "receivedAtMs": { "type": "number" },
+                  "completedAtMs": { "type": "number" },
+                  "latencyMs": { "type": "number" }
+                }
+              }
+            }
+          },
+          "qualityStatus": {
+            "type": "object",
+            "required": [
+              "state",
+              "timestampMs"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "NOT_READY",
+                  "READY",
+                  "PAUSED",
+                  "INVALID",
+                  "BLOCKED"
+                ]
+              },
+              "timestampMs": { "type": "number" },
+              "scores": { "type": "object" },
+              "reasons": { "type": "array" },
+              "timing": { "type": "object" },
+              "camera": { "type": "object" },
+              "footPlacementObservable": { "type": "boolean" }
+            }
+          },
+          "commandAfter": {
+            "enum": [
+              "ADVANCE_TO_NEXT_STAGE"
+            ]
+          }
+        }
+      }
+    },
+    "label": {
+      "type": "object",
+      "description": "Must match chair-stand-label.schema.json or balance-label.schema.json."
+    },
+    "expected": {
+      "type": "object"
+    },
+    "coverageTags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "landmark": {
+      "type": "object",
+      "required": [
+        "index",
+        "x",
+        "y"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" },
+        "visibility": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "presence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "isValid": { "type": "boolean" }
+      }
+    }
+  }
+}

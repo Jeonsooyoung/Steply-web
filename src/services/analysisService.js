@@ -1,7 +1,10 @@
-const crypto = require('crypto');
 const { getSession, broadcast } = require('./sessionStore');
 const { publicSession } = require('./sessionPresenter');
 const { addHistoryItem } = require('../repositories/historyRepository');
+const {
+  AssessmentResultTypes,
+  saveAssessmentResult,
+} = require('./assessmentResultPersistence');
 
 function saveRealtimeResult(payload) {
   const session = getSession(payload.sessionId);
@@ -9,6 +12,7 @@ function saveRealtimeResult(payload) {
 
   const result = {
     ...payload,
+    resultType: payload.resultType || AssessmentResultTypes.Frame,
     receivedAt: Date.now(),
   };
 
@@ -26,24 +30,12 @@ function saveFinalResult(payload) {
   const session = getSession(payload.sessionId);
   if (!session) return { error: 'Session not found', status: 404 };
 
-  const finalResult = {
-    ...payload,
-    id: crypto.randomBytes(6).toString('hex'),
-    receivedAt: Date.now(),
-    profile: session.profile || null,
-    selectedTest: session.selectedTest || payload.testType || null,
-  };
-
-  session.finalResult = finalResult;
-  addHistoryItem(finalResult);
-
-  broadcast(payload.sessionId, {
-    type: 'final',
-    result: finalResult,
-    session: publicSession(session),
+  return saveAssessmentResult(payload, {
+    session,
+    addHistoryItem,
+    broadcast,
+    publicSession,
   });
-
-  return { result: finalResult };
 }
 
 module.exports = {

@@ -1,0 +1,38 @@
+{
+  "createdAt": "2026-07-11T05:11:54.294Z",
+  "base": "http://127.0.0.1:5177",
+  "results": [
+    {
+      "name": "sharing-disabled-consent",
+      "passed": true
+    },
+    {
+      "name": "export-report",
+      "passed": true
+    },
+    {
+      "name": "professional-report-nav",
+      "passed": true
+    },
+    {
+      "name": "sharing-enabled-consent",
+      "passed": true
+    },
+    {
+      "name": "delete-confirmation",
+      "passed": true
+    },
+    {
+      "name": "accessibility-controls",
+      "passed": true,
+      "settingsState": {
+        "className": "foundation-shell step-eight-shell step-eight-settings-shell step-eight-settings--large-text step-eight-settings--high-contrast step-eight-settings--reduced-motion",
+        "clientWidth": 1280,
+        "highContrast": true,
+        "reduceMotion": true,
+        "scrollWidth": 1280,
+        "textSize": "Extra Large"
+      }
+    }
+  ]
+}

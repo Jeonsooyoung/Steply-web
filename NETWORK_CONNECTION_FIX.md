@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Then create a new QR session. The QR payload should now show your PC Wi-Fi/LAN address, for example `192.168.0.x`, not `192.168.56.1`.
+Then create a new QR session. The QR payload should now show your PC Wi-Fi/LAN address with HTTPS, for example `https://192.168.0.x:3000`, not `192.168.56.1`.
 
 ## Manual override
 
@@ -27,8 +27,8 @@ npm run dev
 or force the full server URL:
 
 ```powershell
-$env:STEPLY_SERVER_URL="http://YOUR_PC_IP:3000"
+$env:STEPLY_SERVER_URL="https://YOUR_PC_IP:3000"
 npm run dev
 ```
 
-Also make sure Windows Firewall allows Node.js on private networks and both devices are on the same Wi-Fi/LAN.
+The mobile app rejects HTTP QR payloads, so do not force `http://` unless you are only testing the web dashboard without mobile QR linking. Also make sure Windows Firewall allows Node.js on private networks and both devices are on the same Wi-Fi/LAN.

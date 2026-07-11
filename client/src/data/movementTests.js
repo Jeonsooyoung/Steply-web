@@ -39,8 +39,8 @@ export const fourStageBalanceTest = {
   id: 'four_stage_balance',
   protocolId: 'steadi_four_stage_balance',
   axis: 'balance',
-  title: '4-Stage Balance',
-  subtitle: 'Side-by-side to one-leg static balance sequence',
+  title: '4-Stage Balance Test',
+  subtitle: 'Side-by-side to one-leg standing balance sequence',
   duration: '4 x 10 sec',
   level: 'Balance',
   primaryMetric: {
@@ -59,9 +59,9 @@ export const chairStandTest = {
   id: 'chair_stand',
   protocolId: 'steadi_30_second_chair_stand',
   axis: 'chair_stand',
-  title: '30 sec Chair Stand',
+  title: '30-Second Chair Stand Test',
   subtitle: 'Repeated sit-to-stand count in 30 seconds',
-  duration: '30 sec',
+  duration: '30 seconds',
   durationSeconds: 30,
   level: 'Strength',
   primaryMetric: {
@@ -87,7 +87,7 @@ export const timedUpAndGoExperimentalTest = {
   pipelineScope: 'future',
   primaryMetric: {
     id: 'total_time_seconds',
-    label: 'TUG Time',
+    label: 'Timed Up and Go Time',
     unit: 'sec',
   },
   completion: {

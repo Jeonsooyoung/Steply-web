@@ -65,19 +65,20 @@ public/models/pose_landmarker_lite.task
 추가된 파일:
 
 ```txt
-client/src/pose/chairStandAnalyzer.js
-client/src/pose/poseLandmarks.js
 client/src/pose/steadiRules.js
-client/src/pose/recommendationRules.js
+client/src/pose/poseLandmarks.js
+client/src/pipeline/assessment/chairStand/chairStandStateMachine.js
+client/src/pipeline/assessment/balanceTest/balanceTestStateMachine.js
 ```
 
-모바일 Kotlin 분석 규칙을 JS로 옮긴 것입니다.
+현재 runtime 분석 규칙은 structured state machine으로 구현되어 있습니다.
 
 포함 규칙:
 
 - 전신 감지: 어깨, 엉덩이, 무릎, 발목 visibility 확인
-- 무릎 각도 기반 seated/rising/standing phase 판정
-- 완전히 선 자세 2프레임 이상 안정 시 1회 카운트
+- 개인 캘리브레이션 기반 sitting-to-standing progress
+- timestamp 기반 dwell/hysteresis state transition
+- structured `AssessmentResult` 생성
 - 앉은 자세 2프레임 이상 안정 시 다음 count reset
 - 종료 시 절반 이상 올라온 경우 1회 인정
 - 팔 사용 감지 시 official Chair Stand score 0점 처리

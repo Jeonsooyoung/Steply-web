@@ -6,16 +6,42 @@ import {
   getNetworkInfo,
   getSessionStatus,
   postFinalAnalysis,
-  postRealtimeAnalysis,
   selectTest,
 } from '../api/steplyApi';
-import { buildRealtimePayload } from '../data/demoAnalysis';
 import { buildDemoHistoryItems } from '../data/demoHistory';
 import { demoProfile } from '../data/demoProfile';
 import { useRemotePoseAnalysis } from './useRemotePoseAnalysis';
-import { recommendationLabel, recommendationTemplatesForResult, resultFlagsFor, testLabel } from '../pose/recommendationRules';
+import { calculateSteadiFallRisk, SteadiRiskLevels as LegacySteadiRiskLevels } from '../pose/steadiRules';
 import { SteplyV1TestTypes } from '../data/movementTests';
-import { runCareOrchestrationPipeline } from '../agents/careOrchestrationAgent';
+import { createFunctionalFindings } from '../pipeline/findings/functionalFindings.js';
+import { createDeterministicOtagoExercisePlan } from '../pipeline/recommendation/otagoExerciseEngine.js';
+import {
+  CareAgentEventTypes,
+  createMemoryCareAgentStore,
+  runCareAgentLoop,
+} from '../pipeline/agent/careAgent.js';
+import {
+  AssessmentResultStatuses as StructuredAssessmentStatuses,
+  AssessmentTypes as StructuredAssessmentTypes,
+  BalanceStages as StructuredBalanceStages,
+  SteadiRiskLevels as StructuredSteadiRiskLevels,
+} from '../pipeline/shared/types/index.js';
+import { validateAssessmentResult } from '../pipeline/shared/validation/runtimeValidation.js';
+import { recommendationLabel, resultFlagsFor, testLabel } from '../pipeline/ui/assessmentCopy.js';
+import {
+  UserScreenIds,
+  activeStepFromScreen,
+  screenFromActiveStep,
+} from '../pipeline/ui/sessionFlow.js';
+import {
+  AssessmentResultTypes,
+  AssessmentStatuses,
+  ResultSources,
+  assessmentTypeForTestType,
+  canPersistAssessmentResult,
+  canUseClinicalPipeline,
+  withAssessmentMetadata,
+} from '../pose/assessmentResultMetadata';
 
 function normalizeFrameSource(frame, mimeType = 'image/jpeg') {
   if (typeof frame !== 'string') return '';
@@ -55,28 +81,476 @@ function dashboardWebSocketUrl(bundle) {
   return `${protocol}//${window.location.host}${value}`;
 }
 
-function buildFinalAnalysisPayload({
+function timestampMsFrom(...values) {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim()) {
+      const numeric = Number(value);
+      if (Number.isFinite(numeric)) return numeric;
+      const parsed = Date.parse(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return Date.now();
+}
+
+function isAssessmentFlowScreen(activeStep) {
+  return [
+    UserScreenIds.SafetyCheck,
+    UserScreenIds.CameraSetup,
+    UserScreenIds.Calibration,
+    UserScreenIds.Assessment,
+  ].includes(screenFromActiveStep(activeStep));
+}
+
+function activeStepForIncomingFrame(current) {
+  if (screenFromActiveStep(current) === UserScreenIds.Exercise) return current;
+  if (isAssessmentFlowScreen(current)) return current;
+  return activeStepFromScreen(UserScreenIds.CameraSetup);
+}
+
+function structuredAssessmentFromLiveResult(baseResult = {}) {
+  const candidate = baseResult.structuredAssessmentResult
+    || baseResult.finalResponse?.result
+    || baseResult.structuredPipeline?.assessmentResult
+    || null;
+  if (candidate) {
+    return {
+      value: candidate,
+      validation: validateAssessmentResult(candidate),
+    };
+  }
+  return {
+    value: null,
+    validation: {
+      ok: false,
+      failures: [{ code: 'MISSING_STRUCTURED_ASSESSMENT', message: 'Live result did not include a structured assessment result.' }],
+    },
+  };
+}
+
+const LEGACY_STEADI_RISK_TO_STRUCTURED = {
+  [LegacySteadiRiskLevels.Low]: StructuredSteadiRiskLevels.Low,
+  [LegacySteadiRiskLevels.Medium]: StructuredSteadiRiskLevels.Moderate,
+  [LegacySteadiRiskLevels.High]: StructuredSteadiRiskLevels.High,
+};
+
+function legacyChairInputFromStructuredAssessment(assessment = {}) {
+  if (assessment.assessmentType !== StructuredAssessmentTypes.ChairStand30s) return null;
+  const completed = assessment.primaryMeasurements?.completedRepetitions;
+  return {
+    testType: 'chair_stand',
+    repetitionCount: completed,
+    primaryValue: completed,
+    confidence: assessment.confidence,
+  };
+}
+
+function legacyBalanceInputFromStructuredAssessment(assessment = {}) {
+  if (assessment.assessmentType !== StructuredAssessmentTypes.FourStageBalance) return null;
+  const stageKeyByStructuredStage = {
+    [StructuredBalanceStages.SideBySide]: 'side_by_side',
+    [StructuredBalanceStages.SemiTandem]: 'semi_tandem',
+    [StructuredBalanceStages.Tandem]: 'tandem',
+    [StructuredBalanceStages.OneLeg]: 'one_leg',
+  };
+  const stageById = {};
+  for (const stage of assessment.primaryMeasurements?.stages || []) {
+    const id = stageKeyByStructuredStage[stage.stage];
+    if (!id) continue;
+    stageById[id] = {
+      id,
+      holdSeconds: stage.holdDurationSeconds,
+      confidence: stage.positionConfidence,
+      status: stage.status,
+    };
+  }
+  return {
+    testType: 'four_stage_balance',
+    stageById,
+    stages: Object.values(stageById),
+    confidence: assessment.confidence,
+  };
+}
+
+function structuredSteadiScoreFromAssessment({ sourceAssessment, profile }) {
+  const legacyScore = calculateSteadiFallRisk({
+    chairStandResult: legacyChairInputFromStructuredAssessment(sourceAssessment),
+    balanceResult: legacyBalanceInputFromStructuredAssessment(sourceAssessment),
+    profile,
+  });
+  const riskLevel = LEGACY_STEADI_RISK_TO_STRUCTURED[legacyScore.riskLevel]
+    || StructuredSteadiRiskLevels.NotScorable;
+  return {
+    value: {
+      riskLevel,
+      strengthProblem: Boolean(legacyScore.signals?.chairStandBelowAverage?.present),
+      balanceProblem: Boolean(legacyScore.signals?.balanceTandem?.present),
+      inputs: legacyScore.inputs || {},
+      appliedRuleVersion: legacyScore.schemaVersion,
+      reasonCodes: Object.values(legacyScore.signals || {})
+        .filter((signal) => signal.present)
+        .map((signal) => signal.id || signal.reason || 'STEADI_SIGNAL'),
+      complete: legacyScore.complete,
+      missingInputs: legacyScore.missingInputs || [],
+    },
+    validation: { ok: true, failures: [] },
+    legacyScore,
+  };
+}
+
+function primaryMetricFromStructuredAssessment(assessment = {}) {
+  const source = assessment || {};
+  if (source.assessmentType === StructuredAssessmentTypes.ChairStand30s) {
+    return {
+      metricKey: 'chairStandRepetitions',
+      metricValue: source.primaryMeasurements?.completedRepetitions ?? null,
+    };
+  }
+  if (source.assessmentType === StructuredAssessmentTypes.FourStageBalance) {
+    const tandem = (source.primaryMeasurements?.stages || [])
+      .find((stage) => stage.stage === StructuredBalanceStages.Tandem);
+    return {
+      metricKey: 'tandemHoldSeconds',
+      metricValue: tandem?.holdDurationSeconds ?? null,
+    };
+  }
+  return { metricKey: 'primaryValue', metricValue: null };
+}
+
+function trendMetricFromHistoryItem(item = {}) {
+  const testType = item.testType || item.selectedTest;
+  const completedAtMs = Number(item.completedAt ?? item.receivedAt ?? item.endedAt ?? item.createdAt ?? 0);
+  if (testType === 'chair_stand') {
+    const value = Number(item.repetitionCount ?? item.count ?? item.primaryValue);
+    if (!Number.isFinite(value)) return null;
+    return {
+      trendId: `history-${item.id || item.assessmentId || completedAtMs || value}`,
+      assessmentId: item.assessmentId || item.id || null,
+      assessmentType: StructuredAssessmentTypes.ChairStand30s,
+      metricKey: 'chairStandRepetitions',
+      value,
+      completedAtMs,
+    };
+  }
+  if (testType === 'four_stage_balance') {
+    const value = Number(item.primaryValue ?? item.count ?? item.holdSeconds);
+    if (!Number.isFinite(value)) return null;
+    return {
+      trendId: `history-${item.id || item.assessmentId || completedAtMs || value}`,
+      assessmentId: item.assessmentId || item.id || null,
+      assessmentType: StructuredAssessmentTypes.FourStageBalance,
+      metricKey: 'tandemHoldSeconds',
+      value,
+      completedAtMs,
+    };
+  }
+  return null;
+}
+
+function recentTrendStateFromHistory(historyItems = []) {
+  return historyItems
+    .map(trendMetricFromHistoryItem)
+    .filter(Boolean)
+    .sort((first, second) => first.completedAtMs - second.completedAtMs)
+    .slice(-5);
+}
+
+function structuredPipelineFromLiveResult({
+  baseResult,
+  session,
+} = {}) {
+  const structuredAssessment = structuredAssessmentFromLiveResult(baseResult);
+  const sourceAssessment = structuredAssessment.value;
+  const steadiScore = sourceAssessment
+    ? structuredSteadiScoreFromAssessment({ sourceAssessment, profile: session.profile })
+    : {
+      value: {
+        riskLevel: StructuredSteadiRiskLevels.NotScorable,
+        reasonCodes: ['MISSING_STRUCTURED_ASSESSMENT'],
+      },
+      validation: { ok: false, failures: [{ code: 'MISSING_STRUCTURED_ASSESSMENT' }] },
+    };
+  const structuredRiskLevel = steadiScore.value.riskLevel;
+  const canUseStructuredResult = Boolean(
+    sourceAssessment
+      && structuredAssessment.validation.ok
+      && sourceAssessment.status === StructuredAssessmentStatuses.Valid
+      && sourceAssessment.metadata?.isClinicallyScorable !== false
+  );
+
+  if (!canUseStructuredResult) {
+    return {
+      assessmentResult: sourceAssessment,
+      assessmentValidation: structuredAssessment.validation,
+      functionalFindings: [],
+      functionalFindingValidation: {
+        ok: false,
+        failures: [{ code: 'STRUCTURED_RESULT_NOT_SCORABLE', message: 'Structured findings require a valid live assessment.' }],
+      },
+      exercisePlan: null,
+      exercisePlanValidation: {
+        ok: false,
+        failures: [{ code: 'STRUCTURED_EXERCISE_PLAN_NOT_CREATED', message: 'Exercise plan was not created for an invalid assessment.' }],
+      },
+      steadiScore: steadiScore.value,
+      steadiScoreValidation: steadiScore.validation,
+      steadiRiskLevel: structuredRiskLevel,
+      reasonCodes: ['STRUCTURED_RESULT_NOT_SCORABLE'],
+    };
+  }
+
+  const findingInput = sourceAssessment.assessmentType === StructuredAssessmentTypes.ChairStand30s
+    ? { chairStandResult: sourceAssessment }
+    : { balanceResult: sourceAssessment };
+  const findings = createFunctionalFindings({
+    ...findingInput,
+    assessmentResults: [sourceAssessment],
+    profile: session.profile,
+  });
+  const exercisePlan = createDeterministicOtagoExercisePlan({
+    userId: session.profile?.id || session.id,
+    findings: findings.value,
+    steadiScore: steadiScore.value,
+    riskLevel: structuredRiskLevel,
+    sourceAssessments: [sourceAssessment],
+  });
+
+  return {
+    assessmentResult: sourceAssessment,
+    assessmentValidation: structuredAssessment.validation,
+    functionalFindings: findings.value,
+    functionalFindingValidation: findings.validation,
+    exercisePlan: exercisePlan.value,
+    exercisePlanValidation: exercisePlan.validation,
+    steadiScore: steadiScore.value,
+    steadiScoreValidation: steadiScore.validation,
+    steadiRiskLevel: structuredRiskLevel,
+    reasonCodes: [
+      ...(findings.reasonCodes || []),
+      ...(exercisePlan.value?.decisionTrace || []),
+    ],
+  };
+}
+
+function createStructuredCarePipeline({
+  baseResult,
+  session,
+  historyItems,
+  structuredPipeline,
+} = {}) {
+  const now = timestampMsFrom(baseResult.generatedAt, baseResult.completedAt);
+  const userId = session.profile?.id || session.id || 'anonymous-user';
+  const sourceAssessment = structuredPipeline.assessmentResult;
+  const exercisePlan = structuredPipeline.exercisePlan || null;
+  const functionalFindings = structuredPipeline.functionalFindings || [];
+  const riskLevel = structuredPipeline.steadiRiskLevel || StructuredSteadiRiskLevels.NotScorable;
+  const metric = primaryMetricFromStructuredAssessment(sourceAssessment);
+  const latestValidAssessment = sourceAssessment
+    ? {
+      assessmentId: sourceAssessment.assessmentId,
+      assessmentType: sourceAssessment.assessmentType,
+      testType: baseResult.testType,
+      primaryValue: metric.metricValue,
+      status: sourceAssessment.status,
+      completedAtMs: timestampMsFrom(baseResult.completedAt, baseResult.endedAt, now),
+    }
+    : null;
+  const initialState = {
+    userId,
+    latestValidAssessment,
+    currentSteadiRiskLevel: riskLevel,
+    activeFunctionalFindings: functionalFindings,
+    currentExercisePlan: exercisePlan,
+    recentFiveAssessmentTrends: recentTrendStateFromHistory(historyItems),
+    weeklyAdherence: session.profile?.weeklyAdherence || [],
+    recentInvalidAttempts: session.profile?.recentInvalidAttempts || [],
+    safetyEvents: session.profile?.safetyEvents || [],
+    reportedFalls: session.profile?.reportedFalls || [],
+    currentSessionPlan: session.profile?.currentSessionPlan || null,
+    nextReassessmentDate: session.profile?.nextReassessmentDate || null,
+    pendingEscalation: session.profile?.pendingEscalation || null,
+    reminderPreferences: session.profile?.reminderPreferences || {},
+    caregiverConsentSettings: session.profile?.caregiverConsentSettings || {},
+    recentExerciseSessionResult: session.profile?.recentExerciseSessionResult || null,
+    decisionLog: [],
+    processedEventIds: [],
+    updatedAtMs: now,
+  };
+  const event = sourceAssessment && sourceAssessment.status === StructuredAssessmentStatuses.Valid
+    ? {
+      eventId: sourceAssessment.assessmentId || baseResult.analysisSessionId || `${baseResult.testType}-${now}`,
+      type: CareAgentEventTypes.ValidAssessment,
+      assessment: latestValidAssessment,
+      metricKey: metric.metricKey,
+      metricValue: metric.metricValue,
+      currentSteadiRiskLevel: riskLevel,
+      functionalFindings,
+      exercisePlan,
+      timestampMs: now,
+    }
+    : null;
+  const store = createMemoryCareAgentStore({ [userId]: initialState });
+  const loop = runCareAgentLoop({
+    userId,
+    initialState,
+    events: event ? [event] : [],
+    store,
+    now,
+  });
+  const decisionTrace = {
+    whatChanged: loop.finalPlan.expectedOutcome,
+    observed: loop.finalPlan.observedState,
+    triggeredPolicy: loop.finalPlan.triggeredPolicy,
+    selectedActions: loop.finalPlan.selectedActions,
+    rejectedActions: loop.finalPlan.rejectedActions,
+    guardrailChecks: loop.finalPlan.guardrailChecks,
+    toolResults: loop.toolResults,
+    finalObservation: loop.finalObservation,
+  };
+  const selectedExercises = exercisePlan?.selectedExercises || [];
+  return {
+    schemaVersion: 'structured_care_pipeline.v2',
+    createdAt: new Date(now).toISOString(),
+    stageOrder: [
+      'STRUCTURED_ASSESSMENT',
+      'STEADI_SCORING',
+      'FUNCTIONAL_FINDINGS',
+      'OTAGO_RECOMMENDATION',
+      'CARE_ORCHESTRATION_AGENT',
+    ],
+    roleBoundary:
+      'Deterministic tools create measurement, finding, risk, and exercise outputs; the agent only chooses timing, next action, reminders, and escalation.',
+    stages: {
+      structuredAssessment: structuredPipeline.assessmentResult,
+      steadiScoring: structuredPipeline.steadiScore,
+      functionalFindings,
+      exerciseRecommendation: exercisePlan,
+    },
+    agent: {
+      stageId: 'CARE_ORCHESTRATION_AGENT',
+      loop,
+      decision: loop.decision,
+      decisionTrace,
+      currentExercisePlan: exercisePlan,
+      observedState: {
+        testType: baseResult.testType,
+        currentSteadiRiskLevel: riskLevel,
+        activeFunctionalFindingTypes: functionalFindings.map((finding) => finding.findingType),
+        activeFunctionalFindings: functionalFindings,
+        safetyGates: exercisePlan?.safetyNotices || [],
+        agentState: loop.finalState,
+      },
+    },
+    finalResultPatch: {
+      recommendationPlan: exercisePlan,
+      recommendedExercises: selectedExercises,
+      recommendations: selectedExercises,
+      seniorMessage: loop.decision.userMessage,
+      staffMessage: loop.decision.nextAction,
+    },
+  };
+}
+
+export function buildFinalAnalysisPayload({
   result,
   session,
   selectedTest,
   historyItems,
 }) {
   const resultTestType = result.testType || selectedTest;
-  const baseResult = { ...result, testType: resultTestType };
-  const carePipeline = runCareOrchestrationPipeline({
-    result: baseResult,
-    profile: session.profile,
-    historyItems,
+  const baseResult = withAssessmentMetadata(
+    { ...result, testType: resultTestType },
+    {
+      source: result.source || result.metadata?.source || ResultSources.LivePose,
+      sessionId: session.id,
+      analysisSessionId: result.analysisSessionId || result.metadata?.analysisSessionId,
+      testType: resultTestType,
+      assessmentType: result.assessmentType || result.metadata?.assessmentType || assessmentTypeForTestType(resultTestType),
+      isPersistable: result.isPersistable === true,
+      isClinicallyScorable: result.isClinicallyScorable !== false && result.source !== ResultSources.Fallback,
+      status: result.status || (result.invalid ? AssessmentStatuses.Invalid : AssessmentStatuses.Valid),
+      resultType: AssessmentResultTypes.Final,
+      analyzerFinalEvent: result.analyzerFinalEvent === true,
+      generatedAt: result.generatedAt || Date.now(),
+    },
+  );
+  if (!canUseClinicalPipeline(baseResult)) {
+    return {
+      ...baseResult,
+      sessionId: session.id,
+      userId: session.profile?.id || session.id,
+      testType: resultTestType,
+      testLabel: testLabel(resultTestType),
+      score: 0,
+      count: null,
+      message: baseResult.seniorMessage || baseResult.summaryMessage || 'We could not complete the measurement.',
+      features: {
+        ...(result.features || {}),
+        primaryValue: result.primaryValue ?? null,
+        primaryLabel: result.primaryLabel || 'Measurement',
+        confidence: result.confidence ?? 0,
+      },
+      flags: baseResult.status === AssessmentStatuses.Incomplete
+        ? ['We could not complete the measurement.', 'Please check the camera connection and try again.']
+        : resultFlagsFor(baseResult, resultTestType),
+      recommendations: [],
+      recommendedExercises: [],
+      recommendationPlan: {
+        priority: 'not_available',
+        reason: 'Recommendations are disabled for non-clinical assessment results.',
+        recommendedExercises: [],
+        safetyGates: ['non_clinical_result'],
+      },
+      carePipeline: null,
+    };
+  }
+  const structuredPipeline = structuredPipelineFromLiveResult({
+    baseResult,
+    session,
   });
-  const assessmentResult = carePipeline.stages.poseJudgement.assessmentResult;
+  const carePipeline = createStructuredCarePipeline({
+    baseResult,
+    session,
+    historyItems,
+    structuredPipeline,
+  });
+  const structuredExercises = structuredPipeline.exercisePlan?.selectedExercises || [];
+  const structuredRecommendationPlan = structuredPipeline.exercisePlan
+    ? {
+      ...structuredPipeline.exercisePlan,
+      source: 'deterministic_otago_engine',
+      priority: carePipeline.agent.decision.priority,
+      reason: structuredPipeline.exercisePlan.decisionTrace?.join(', ') || carePipeline.agent.decision.nextAction,
+      recommendedExercises: structuredExercises,
+      selectedExercises: structuredExercises,
+      safetyGates: structuredPipeline.exercisePlan.safetyNotices || [],
+      seniorMessage: carePipeline.agent.decision.seniorMessage,
+      nextAction: carePipeline.agent.decision.nextAction,
+      sessionPlanMode: carePipeline.agent.loop?.finalState?.currentSessionPlan?.mode || null,
+    }
+    : {
+      priority: 'not_available',
+      reason: 'Exercise recommendations require a valid structured measurement.',
+      recommendedExercises: [],
+      selectedExercises: [],
+      safetyGates: ['structured_result_not_scorable'],
+      nextAction: carePipeline.agent.decision.nextAction,
+    };
   const enrichedResult = {
     ...baseResult,
-    ...assessmentResult,
-    ...carePipeline.finalResultPatch,
     rawAnalysisResult: baseResult,
     carePipeline,
+    structuredPipeline,
+    functionalFindings: structuredPipeline.functionalFindings,
+    recommendationPlan: structuredRecommendationPlan,
+    recommendedExercises: structuredExercises,
+    recommendations: structuredExercises,
+    agentDecision: carePipeline.agent.decision,
+    agentDecisionTrace: carePipeline.agent.decisionTrace,
+    seniorMessage: carePipeline.agent.decision.seniorMessage,
+    staffMessage: carePipeline.agent.decision.nextAction,
   };
-  const templates = recommendationTemplatesForResult(enrichedResult);
   const primaryValue = result.primaryValue ?? result.repetitionCount ?? result.count ?? 0;
   const primaryLabel = result.primaryLabel || 'Measured Value';
   const qualityScore = result.trackingQualityScore ?? result.confidence;
@@ -102,17 +576,21 @@ function buildFinalAnalysisPayload({
       symmetry: result.symmetryScore,
       stability: result.stabilityScore,
       confidence: result.confidence,
-      primaryWeakness: enrichedResult.primaryWeakness,
-      fallRiskLevel: enrichedResult.fallRiskLevel,
-      steadiSeverity: carePipeline.agent.observedState.steadiSeverity,
+      steadiRiskLevel: structuredPipeline.steadiRiskLevel,
       agentPriority: carePipeline.agent.decision.priority,
     },
     flags: resultFlagsFor(enrichedResult, resultTestType),
-    recommendations: templates,
+    recommendationPlan: structuredRecommendationPlan,
+    recommendedExercises: structuredExercises,
+    recommendations: structuredExercises,
+    structuredPipeline,
+    functionalFindings: structuredPipeline.functionalFindings,
+    agentDecision: carePipeline.agent.decision,
+    agentDecisionTrace: carePipeline.agent.decisionTrace,
   };
 }
 
-export function useSteplyDashboard() {
+export function useSteplyDashboard({ demoMode = false } = {}) {
   const [networkInfo, setNetworkInfo] = useState(null);
   const [sessionBundle, setSessionBundle] = useState(null);
   const [selectedTest, setSelectedTest] = useState(initialSelectedTestFromUrl);
@@ -126,7 +604,7 @@ export function useSteplyDashboard() {
   });
   const [remoteCameraFrame, setRemoteCameraFrame] = useState(null);
   const [remoteCameraStatus, setRemoteCameraStatus] = useState('Phone camera is not connected yet.');
-  const [activeStep, setActiveStep] = useState('start');
+  const [activeStep, setActiveStep] = useState(activeStepFromScreen(UserScreenIds.Start));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const socketRef = useRef(null);
@@ -136,6 +614,15 @@ export function useSteplyDashboard() {
   const session = sessionBundle?.session || null;
 
   const refreshHistory = useCallback(async () => {
+    if (demoMode) {
+      setHistoryItems([]);
+      setHistorySource({
+        type: 'demo_route_boundary',
+        label: 'DEMO DATA - NOT SAVED',
+        persistent: false,
+      });
+      return;
+    }
     // Display-only injection point. In production, these items should be supplied by
     // the Kotlin phone app, which owns persistent personal history storage.
     if (shouldUseDemoHistoryFixture()) {
@@ -161,7 +648,7 @@ export function useSteplyDashboard() {
     } catch (err) {
       console.warn(err);
     }
-  }, []);
+  }, [demoMode]);
 
   const handlePoseFinalResult = useCallback(async (result) => {
     if (!session?.id || !result) return;
@@ -174,7 +661,17 @@ export function useSteplyDashboard() {
     });
 
     setFinalResult(payload);
-    setActiveStep('result');
+    setActiveStep(activeStepFromScreen(UserScreenIds.Result));
+    const persistCheck = canPersistAssessmentResult(payload);
+    if (!persistCheck.ok) {
+      console.info(JSON.stringify({
+        event: 'ASSESSMENT_SAVE_REJECTED',
+        reason: persistCheck.reason,
+        sessionId: payload.sessionId,
+        source: payload.source,
+      }));
+      return;
+    }
     try {
       const saved = await postFinalAnalysis(payload);
       setFinalResult(saved.result);
@@ -203,6 +700,7 @@ export function useSteplyDashboard() {
     session,
     selectedTest,
     remoteCameraFrame,
+    activeStep,
     autoStart: false,
     onFinalResult: handlePoseFinalResult,
     onFrameProcessed: handleRemoteFrameProcessed,
@@ -212,6 +710,33 @@ export function useSteplyDashboard() {
     getNetworkInfo().then(setNetworkInfo).catch(console.warn);
     refreshHistory();
   }, [refreshHistory]);
+
+  useEffect(() => {
+    if (demoMode || !session?.id || session.profile) return undefined;
+    if (typeof window === 'undefined') return undefined;
+
+    let cancelled = false;
+    const pollSessionStatus = async () => {
+      try {
+        const data = await getSessionStatus(session.id);
+        if (cancelled || !data.session) return;
+        setSessionBundle((prev) => {
+          if (!prev?.session || prev.session.id !== session.id) return prev;
+          return { ...prev, session: data.session };
+        });
+        if (data.session.selectedTest) setSelectedTest(data.session.selectedTest);
+      } catch (err) {
+        if (!cancelled) console.warn(err);
+      }
+    };
+
+    pollSessionStatus();
+    const timer = window.setInterval(pollSessionStatus, 1500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [demoMode, session?.id, session?.profile]);
 
   useEffect(() => () => {
     if (socketRef.current) socketRef.current.close();
@@ -256,7 +781,7 @@ export function useSteplyDashboard() {
             capturedAtUptimeMs: meta.capturedAtUptimeMs || null,
           });
           setRemoteCameraStatus('Receiving live phone camera stream');
-          setActiveStep((current) => current === 'exercise' ? current : 'analysis');
+          setActiveStep(activeStepForIncomingFrame);
           return;
         }
 
@@ -267,12 +792,21 @@ export function useSteplyDashboard() {
         }
         if (message.type === 'realtime') {
           setLiveResult(message.result);
-          setActiveStep((current) => current === 'exercise' ? current : 'analysis');
+          setActiveStep(activeStepForIncomingFrame);
           if (message.session) setSessionBundle((prev) => prev ? { ...prev, session: message.session } : prev);
         }
         if (message.type === 'final') {
-          setFinalResult(message.result);
-          setActiveStep('result');
+          const finalSession = message.session || bundle.session || session;
+          const finalPayload = finalSession?.id
+            ? buildFinalAnalysisPayload({
+              result: message.result,
+              session: finalSession,
+              selectedTest: message.result?.testType || selectedTest,
+              historyItems,
+            })
+            : message.result;
+          setFinalResult(finalPayload);
+          setActiveStep(activeStepFromScreen(UserScreenIds.Result));
           refreshHistory();
         }
         if (message.type === 'session-cleared') {
@@ -287,7 +821,7 @@ export function useSteplyDashboard() {
           pendingFrameMetaRef.current = null;
           setRemoteCameraFrame(null);
           setRemoteCameraStatus('Phone session ended. PC temporary personal data was cleared.');
-          setActiveStep('start');
+          setActiveStep(activeStepFromScreen(UserScreenIds.Start));
         }
         if (message.type === 'remote-camera-frame-meta') {
           pendingFrameMetaRef.current = message;
@@ -305,7 +839,7 @@ export function useSteplyDashboard() {
             mobileSentAt: message.mobileSentAt || null,
           });
           setRemoteCameraStatus('Receiving phone camera stream');
-          setActiveStep((current) => current === 'exercise' ? current : 'analysis');
+          setActiveStep(activeStepForIncomingFrame);
         }
         if (message.type === 'remote-camera-status') {
           setRemoteCameraStatus(message.message || 'Phone camera status changed.');
@@ -314,7 +848,11 @@ export function useSteplyDashboard() {
         console.warn(err);
       }
     };
-  }, [refreshHistory]);
+    socket.onclose = () => {
+      poseAnalysis?.resetAnalysis?.('websocket_closed');
+      setRemoteCameraStatus('Phone camera connection closed.');
+    };
+  }, [historyItems, poseAnalysis, refreshHistory, selectedTest, session]);
 
   const handleCreateSession = useCallback(async () => {
     setBusy(true);
@@ -375,7 +913,9 @@ export function useSteplyDashboard() {
     setSelectedTest(testId);
     setLiveResult(null);
     setFinalResult(null);
-    setActiveStep(remoteCameraFrame ? 'analysis' : 'start');
+    setActiveStep(remoteCameraFrame
+      ? activeStepFromScreen(UserScreenIds.CameraSetup)
+      : activeStepFromScreen(UserScreenIds.Start));
     setError('');
     if (!session?.id) return;
     try {
@@ -384,50 +924,44 @@ export function useSteplyDashboard() {
     } catch (err) {
       setError(err.message);
     }
-  }, [session?.id]);
+  }, [remoteCameraFrame, session?.id]);
 
   const handleDemoRealtime = useCallback(async () => {
-    if (!session?.id) {
-      setError('Create a session before sending realtime results.');
-      return;
-    }
-    const payload = buildRealtimePayload(session.id, selectedTest);
-    setLiveResult(payload);
-    setActiveStep('analysis');
-    try {
-      await postRealtimeAnalysis(payload);
-    } catch (err) {
-      setError(err.message);
-    }
-  }, [session?.id, selectedTest]);
+    setError('Demo realtime results are disabled. Start a live camera assessment instead.');
+  }, []);
 
   const handleSaveFinal = useCallback(async () => {
+    if (demoMode) {
+      setError('Demo data is not saved.');
+      return;
+    }
     if (!session?.id) {
       setError('Create a session before saving final results.');
       return;
     }
-    const base = liveResult || buildRealtimePayload(session.id, selectedTest);
-    const payload = buildFinalAnalysisPayload({
-      result: {
-        ...base,
-        endedAt: Date.now(),
-        score: base.score || 85,
-        message: base.message || 'Movement check complete. Keep practicing gently.',
-      },
-      session,
-      selectedTest,
-      historyItems,
-    });
-    setFinalResult(payload);
-    setActiveStep('result');
+    if (!finalResult) {
+      setError('No completed live pose result is available to save.');
+      return;
+    }
+    const persistCheck = canPersistAssessmentResult(finalResult);
+    if (!persistCheck.ok) {
+      console.info(JSON.stringify({
+        event: 'ASSESSMENT_SAVE_REJECTED',
+        reason: persistCheck.reason,
+        sessionId: finalResult.sessionId,
+        source: finalResult.source,
+      }));
+      setError('Only completed live pose results can be saved.');
+      return;
+    }
     try {
-      const result = await postFinalAnalysis(payload);
+      const result = await postFinalAnalysis(finalResult);
       setFinalResult(result.result);
       refreshHistory();
     } catch (err) {
       setError(err.message);
     }
-  }, [session, selectedTest, liveResult, refreshHistory, historyItems]);
+  }, [demoMode, session?.id, finalResult, refreshHistory]);
 
   const handleCopyPayload = useCallback(async () => {
     if (!sessionBundle?.qrPayload) return;

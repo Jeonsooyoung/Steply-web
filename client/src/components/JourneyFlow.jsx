@@ -2,16 +2,18 @@ import { journeySteps } from '../data/flowSteps';
 import { StatusPill } from './SteplyPrimitives';
 
 function isStepActive(step, activeStep) {
+  if (step.active === true) return true;
   if (step.id === activeStep) return true;
   return Array.isArray(step.activeWhen) && step.activeWhen.includes(activeStep);
 }
 
-export function JourneyFlow({ activeStep, onStepChange, compact = false }) {
+export function JourneyFlow({ activeStep, onStepChange, compact = false, steps = journeySteps }) {
   const isReadOnly = typeof onStepChange !== 'function';
+  const flowSteps = steps.length ? steps : journeySteps;
 
   return (
     <nav className={compact ? 'journey-flow journey-flow--compact' : 'journey-flow'} aria-label="Steply flow">
-      {journeySteps.map((step, index) => (
+      {flowSteps.map((step, index) => (
         <button
           key={step.id}
           type="button"
@@ -24,7 +26,7 @@ export function JourneyFlow({ activeStep, onStepChange, compact = false }) {
             <strong>{step.title}</strong>
             <small>{step.description}</small>
           </span>
-          {index < journeySteps.length - 1 ? <span className="journey-step__line" /> : null}
+          {index < flowSteps.length - 1 ? <span className="journey-step__line" /> : null}
         </button>
       ))}
       <StatusPill status="steady">Large-screen ready</StatusPill>

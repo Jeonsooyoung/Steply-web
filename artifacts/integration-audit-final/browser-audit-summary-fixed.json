@@ -1,0 +1,583 @@
+{
+  "createdAt": "2026-07-11T08:14:48.659Z",
+  "baseUrl": "http://127.0.0.1:5177",
+  "routeResults": [
+    {
+      "route": "/display/home",
+      "title": "Good morning",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Good morning, Maria",
+        "Today's Session",
+        "Next reassessment",
+        "Latest weekly report"
+      ],
+      "overflowX": false,
+      "titleText": "Good morning | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/session/plan",
+      "title": "Today's Session",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Today's Session",
+        "Quick Health Check",
+        "Safety Setup",
+        "Balance Test",
+        "Chair Stand Test",
+        "Recommended Exercises",
+        "Session summary"
+      ],
+      "overflowX": false,
+      "titleText": "Today's Session | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/session/screening",
+      "title": "Health Check",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Health Check 1 of 3",
+        "Have you fallen in the past year?"
+      ],
+      "overflowX": false,
+      "titleText": "Health Check | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/session/safety",
+      "title": "Safety Setup",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Safety Setup",
+        "Stable table or countertop",
+        "Chair against a wall",
+        "Clear floor",
+        "Safe clothing and footwear",
+        "Confirm before continuing"
+      ],
+      "overflowX": false,
+      "titleText": "Safety Setup | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/session/camera-setup?assessment=balance&ready=1",
+      "title": "Camera Setup",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Balance Test Camera Setup",
+        "Camera quality"
+      ],
+      "overflowX": false,
+      "titleText": "Camera Setup | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/session/calibration?state=success",
+      "title": "Stand Still for a Moment",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Stand Still for a Moment",
+        "Checking position"
+      ],
+      "overflowX": false,
+      "titleText": "Stand Still for a Moment | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/assessment/balance/live?stage=3&state=holding&remaining=7&ready=1",
+      "title": "Stage 3 of 4",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Stage 3 of 4",
+        "Camera quality",
+        "Current instruction"
+      ],
+      "overflowX": false,
+      "titleText": "4-Stage Balance Test | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/assessment/chair/live?state=stand_up&ready=1&reps=8&remaining=17",
+      "title": "30-Second Chair Stand Test",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "30-Second Chair Stand Test",
+        "Stand all the way up",
+        "Camera quality"
+      ],
+      "overflowX": false,
+      "titleText": "30-Second Chair Stand Test | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/results/summary",
+      "title": "Today's Movement Check",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Today's Movement Check",
+        "Moderate Support Needs",
+        "4-Stage Balance Test",
+        "30-Second Chair Stand Test",
+        "Functional areas"
+      ],
+      "overflowX": false,
+      "titleText": "Today's Movement Check | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/exercises/plan?scenario=professional",
+      "title": "Today's Exercise Plan",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Today's Exercise Plan",
+        "Professional Assessment Recommended",
+        "No exercises are available to start today"
+      ],
+      "overflowX": false,
+      "titleText": "Today's Exercise Plan | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/exercises/tandem-stand/preview?scenario=professional",
+      "title": "Professional Guidance Needed",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Professional Guidance Needed",
+        "Professional Assessment Recommended"
+      ],
+      "overflowX": false,
+      "titleText": "Exercise preview | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/exercises/tandem-stand/live?scenario=professional",
+      "title": "Professional Guidance Needed",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Professional Guidance Needed",
+        "Professional Assessment Recommended"
+      ],
+      "overflowX": false,
+      "titleText": "Exercise in progress | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/progress",
+      "title": "Progress",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Progress",
+        "Chair Stand Progress",
+        "Balance Progress",
+        "Weekly Exercise Completion"
+      ],
+      "overflowX": false,
+      "titleText": "Progress | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/reports",
+      "title": "Weekly Report",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Weekly Report",
+        "Support Level",
+        "Functional Areas",
+        "Recent Assessment Results",
+        "Exercise Completion",
+        "Safety Events",
+        "Reported Falls",
+        "Recommended Next Step"
+      ],
+      "overflowX": false,
+      "titleText": "Weekly Report | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/settings",
+      "title": "Settings",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Settings",
+        "Profile",
+        "Accessibility",
+        "Camera and Connection",
+        "Notifications",
+        "Privacy"
+      ],
+      "overflowX": false,
+      "titleText": "Settings | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/error/safety-stop",
+      "title": "Please sit down safely.",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Please sit down safely.",
+        "Please sit down safely."
+      ],
+      "overflowX": false,
+      "titleText": "Session Notice | Steply",
+      "passed": true
+    },
+    {
+      "route": "/display/error/invalid-assessment",
+      "title": "We Couldn't Complete This Measurement",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "We Couldn't Complete This Measurement",
+        "We Couldn't Complete This Measurement"
+      ],
+      "overflowX": false,
+      "titleText": "Session Notice | Steply",
+      "passed": true
+    },
+    {
+      "route": "/camera/permission?denied=1",
+      "title": "Camera Access Is Required",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Camera Access Is Required",
+        "Camera access is required"
+      ],
+      "overflowX": false,
+      "titleText": "Allow camera access | Steply",
+      "passed": true
+    },
+    {
+      "route": "/camera/disconnected",
+      "title": "Phone Connection Lost",
+      "forbidden": [],
+      "hangul": false,
+      "hasExpectedTitle": true,
+      "headings": [
+        "Phone Connection Lost"
+      ],
+      "overflowX": false,
+      "titleText": "Phone Connection Lost | Steply",
+      "passed": true
+    }
+  ],
+  "transitionResults": [
+    {
+      "route": "/display/home",
+      "text": "Start Today's Session",
+      "expectedPath": "/display/session/plan",
+      "clicked": true,
+      "nodeId": "2",
+      "url": "http://127.0.0.1:5177/display/session/plan",
+      "passed": true
+    },
+    {
+      "route": "/display/session/plan",
+      "text": "Start Setup",
+      "expectedPath": "/display/session/screening",
+      "clicked": true,
+      "nodeId": "2",
+      "url": "http://127.0.0.1:5177/display/session/screening",
+      "passed": true
+    },
+    {
+      "route": "/display/session/plan",
+      "text": "Return Home",
+      "expectedPath": "/display/home",
+      "clicked": true,
+      "nodeId": "1",
+      "url": "http://127.0.0.1:5177/display/home",
+      "passed": true
+    }
+  ],
+  "professionalRestriction": {
+    "passed": true,
+    "details": [
+      {
+        "route": "/display/exercises/plan?scenario=professional",
+        "hasStartButton": true,
+        "heading": [
+          "Today's Exercise Plan",
+          "Professional Assessment Recommended",
+          "No exercises are available to start today"
+        ],
+        "startDisabled": true,
+        "textHasRestriction": true,
+        "title": "Today's Exercise Plan | Steply",
+        "passed": true
+      },
+      {
+        "route": "/display/exercises/tandem-stand/preview?scenario=professional",
+        "hasStartButton": false,
+        "heading": [
+          "Professional Guidance Needed",
+          "Professional Assessment Recommended"
+        ],
+        "startDisabled": null,
+        "textHasRestriction": true,
+        "title": "Exercise preview | Steply",
+        "passed": true
+      },
+      {
+        "route": "/display/exercises/tandem-stand/live?scenario=professional",
+        "hasStartButton": false,
+        "heading": [
+          "Professional Guidance Needed",
+          "Professional Assessment Recommended"
+        ],
+        "startDisabled": null,
+        "textHasRestriction": true,
+        "title": "Exercise in progress | Steply",
+        "passed": true
+      }
+    ]
+  },
+  "screenshots": [
+    {
+      "width": 1440,
+      "height": 900,
+      "route": "/display/home",
+      "name": "1440x900-home.png",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/integration-audit-final/1440x900-home.png",
+      "screenshotError": null
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "/display/assessment/balance/live?stage=3&state=holding&remaining=7&ready=1",
+      "name": "1366x768-balance-live.png",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/integration-audit-final/1366x768-balance-live.png",
+      "screenshotError": null
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "/display/assessment/chair/live?state=stand_up&ready=1&reps=8&remaining=17",
+      "name": "1366x768-chair-live.png",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/integration-audit-final/1366x768-chair-live.png",
+      "screenshotError": null
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "/display/reports?scenario=five&sharing=disabled",
+      "name": "1920x1080-weekly-report.png",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/integration-audit-final/1920x1080-weekly-report.png",
+      "screenshotError": null
+    },
+    {
+      "width": 1024,
+      "height": 768,
+      "route": "/display/results/summary",
+      "name": "1024x768-results-summary.png",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/integration-audit-final/1024x768-results-summary.png",
+      "screenshotError": null
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "route": "/display/settings?text=Extra%20Large&contrast=1&motion=reduced",
+      "name": "390x844-settings-large-contrast.png",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/integration-audit-final/390x844-settings-large-contrast.png",
+      "screenshotError": null
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "route": "/display/error/invalid-assessment",
+      "name": "390x844-invalid-assessment.png",
+      "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/integration-audit-final/390x844-invalid-assessment.png",
+      "screenshotError": null
+    }
+  ],
+  "screenshotChecks": [
+    {
+      "width": 1440,
+      "height": 900,
+      "route": "/display/home",
+      "name": "1440x900-home.png",
+      "clientHeight": 900,
+      "clientWidth": 1440,
+      "critical": [],
+      "hangul": false,
+      "overflowX": false,
+      "scrollHeight": 1280,
+      "screenshotError": null,
+      "passed": true
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "/display/assessment/balance/live?stage=3&state=holding&remaining=7&ready=1",
+      "name": "1366x768-balance-live.png",
+      "clientHeight": 768,
+      "clientWidth": 1366,
+      "critical": [
+        {
+          "bottom": 93.1796875,
+          "className": "ds-button emergency-stop-button",
+          "top": 32.78125,
+          "visible": true
+        },
+        {
+          "bottom": 580.921875,
+          "className": "step-four-timer step-four-timer--countdown",
+          "top": 360.921875,
+          "visible": true
+        },
+        {
+          "bottom": 666.921875,
+          "className": "primary-action-bar",
+          "top": 594.921875,
+          "visible": true
+        }
+      ],
+      "hangul": false,
+      "overflowX": false,
+      "scrollHeight": 1152,
+      "screenshotError": null,
+      "passed": true
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "/display/assessment/chair/live?state=stand_up&ready=1&reps=8&remaining=17",
+      "name": "1366x768-chair-live.png",
+      "clientHeight": 768,
+      "clientWidth": 1366,
+      "critical": [
+        {
+          "bottom": 90.9765625,
+          "className": "ds-button emergency-stop-button",
+          "top": 34.9765625,
+          "visible": true
+        },
+        {
+          "bottom": 418.015625,
+          "className": "step-five-rep-display step-five-rep-display--info",
+          "top": 230.15625,
+          "visible": true
+        },
+        {
+          "bottom": 755.0546875,
+          "className": "primary-action-bar",
+          "top": 699.0546875,
+          "visible": true
+        }
+      ],
+      "hangul": false,
+      "overflowX": false,
+      "scrollHeight": 1178,
+      "screenshotError": null,
+      "passed": true
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "/display/reports?scenario=five&sharing=disabled",
+      "name": "1920x1080-weekly-report.png",
+      "clientHeight": 1080,
+      "clientWidth": 1920,
+      "critical": [],
+      "hangul": false,
+      "overflowX": false,
+      "scrollHeight": 1313,
+      "screenshotError": null,
+      "passed": true
+    },
+    {
+      "width": 1024,
+      "height": 768,
+      "route": "/display/results/summary",
+      "name": "1024x768-results-summary.png",
+      "clientHeight": 768,
+      "clientWidth": 1024,
+      "critical": [],
+      "hangul": false,
+      "overflowX": false,
+      "scrollHeight": 3175,
+      "screenshotError": null,
+      "passed": true
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "route": "/display/settings?text=Extra%20Large&contrast=1&motion=reduced",
+      "name": "390x844-settings-large-contrast.png",
+      "clientHeight": 844,
+      "clientWidth": 390,
+      "critical": [],
+      "hangul": false,
+      "overflowX": false,
+      "scrollHeight": 2943,
+      "screenshotError": null,
+      "passed": true
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "route": "/display/error/invalid-assessment",
+      "name": "390x844-invalid-assessment.png",
+      "clientHeight": 844,
+      "clientWidth": 390,
+      "critical": [],
+      "hangul": false,
+      "overflowX": false,
+      "scrollHeight": 1488,
+      "screenshotError": null,
+      "passed": true
+    }
+  ],
+  "zoomChecks": [
+    {
+      "hangul": false,
+      "overflowX": false,
+      "zoom": "browser-zoom-step-1",
+      "passed": true
+    },
+    {
+      "hangul": false,
+      "overflowX": false,
+      "zoom": "browser-zoom-step-2",
+      "passed": true
+    }
+  ],
+  "consoleErrors": [],
+  "failures": []
+}

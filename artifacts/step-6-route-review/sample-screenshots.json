@@ -1,0 +1,62 @@
+[
+  {
+    "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/sample-laptop-summary-professional.png",
+    "name": "sample-laptop-summary-professional.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "path": "/display/results/summary?support=high&result=professional&problem=both&reps=7&reference=10",
+    "metrics": {
+      "height": 900,
+      "overflow": false,
+      "text": "S\nResults\nToday's Movement Check\n\nA clear summary based on today's completed assessments.\n\nOK\nResults ready\nProfessional Assessment Recommended\n!\nStop Session\nSession progress\n9 of 9\n\nCurrent support ",
+      "width": 1440
+    }
+  },
+  {
+    "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/sample-tv-details-high.png",
+    "name": "sample-tv-details-high.png",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "path": "/display/results/details?support=high&problem=both&trend=declining&reps=7&reference=10",
+    "metrics": {
+      "height": 1080,
+      "overflow": false,
+      "text": "S\nDetailed results\nDetailed Results\n\nReview the assessment details and exercise reasoning.\n\nOK\nDetails ready\nProfessional Assessment Recommended\n!\nStop Session\nSession progress\n9 of 9\nProfessional gui",
+      "width": 1920
+    }
+  },
+  {
+    "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/sample-tablet-summary-strength.png",
+    "name": "sample-tablet-summary-strength.png",
+    "viewport": {
+      "width": 834,
+      "height": 1112
+    },
+    "path": "/display/results/summary?support=moderate&problem=strength&previous=missing&reps=9&reference=10",
+    "metrics": {
+      "height": 1112,
+      "overflow": false,
+      "text": "S\nResults\nToday's Movement Check\n\nA clear summary based on today's completed assessments.\n\nOK\nResults ready\nModerate Support Needs\n!\nStop Session\nSession progress\n9 of 9\n\nCurrent support level\n\nModera",
+      "width": 834
+    }
+  },
+  {
+    "file": "/Users/sujin/Desktop/Steply/Steply-web/artifacts/step-6-route-review/sample-phone-analysis-done.png",
+    "name": "sample-phone-analysis-done.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "path": "/display/session/analyzing?done=1",
+    "metrics": {
+      "height": 844,
+      "overflow": false,
+      "text": "S\nAnalysis\nReviewing Your Movement\n\nSteply is preparing the assessment summary from completed measurements.\n\nOK\nResults ready\nExercise plan prepared\n!\nStop Session\nSession progress\n9 of 9\nAnalysis pro",
+      "width": 390
+    }
+  }
+]

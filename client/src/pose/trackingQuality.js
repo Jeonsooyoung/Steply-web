@@ -14,6 +14,13 @@ import {
 export const TRACKING_QUALITY_ALLOW = 0.8;
 export const TRACKING_QUALITY_MIN_RESULT = 0.6;
 
+export const QualityDecisionStates = {
+  Pass: 'PASS',
+  Pause: 'PAUSE',
+  Block: 'BLOCK',
+  Invalid: 'INVALID',
+};
+
 export const REQUIRED_TRACKING_LANDMARKS = [
   PoseLandmarks.Nose,
   PoseLandmarks.LeftShoulder,
@@ -413,5 +420,73 @@ export function evaluateCameraReadiness({
       landmarks,
       trackingQualityScore: trackingQuality.trackingQualityScore,
     },
+  };
+}
+
+function generalGateBlocks(readiness) {
+  return (
+    !readiness?.fullBodyVisible
+    || !readiness?.feetVisible
+    || !readiness?.singlePersonDetected
+    || !readiness?.brightnessOk
+    || (readiness?.trackingQualityScore ?? 0) < TRACKING_QUALITY_MIN_RESULT
+  );
+}
+
+function movementGateBlocks(readiness) {
+  return (
+    !readiness?.fullBodyVisible
+    || !readiness?.feetVisible
+    || !readiness?.singlePersonDetected
+  );
+}
+
+function qualityReasons(readiness, { generalBlocked, movementBlocked }) {
+  const reasons = [];
+  if (!readiness) return ['missing_readiness'];
+  if (!readiness.fullBodyVisible) reasons.push('full_body_not_visible');
+  if (!readiness.feetVisible) reasons.push('feet_not_visible');
+  if (!readiness.singlePersonDetected) reasons.push('single_person_required');
+  if (!readiness.brightnessOk) reasons.push('brightness_out_of_range');
+  if ((readiness.trackingQualityScore ?? 0) < TRACKING_QUALITY_MIN_RESULT) {
+    reasons.push('tracking_quality_below_result_threshold');
+  }
+  if (generalBlocked && !movementBlocked) reasons.push('legacy_gate_disagreement');
+  return reasons;
+}
+
+export function evaluateFrameQuality({
+  readiness = null,
+  frameId = null,
+  source = 'analysis-frame',
+} = {}) {
+  const generalBlocked = generalGateBlocks(readiness);
+  const movementBlocked = movementGateBlocks(readiness);
+  const disagreement = generalBlocked !== movementBlocked;
+  const state = movementBlocked
+    ? QualityDecisionStates.Block
+    : generalBlocked
+      ? QualityDecisionStates.Pause
+      : QualityDecisionStates.Pass;
+
+  return {
+    state,
+    frameId,
+    source,
+    reasons: qualityReasons(readiness, { generalBlocked, movementBlocked }),
+    scores: {
+      brightness: readiness?.trackingQuality?.brightness ?? readiness?.brightness?.corrected ?? null,
+      bodyVisibility: readiness?.trackingQuality?.fullBodyInFrameScore ?? null,
+      feetVisibility: readiness?.feetVisible ? 1 : 0,
+      personCount: readiness?.singlePersonDetected ? 1 : 0,
+      trackingQuality: readiness?.trackingQualityScore ?? null,
+    },
+    legacy: {
+      generalGateResult: generalBlocked ? 'BLOCK' : 'PASS',
+      movementGateResult: movementBlocked ? 'BLOCK' : 'PASS',
+      generalBlocked,
+      movementBlocked,
+    },
+    disagreement,
   };
 }

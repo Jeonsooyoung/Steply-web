@@ -557,8 +557,17 @@
 
 .exercise-recommendation-hero {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
   align-content: center;
   min-height: 138px;
+}
+
+.exercise-recommendation-hero__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .exercise-recommendation-hero h2 {
@@ -634,6 +643,8 @@
 
 .exercise-recommendation-actions {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
 }
 
 .exercise-recommendation-actions .steply-button {
@@ -1006,6 +1017,14 @@
 }
 
 @media (max-width: 720px) {
+  .exercise-recommendation-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .exercise-recommendation-hero__actions {
+    justify-content: start;
+  }
+
   .exercise-recommendation-options {
     grid-template-columns: 1fr;
   }
