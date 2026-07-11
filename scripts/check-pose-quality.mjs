@@ -82,6 +82,11 @@ try {
   });
   assert.equal(ready.isReady, true);
   assert.ok(ready.trackingQualityScore >= 0.8);
+  assert.equal(ready.readinessDebug.isReady, true);
+  assert.equal(ready.readinessDebug.hasPerson, true);
+  assert.equal(ready.readinessDebug.singlePerson, true);
+  assert.deepEqual(ready.readinessDebug.failingReasons, []);
+  assert.equal(ready.readinessDebug.footLandmarkVisibility.left_ankle, 0.95);
 
   const chairSideView = evaluateCameraReadiness({
     landmarks: basePose({
@@ -129,6 +134,8 @@ try {
   assert.equal(missingFeet.isReady, false);
   assert.equal(missingFeet.feetVisible, false);
   assert.match(missingFeet.message, /feet/i);
+  assert.ok(missingFeet.readinessDebug.failingReasons.includes('feet_not_visible'));
+  assert.equal(missingFeet.readinessDebug.footLandmarkVisibility.left_heel, 0.05);
 
   const lowQualityAssessment = buildAssessmentResult({
     result: {

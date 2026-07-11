@@ -75,6 +75,16 @@ function isChairStandTest(testType) {
   return testType === 'chair_stand';
 }
 
+// Tests where a single clearly tracked foot is enough for setup readiness.
+// The 4-stage balance sequence includes semi-tandem, tandem, and one-leg
+// stances where the feet overlap or one foot lifts, so requiring both feet
+// to be independently visible blocks the ready-to-start check. One foot keeps
+// the person in frame while letting the 3-second auto-start fire like the
+// chair-stand test.
+function usesLenientFootVisibility(testType) {
+  return testType === 'chair_stand' || testType === 'four_stage_balance';
+}
+
 function finite(value) {
   return typeof value === 'number' && Number.isFinite(value);
 }
@@ -134,9 +144,16 @@ function sideFootVisible(points, side, minVisibility = MIN_VISIBILITY) {
 function feetVisible(points, testType = 'chair_stand') {
   const leftFootVisible = sideFootVisible(points, 'left');
   const rightFootVisible = sideFootVisible(points, 'right');
-  return isChairStandTest(testType)
+  return usesLenientFootVisibility(testType)
     ? leftFootVisible || rightFootVisible
     : leftFootVisible && rightFootVisible;
+}
+
+function footLandmarkVisibility(points) {
+  return Object.fromEntries(FOOT_LANDMARKS.map((name) => [
+    name,
+    visibilityOf(points.get(name), 0),
+  ]));
 }
 
 function sideBodyVisible(points, landmarkNames, minVisibility = MIN_VISIBILITY) {
@@ -318,6 +335,32 @@ export function evaluateCameraReadiness({
       && trackingQuality.trackingQualityScore >= TRACKING_QUALITY_ALLOW
   );
   const baseOfSupport = calculateBaseOfSupport(landmarks, { minVisibility: 0.35 });
+  const failingReasons = [];
+  if (!hasPose) failingReasons.push('no_person');
+  if (!singlePersonDetected) failingReasons.push('single_person_required');
+  if (!fullBodyVisible) failingReasons.push('full_body_not_visible');
+  if (!hasFeet) failingReasons.push('feet_not_visible');
+  if (!properDistance) failingReasons.push('improper_distance');
+  if (!trackingStable) failingReasons.push('tracking_unstable');
+  if (!cameraStill) failingReasons.push('camera_moving');
+  if (!brightnessOk) failingReasons.push('brightness_out_of_range');
+  if (trackingQuality.trackingQualityScore < TRACKING_QUALITY_ALLOW) {
+    failingReasons.push('tracking_quality_below_threshold');
+  }
+  const readinessDebug = {
+    isReady,
+    hasPerson: hasPose,
+    singlePerson: singlePersonDetected,
+    fullBodyVisible,
+    feetVisible: hasFeet,
+    properDistance,
+    trackingStable,
+    cameraStill,
+    brightnessOk,
+    trackingQualityScore: trackingQuality.trackingQualityScore,
+    failingReasons,
+    footLandmarkVisibility: footLandmarkVisibility(points),
+  };
   const message = cameraMessage({
     hasPose,
     singlePersonDetected,
@@ -344,6 +387,7 @@ export function evaluateCameraReadiness({
     readyScore: trackingQuality.trackingQualityScore,
     trackingQualityScore: trackingQuality.trackingQualityScore,
     trackingQuality,
+    readinessDebug,
     testType,
     checks: {
       singlePersonStable: singlePersonDetected && cameraStill,

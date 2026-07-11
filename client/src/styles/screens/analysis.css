@@ -284,12 +284,12 @@
 
 .pose-debug-overlay {
   position: absolute;
+  top: 16px;
   right: 16px;
-  bottom: 64px;
   z-index: 11;
   display: grid;
-  gap: 2px;
-  min-width: 170px;
+  gap: 4px;
+  width: min(340px, calc(100% - 32px));
   padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: var(--radius-notice);
@@ -302,6 +302,18 @@
 
 .pose-debug-overlay strong {
   font-size: 12px;
+}
+
+.pose-debug-overlay>span {
+  overflow-wrap: anywhere;
+}
+
+.pose-debug-foot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 10px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .guided-camera-focus {

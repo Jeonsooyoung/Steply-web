@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { SteplyButton, SteplyCard, TimerCircle } from './SteplyPrimitives';
+import { SteplyCard, TimerCircle } from './SteplyPrimitives';
 import { PoseOverlay } from './pose/PoseOverlay';
 import { READY_HOLD_SECONDS, evaluateSetupReadiness } from '../pose/poseQuality';
 import { recommendationLabel } from '../pose/recommendationRules';
@@ -9,12 +9,18 @@ import standingPostureGuide from '../assets/movement-guides/standing-posture-che
 import chairStandGuide from '../assets/movement-guides/chair-stand-check.png';
 import standingReferenceOverlay from '../assets/movement-guides/standing-reference-overlay.png';
 
-// Developer-only: add ?poseDebug=1 while running Vite locally.
-const SHOW_DEBUG_TOOLS = Boolean(
-  import.meta.env.DEV
-    && typeof window !== 'undefined'
-    && new URLSearchParams(window.location.search).get('poseDebug') === '1'
-);
+function poseDebugEnabled() {
+  if (typeof window === 'undefined') return false;
+  const search = new URLSearchParams(window.location.search);
+  if (search.get('debugPose') === '1' || search.get('poseDebug') === '1') return true;
+  try {
+    return window.localStorage.getItem('steply.poseDebug') === 'true';
+  } catch (_) {
+    return false;
+  }
+}
+
+const SHOW_DEBUG_TOOLS = poseDebugEnabled();
 
 const selectableMovementTests = movementTests;
 
@@ -270,8 +276,10 @@ export function AnalysisPanel({
   const [setupImageFrame, setSetupImageFrame] = useState(null);
   const [showReferenceOverlay, setShowReferenceOverlay] = useState(true);
   const [referenceOverlayOpacity, setReferenceOverlayOpacity] = useState(0.38);
+  const [latestReadinessReset, setLatestReadinessReset] = useState(null);
   const previousSetupSampleRef = useRef(null);
   const readyStartedAtRef = useRef(null);
+  const readyHoldSecondsRef = useRef(0);
   const autoStartRequestedRef = useRef(false);
   const badQualityStartedAtRef = useRef(null);
   const setupImageInputRef = useRef(null);
@@ -397,6 +405,13 @@ export function AnalysisPanel({
       checks: Object.fromEntries(Object.keys(setupCheck.checks || {}).map((key) => [key, true])),
     }
     : setupCheck;
+  const readinessDebug = displaySetupCheck.readinessDebug || {
+    isReady: Boolean(displaySetupCheck.isReady),
+    trackingQualityScore,
+    failingReasons: displaySetupCheck.warnings || [],
+    footLandmarkVisibility: {},
+  };
+  const footVisibility = readinessDebug.footLandmarkVisibility || {};
   const setupStatus = isSetupImageMode
     ? 'Image check'
     : setupStatusLabel(displaySetupCheck, isMissionRunning, Boolean((displayFrame?.src || missionPreviewActive) && !frameLoadError));
@@ -433,8 +448,10 @@ export function AnalysisPanel({
 
   useEffect(() => {
     readyStartedAtRef.current = null;
+    readyHoldSecondsRef.current = 0;
     autoStartRequestedRef.current = false;
     setReadyHoldSeconds(0);
+    setLatestReadinessReset(null);
     setQualityWarning('');
     badQualityStartedAtRef.current = null;
   }, [selectedTest, poseAnalysis?.analysisResult]);
@@ -442,13 +459,25 @@ export function AnalysisPanel({
   useEffect(() => {
     if (isMissionRunning || poseAnalysis?.analysisResult || !remoteCameraFrame?.src || isSetupImageMode || frameLoadError) {
       readyStartedAtRef.current = null;
+      readyHoldSecondsRef.current = 0;
       autoStartRequestedRef.current = false;
       setReadyHoldSeconds(0);
       return undefined;
     }
 
     if (!displaySetupCheck.isReady) {
+      const previousTimerValue = readyHoldSecondsRef.current;
+      if (SHOW_DEBUG_TOOLS && previousTimerValue > 0) {
+        setLatestReadinessReset({
+          timestamp: Date.now(),
+          previousTimerValue,
+          failingReasons: readinessDebug.failingReasons || [],
+          trackingQualityScore: readinessDebug.trackingQualityScore ?? trackingQualityScore,
+          footLandmarkVisibility: { ...footVisibility },
+        });
+      }
       readyStartedAtRef.current = null;
+      readyHoldSecondsRef.current = 0;
       autoStartRequestedRef.current = false;
       setReadyHoldSeconds(0);
       return undefined;
@@ -458,7 +487,9 @@ export function AnalysisPanel({
 
     const tick = () => {
       const elapsed = (performance.now() - readyStartedAtRef.current) / 1000;
-      setReadyHoldSeconds(Math.min(READY_HOLD_SECONDS, elapsed));
+      const nextReadyHoldSeconds = Math.min(READY_HOLD_SECONDS, elapsed);
+      readyHoldSecondsRef.current = nextReadyHoldSeconds;
+      setReadyHoldSeconds(nextReadyHoldSeconds);
       if (elapsed >= READY_HOLD_SECONDS && !autoStartRequestedRef.current) {
         autoStartRequestedRef.current = true;
         startAnalysis?.();
@@ -476,6 +507,9 @@ export function AnalysisPanel({
     isSetupImageMode,
     startAnalysis,
     displaySetupCheck.isReady,
+    readinessDebug,
+    footVisibility,
+    trackingQualityScore,
   ]);
 
   const handleSetupImageChange = (event) => {
@@ -690,21 +724,6 @@ export function AnalysisPanel({
               <span />
             </div>
 
-            {selectedTest === 'four_stage_balance' ? (
-              <div
-                className={[
-                  'foot-placement-guide',
-                  balanceStage?.id ? `foot-placement-guide--${balanceStage.id}` : 'foot-placement-guide--side_by_side',
-                  isMissionRunning ? 'foot-placement-guide--active' : '',
-                ].filter(Boolean).join(' ')}
-                aria-hidden="true"
-              >
-                <span className="foot-placement-guide__foot foot-placement-guide__foot--back" />
-                <span className="foot-placement-guide__foot foot-placement-guide__foot--front" />
-                <strong>{balanceStage?.title || 'Side-by-side Stand'}</strong>
-              </div>
-            ) : null}
-
             <div className="guided-camera-message">
               <span className="guided-camera-icon">▶</span>
               <div>
@@ -734,13 +753,29 @@ export function AnalysisPanel({
               {cameraStatusText}
             </div>
 
-            {SHOW_DEBUG_TOOLS ? (
+            {SHOW_DEBUG_TOOLS && !isMissionRunning ? (
               <div className="pose-debug-overlay">
-                <strong>Pose Debug</strong>
-                <span>Quality {percent(trackingQualityScore)}</span>
-                <span>Full body {displaySetupCheck.fullBodyVisible ? 'yes' : 'no'}</span>
-                <span>Feet {displaySetupCheck.feetVisible ? 'yes' : 'no'}</span>
-                <span>Mode {poseAnalysis?.smoothingStats?.mode || '-'}</span>
+                <strong>Readiness Debug</strong>
+                <span>Ready: {readinessDebug.isReady ? 'yes' : 'no'}</span>
+                <span>Timer: {readyHoldSeconds.toFixed(1)} / {READY_HOLD_SECONDS.toFixed(1)}s</span>
+                <span>Quality: {percent(readinessDebug.trackingQualityScore)}</span>
+                <span>Failing: {readinessDebug.failingReasons?.join(', ') || 'none'}</span>
+                <span>
+                  Latest reset: {latestReadinessReset
+                    ? `${timeWithMilliseconds(latestReadinessReset.timestamp)} at ${latestReadinessReset.previousTimerValue.toFixed(1)}s`
+                    : 'none'}
+                </span>
+                {latestReadinessReset ? (
+                  <span>Reset reasons: {latestReadinessReset.failingReasons.join(', ') || 'unknown'}</span>
+                ) : null}
+                <div className="pose-debug-foot-grid">
+                  <span>L ankle {percent(footVisibility.left_ankle)}</span>
+                  <span>R ankle {percent(footVisibility.right_ankle)}</span>
+                  <span>L heel {percent(footVisibility.left_heel)}</span>
+                  <span>R heel {percent(footVisibility.right_heel)}</span>
+                  <span>L toe {percent(footVisibility.left_foot_index)}</span>
+                  <span>R toe {percent(footVisibility.right_foot_index)}</span>
+                </div>
               </div>
             ) : null}
           </div>
