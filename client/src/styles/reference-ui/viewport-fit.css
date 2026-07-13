@@ -9,7 +9,7 @@
   }
 
   body:has(.ref-app--fit) {
-    background: #f4f6f5;
+    background: #fff;
   }
 
   .ref-app--fit {
