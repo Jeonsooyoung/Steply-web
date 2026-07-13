@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
@@ -16,6 +17,24 @@ const server = await createServer({
 });
 
 try {
+  const routeFiles = fs.readdirSync(path.join(root, 'client/src/routes'))
+    .filter((name) => name.endsWith('.jsx'));
+  for (const fileName of routeFiles) {
+    const source = fs.readFileSync(path.join(root, 'client/src/routes', fileName), 'utf8');
+    assert.doesNotMatch(source, /window\.location\.assign|window\.location\.reload/, `${fileName} must use SPA navigation`);
+  }
+  const balanceRouteSource = fs.readFileSync(path.join(root, 'client/src/routes/StepFourScreens.jsx'), 'utf8');
+  const chairRouteSource = fs.readFileSync(path.join(root, 'client/src/routes/StepFiveScreens.jsx'), 'utf8');
+  const analysisHookSource = fs.readFileSync(path.join(root, 'client/src/hooks/useRemotePoseAnalysis.js'), 'utf8');
+  const dashboardHookSource = fs.readFileSync(path.join(root, 'client/src/hooks/useSteplyDashboard.js'), 'utf8');
+  const screeningRouteSource = fs.readFileSync(path.join(root, 'client/src/routes/StepThreeScreens.jsx'), 'utf8');
+  assert.doesNotMatch(balanceRouteSource, /poseAnalysis\?\.finishAnalysis|finishAnalysis\?\./, 'Balance UI timer cannot finalize worker analysis');
+  assert.doesNotMatch(chairRouteSource, /poseAnalysis\?\.finishAnalysis|finishAnalysis\?\./, 'Chair UI timer cannot finalize worker analysis');
+  assert.doesNotMatch(analysisHookSource, /setInterval\([\s\S]*finishAnalysis/, 'hook wall clock cannot finalize analysis');
+  assert.match(dashboardHookSource, /socketReconnectAttemptsRef/, 'dashboard socket uses bounded reconnect state');
+  assert.doesNotMatch(dashboardHookSource, /onclose\s*=\s*\([^)]*\)\s*=>\s*\{[^}]*resetAnalysis/s, 'transient socket close cannot reset assessment');
+  assert.doesNotMatch(screeningRouteSource, /params\.get\(['"](?:fallen|fallCount|injured|unsteady|worried)['"]\)/, 'screening answers cannot live in URL query');
+
   const {
     AssessmentStatuses,
     ResultSources,
@@ -27,6 +46,9 @@ try {
     AssessmentResultTypes,
     AssessmentResultStatuses,
     AssessmentTypes,
+    BalanceMeasurementKind,
+    BalanceStageStatuses,
+    BalanceStages,
     ChairStandFinalStates,
     ChairStandMeasurementKind,
     EvidenceKinds,
@@ -40,20 +62,14 @@ try {
     canShowExerciseFromResult,
     screenFromActiveStep,
   } = await server.ssrLoadModule('/client/src/pipeline/ui/sessionFlow.js');
-  const { createResultViewModel } = await server.ssrLoadModule('/client/src/pipeline/ui/resultViewModel.js');
 
   const session = {
     id: 'ui-session-1',
     profile: {
       id: 'profile-1',
       displayName: 'Ada',
-      age: 76,
-      gender: 'female',
-      steadiStep1: {
-        fallenPastYear: false,
-        feelsUnsteady: false,
-        worriesAboutFalling: false,
-      },
+      birthYear: 1950,
+      sex: 'FEMALE',
     },
   };
 
@@ -134,9 +150,90 @@ try {
     confidence: validChairStand.confidence,
   };
 
-  const validPayload = buildFinalAnalysisPayload({
+  const validBalanceAssessment = {
+    resultId: 'result-valid-balance',
+    assessmentId: 'analysis-valid-balance',
+    sessionId: session.id,
+    assessmentType: AssessmentTypes.FourStageBalance,
+    status: AssessmentResultStatuses.Valid,
+    resultType: AssessmentResultTypes.StructuredAssessment,
+    metadata: {
+      source: ResultSources.LivePose,
+      isPersistable: true,
+      isClinicallyScorable: true,
+      analyzerVersion: 'structured-ui-check.v1',
+      schemaVersion: STRUCTURED_PIPELINE_SCHEMA_VERSION,
+      generatedAtMs: 40_000,
+    },
+    timing: {
+      startedAtMs: 32_000,
+      completedAtMs: 40_000,
+      activeAnalysisDurationMs: 8_000,
+      pausedDurationMs: 0,
+    },
+    primaryMeasurements: {
+      kind: BalanceMeasurementKind,
+      stages: [
+        BalanceStages.SideBySide,
+        BalanceStages.SemiTandem,
+        BalanceStages.Tandem,
+        BalanceStages.OneLeg,
+      ].map((stage) => ({
+        stage,
+        status: BalanceStageStatuses.Passed,
+        positionConfidence: 0.92,
+        holdDurationSeconds: 10,
+      })),
+      lastAttemptedStage: BalanceStages.OneLeg,
+    },
+    secondaryObservations: [],
+    qualitySummary: validChairStand.trackingQualitySummary,
+    events: [{
+      eventId: 'event-valid-balance-completed',
+      sessionId: session.id,
+      assessmentType: AssessmentTypes.FourStageBalance,
+      type: AssessmentEventTypes.AssessmentCompleted,
+      timestampMs: 40_000,
+      confidence: 0.92,
+      evidence: { kind: EvidenceKinds.Duration, durationMs: 8_000, requiredDurationMs: 8_000 },
+    }],
+    confidence: 0.92,
+  };
+
+  const chairOnlyPayload = buildFinalAnalysisPayload({
     result: validChairStand,
     session,
+    selectedTest: 'chair_stand',
+    historyItems: [],
+  });
+  assert.equal(chairOnlyPayload.structuredPipeline.aggregateReady, false, 'one functional test is not an aggregate');
+  assert.equal(chairOnlyPayload.functionalFindings.length, 0, 'one functional test creates no aggregate findings');
+  assert.equal(chairOnlyPayload.recommendedExercises.length, 0, 'one functional test creates no prescription');
+  assert.equal(canShowExerciseFromResult(chairOnlyPayload), false, 'one functional test cannot show exercise screen');
+
+  const aggregateSession = {
+    ...session,
+    assessmentSession: {
+      assessmentSessionId: 'assessment-ui-1',
+      profileSnapshot: { ageYears: 76, sex: 'FEMALE' },
+      screening: {
+        status: 'COMPLETED',
+        responses: { fallenPastYear: false, feelsUnsteady: false, worriedAboutFalling: false },
+        fallHistory: { count: 'ZERO', injuriousFall: false },
+      },
+      functionalTests: {
+        FOUR_STAGE_BALANCE: {
+          status: 'COMPLETED',
+          acceptedResult: { payload: { structuredAssessmentResult: validBalanceAssessment } },
+        },
+        CHAIR_STAND_30S: { status: 'NOT_STARTED', acceptedResult: null },
+      },
+    },
+  };
+
+  const validPayload = buildFinalAnalysisPayload({
+    result: validChairStand,
+    session: aggregateSession,
     selectedTest: 'chair_stand',
     historyItems: [],
   });
@@ -145,16 +242,18 @@ try {
   assert.ok(validPayload.structuredPipeline?.assessmentResult, 'valid payload has structured assessment result');
   assert.ok(validPayload.functionalFindings.length >= 1, 'valid payload has functional findings');
   assert.ok(validPayload.recommendationPlan.selectedExercises.length > 0, 'valid payload has selected structured exercises');
-  assert.ok(validPayload.recommendationPlan.selectedExercises.length <= 3, 'exercise plan is capped to three exercises');
+  assert.equal(
+    new Set(validPayload.recommendationPlan.selectedExercises.map((exercise) => exercise.exerciseId)).size,
+    validPayload.recommendationPlan.selectedExercises.length,
+    'exercise plan keeps the complete deduplicated mapping without an arbitrary count cap',
+  );
   assert.equal(canShowExerciseFromResult(validPayload), true, 'valid payload can show exercise screen');
 
-  const validView = createResultViewModel(validPayload);
-  assert.equal(validView.invalid, false, 'valid view model is not invalid');
-  assert.match(validView.directResult.message, /full stands in 30 seconds/, 'direct result is user-readable');
-  assert.ok(validView.findings.every((finding) => finding.classification), 'findings preserve primary/secondary classification');
-  assert.ok(validView.exercises.every((exercise) => exercise.reason || exercise.support), 'exercise entries include reason or support text');
+  assert.equal(validPayload.status, AssessmentStatuses.Valid, 'valid canonical payload retains VALID status');
+  assert.ok(validPayload.functionalFindings.every((finding) => finding.classification), 'findings preserve primary/secondary classification');
+  assert.ok(validPayload.recommendedExercises.every((exercise) => exercise.reasonMessages?.length || exercise.supportRequirement), 'exercise entries include reason or support data');
   assert.doesNotMatch(
-    `${validView.findings.map((item) => item.title).join(' ')} ${validView.safetyNotice}`,
+    JSON.stringify({ findings: validPayload.functionalFindings, plan: validPayload.recommendationPlan }),
     /gluteus|proprioception|neurological|diagnos/i,
     'result copy does not diagnose muscles or disease',
   );
@@ -194,8 +293,7 @@ try {
     selectedTest: 'chair_stand',
     historyItems: [],
   });
-  const invalidView = createResultViewModel(invalidPayload);
-  assert.equal(invalidView.invalid, true, 'invalid result is displayed as invalid');
+  assert.equal(invalidPayload.invalid, true, 'invalid canonical payload remains invalid');
   assert.equal(canShowExerciseFromResult(invalidPayload), false, 'invalid result cannot open exercise screen');
   assert.equal(invalidPayload.recommendationPlan.selectedExercises?.length || 0, 0, 'invalid result has no selected exercises');
   assert.equal(invalidPayload.recommendedExercises?.length || 0, 0, 'invalid result has no recommended exercise fallback');

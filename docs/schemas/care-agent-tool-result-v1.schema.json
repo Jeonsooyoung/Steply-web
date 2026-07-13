@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/care-agent-tool-result-v1.schema.json",
+  "title": "Steply Care Agent Action Execution v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "actionId", "toolId", "status", "result"],
+  "properties": {
+    "schemaVersion": { "const": "care_agent_tool_result.v1" },
+    "actionId": { "$ref": "#/$defs/id" },
+    "toolId": { "enum": ["scheduler", "notifier", "report_composer", "progress_store"] },
+    "status": { "enum": ["PLANNED", "RUNNING", "SUCCEEDED", "FAILED_RETRYABLE", "FAILED_FINAL", "SKIPPED_DUPLICATE"] },
+    "result": { "oneOf": [{ "$ref": "#/$defs/result" }, { "type": "null" }] }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "result": {
+      "type": "object", "additionalProperties": false,
+      "required": ["success", "resultCode", "resultReference", "retryable"],
+      "properties": {
+        "success": { "type": "boolean" },
+        "resultCode": { "$ref": "#/$defs/id" },
+        "resultReference": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "retryable": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -4,7 +4,6 @@ import { createMovementAnalyzer } from './movementAnalyzers';
 import { PoseLandmarkSeries, normalizePoseLandmarks } from './poseTimeSeries';
 import { createPoseSmootherForTest } from './poseSmoother';
 import {
-  TRACKING_QUALITY_MIN_RESULT,
   evaluateCameraReadiness,
   evaluateFrameQuality,
 } from './trackingQuality';
@@ -26,6 +25,7 @@ import { createQualityStateMachine } from '../pipeline/quality/qualityStateMachi
 import {
   bodyProgressFromCalibration,
   createPersonalCalibrationState,
+  rebindValidPersonalCalibrationState,
   updatePersonalCalibration,
 } from '../pipeline/calibration/personalCalibration.js';
 import {
@@ -40,6 +40,11 @@ import {
 } from '../pipeline/shared/validation/runtimeValidation.js';
 import { createAssessmentEvent } from '../pipeline/assessment/events.js';
 import { poseConfig } from '../pipeline/shared/config/pose.config.js';
+import { stage2Operational } from '../pipeline/shared/config/stage2Analysis.config.js';
+import {
+  AssessmentTestTypes,
+  assertSupportedAssessmentTestType,
+} from '../pipeline/shared/assessmentTestTypes.js';
 import wasmModuleLoaderUrl from '../vendor/mediapipe/wasm/vision_wasm_module_internal.js?url';
 import wasmModuleBinaryUrl from '../vendor/mediapipe/wasm/vision_wasm_module_internal.wasm?url';
 
@@ -50,29 +55,28 @@ const MODEL_PATHS_BY_QUALITY = {
   fast: [DEFAULT_MODEL_PATH],
 };
 const DEFAULT_WASM_PATH = '/wasm';
-const MIN_FRAME_INTERVAL_MS = 66;
-const MAX_INPUT_FRAME_AGE_MS = 500;
-const BRIGHTNESS_SAMPLE_INTERVAL_MS = 333;
-const BRIGHTNESS_CALIBRATION_TARGET = 0.5;
-const BRIGHTNESS_CALIBRATION_MIN_SAMPLES = 4;
-const BRIGHTNESS_CALIBRATION_SAMPLE_LIMIT = 24;
-const BRIGHTNESS_CALIBRATION_MAX_CORRECTION = 0.18;
-const BRIGHTNESS_CORRECTION_HARD_LOW = 0.12;
-const BRIGHTNESS_CORRECTION_HARD_HIGH = 0.97;
-const PREVIEW_QUALITY_INTERVAL_MS = 250;
-const ANALYSIS_QUALITY_INTERVAL_MS = 200;
+const MIN_FRAME_INTERVAL_MS = stage2Operational.signal.frameIntervalMs;
+const MAX_INPUT_FRAME_AGE_MS = stage2Operational.signal.maxInputFrameAgeMs;
+const BRIGHTNESS_SAMPLE_INTERVAL_MS = stage2Operational.calibration.brightnessSampleIntervalMs;
+const BRIGHTNESS_CALIBRATION_TARGET = stage2Operational.calibration.brightnessTargetNormalized;
+const BRIGHTNESS_CALIBRATION_MIN_SAMPLES = stage2Operational.calibration.brightnessMinimumSamples;
+const BRIGHTNESS_CALIBRATION_SAMPLE_LIMIT = stage2Operational.calibration.brightnessSampleLimit;
+const BRIGHTNESS_CALIBRATION_MAX_CORRECTION = stage2Operational.calibration.brightnessMaximumCorrection;
+const BRIGHTNESS_CORRECTION_HARD_LOW = stage2Operational.calibration.brightnessHardLowNormalized;
+const BRIGHTNESS_CORRECTION_HARD_HIGH = stage2Operational.calibration.brightnessHardHighNormalized;
+const PREVIEW_QUALITY_INTERVAL_MS = stage2Operational.signal.previewQualityIntervalMs;
+const ANALYSIS_QUALITY_INTERVAL_MS = stage2Operational.signal.analysisQualityIntervalMs;
 const CHAIR_STAND_MOVEMENT_INTERVAL_MS = MIN_FRAME_INTERVAL_MS;
-const MIN_POSE_CONFIDENCE = 0.65;
-const PROCESSING_TELEMETRY_SAMPLE_LIMIT = 60;
-const PROCESSING_TELEMETRY_REPORT_INTERVAL = 20;
-const SESSION_LOW_QUALITY_RATIO_LIMIT = 0.35;
-const SESSION_MIN_ACCEPTED_FRAMES = 3;
+const MIN_POSE_CONFIDENCE = stage2Operational.signal.minimumPoseConfidence;
+const PROCESSING_TELEMETRY_SAMPLE_LIMIT = stage2Operational.signal.processingTelemetrySampleLimit;
+const PROCESSING_TELEMETRY_REPORT_INTERVAL = stage2Operational.signal.processingTelemetryReportInterval;
 
 let landmarker = null;
-let selectedTest = 'chair_stand';
+let selectedTest = AssessmentTestTypes.ChairStand;
 let analyzer = createMovementAnalyzer(selectedTest);
 let steadiLandmarkSeries = new PoseLandmarkSeries();
 let poseSmoother = createPoseSmootherForTest(selectedTest);
+let worldPoseSmoother = createPoseSmootherForTest(selectedTest);
 let initialized = false;
 let initializing = null;
 let session = null;
@@ -107,6 +111,7 @@ let structuredFrameProcessor = createPoseFrameProcessor({
 });
 let structuredQualityStateMachine = createQualityStateMachine();
 let structuredCalibrationState = null;
+const armUseOccurrencesByAssessmentSession = new Map();
 
 function normalizeBasePath(path) {
   return String(path || '').replace(/\/$/, '');
@@ -133,12 +138,23 @@ function structuredAssessmentType() {
   return assessmentTypeFromLegacyTestType(selectedTest);
 }
 
-function resetStructuredSessionState({ sessionId = null, startedAt = null } = {}) {
+function resetStructuredSessionState({
+  sessionId = null,
+  startedAt = null,
+  preserveValidCalibration = false,
+} = {}) {
   structuredFrameProcessor.reset({ sessionId });
   structuredQualityStateMachine.reset({ startedAt });
-  structuredCalibrationState = createPersonalCalibrationState({
+  const assessmentType = structuredAssessmentType();
+  const preservedCalibration = preserveValidCalibration
+    ? rebindValidPersonalCalibrationState(structuredCalibrationState, {
+      sessionId,
+      assessmentType,
+    })
+    : null;
+  structuredCalibrationState = preservedCalibration || createPersonalCalibrationState({
     sessionId: sessionId || 'preview',
-    assessmentType: structuredAssessmentType(),
+    assessmentType,
     createdAtMs: startedAt || Date.now(),
   });
 }
@@ -348,7 +364,7 @@ async function initLandmarker(config = {}) {
               delegate,
             },
             runningMode: 'VIDEO',
-            numPoses: 1,
+            numPoses: stage2Operational.multiPerson.maximumPoses,
             minPoseDetectionConfidence: config.minPoseDetectionConfidence || MIN_POSE_CONFIDENCE,
             minPosePresenceConfidence: config.minPosePresenceConfidence || MIN_POSE_CONFIDENCE,
             minTrackingConfidence: config.minTrackingConfidence || MIN_POSE_CONFIDENCE,
@@ -486,10 +502,10 @@ function clamp01(value) {
 
 function lightingLevelForBrightness(brightness) {
   if (!finiteNumber(brightness)) return 'unknown';
-  if (brightness < 0.16) return 'too_dark';
-  if (brightness < 0.28) return 'dim';
-  if (brightness > 0.92) return 'too_bright';
-  if (brightness > 0.82) return 'bright';
+  if (brightness < stage2Operational.quality.lightingTooDarkMax) return 'too_dark';
+  if (brightness < stage2Operational.quality.lightingDimMax) return 'dim';
+  if (brightness > stage2Operational.quality.lightingTooBrightMin) return 'too_bright';
+  if (brightness > stage2Operational.quality.lightingBrightMin) return 'bright';
   return 'ok';
 }
 
@@ -594,10 +610,11 @@ function recordProcessingTelemetry({ analyzedAt, inferenceDurationMs }) {
 }
 
 function setSelectedTest(nextSelectedTest) {
-  const next = nextSelectedTest || selectedTest || 'chair_stand';
+  const next = assertSupportedAssessmentTestType(nextSelectedTest || selectedTest);
   if (next === selectedTest) return;
   selectedTest = next;
   poseSmoother = createPoseSmootherForTest(selectedTest);
+  worldPoseSmoother = createPoseSmootherForTest(selectedTest);
   latestQualitySample = null;
   resetCachedAnalysisQuality();
   resetBrightnessSampling();
@@ -677,6 +694,7 @@ function recordSessionQuality(readiness, accepted) {
 }
 
 function sessionTrackingQualitySummary() {
+  const structuredQuality = structuredQualityStateMachine.snapshot(Date.now());
   if (!sessionQuality?.sampleCount) {
     return {
       sampleCount: 0,
@@ -686,6 +704,8 @@ function sessionTrackingQualitySummary() {
       lowQualityRatio: 1,
       trackingQualityScore: 0,
       longestLowQualityStreak: 0,
+      gates: structuredQuality.gates || [],
+      g3ViolationRatio: structuredQuality.g3ViolationRatio || 0,
     };
   }
   return {
@@ -696,6 +716,8 @@ function sessionTrackingQualitySummary() {
     lowQualityRatio: sessionQuality.lowQualityFrameCount / sessionQuality.sampleCount,
     trackingQualityScore: sessionQuality.totalTrackingQualityScore / sessionQuality.sampleCount,
     longestLowQualityStreak: sessionQuality.longestLowQualityStreak,
+    gates: structuredQuality.gates || [],
+    g3ViolationRatio: structuredQuality.g3ViolationRatio || 0,
   };
 }
 
@@ -708,11 +730,7 @@ function shouldBlockMovementFrame(readiness) {
 }
 
 function shouldInvalidateSession(summary) {
-  return (
-    summary.acceptedFrameCount < SESSION_MIN_ACCEPTED_FRAMES
-    || summary.trackingQualityScore < TRACKING_QUALITY_MIN_RESULT
-    || summary.lowQualityRatio >= SESSION_LOW_QUALITY_RATIO_LIMIT
-  );
+  return (summary.g3ViolationRatio || 0) > stage2Operational.quality.invalidViolationRatioExclusive;
 }
 
 function invalidTrackingResult(completedAt, summary, reason = 'camera_tracking_quality') {
@@ -748,6 +766,8 @@ function shouldFinishSessionFromState(state) {
   return Boolean(
     (state.elapsedSeconds || 0) >= (state.durationSeconds || 30)
       || state.balanceProtocol?.shouldFinishSession
+      || state.armUseRestartRequired
+      || state.armUseCdcZero
   );
 }
 
@@ -930,6 +950,10 @@ async function imageBitmapFromFrame(frame) {
     }
   };
 
+  if (typeof ImageBitmap !== 'undefined' && frame instanceof ImageBitmap) {
+    return frame;
+  }
+
   if (frame instanceof Blob) {
     return createBitmap(frame);
   }
@@ -947,6 +971,10 @@ async function imageBitmapFromFrame(frame) {
   throw new Error('Unsupported camera frame type.');
 }
 
+function closeQueuedFrameInput(message) {
+  message?.frame?.close?.();
+}
+
 async function detectPoseFromFrame(message) {
   await initLandmarker(message.config || {});
   const receivedAt = inputReceivedAt(message);
@@ -957,7 +985,8 @@ async function detectPoseFromFrame(message) {
   const inferenceEndedAt = Date.now();
   const rawLandmarks = result.landmarks?.[0] || [];
   const landmarks = normalizeLandmarks(rawLandmarks);
-  const worldLandmarks = result.worldLandmarks?.[0] || result.poseWorldLandmarks?.[0] || [];
+  const rawWorldLandmarks = result.worldLandmarks?.[0] || result.poseWorldLandmarks?.[0] || [];
+  const worldLandmarks = worldPoseSmoother.smooth(rawWorldLandmarks, { timestampMs }).landmarks;
   const visibilityValues = rawLandmarks
     .map((point) => point.visibility)
     .filter((value) => Number.isFinite(value));
@@ -974,7 +1003,12 @@ async function detectPoseFromFrame(message) {
     cameraFrameSequence: message.cameraFrameSequence ?? message.sequence ?? null,
     mobileSequence: message.mobileSequence ?? null,
     landmarks,
+    rawWorldLandmarks,
     worldLandmarks,
+    people: (result.landmarks || []).map((personLandmarks, index) => ({
+      normalizedLandmarks: normalizeLandmarks(personLandmarks),
+      worldLandmarks: result.worldLandmarks?.[index] || result.poseWorldLandmarks?.[index] || [],
+    })),
     mirrored: Boolean(message.mirrored || message.cameraMirrored || message.config?.mirrored),
     poseCount: result.landmarks?.length || 0,
     confidence,
@@ -996,6 +1030,7 @@ function buildStructuredFramePayload({
     image: { width: bitmap?.width, height: bitmap?.height, mirrored: Boolean(detected?.mirrored) },
     normalizedLandmarks: landmarks,
     worldLandmarks: detected?.worldLandmarks || null,
+    secondaryPeople: (detected?.people || []).slice(1),
     completedAtMs: analyzedAt,
     mirrored: Boolean(detected?.mirrored),
   });
@@ -1030,6 +1065,7 @@ function buildStructuredFramePayload({
   const qualityMetrics = evaluatePoseFrameQuality(poseFrame, {
     assessmentType,
     brightness,
+    calibrationProfile: structuredCalibrationState?.profile || null,
   });
   const qualityStatusResult = structuredQualityStateMachine.update({
     frame: poseFrame,
@@ -1107,7 +1143,7 @@ function buildStructuredFramePayload({
       pauseReason: qualityStatus?.reasons?.[0]?.code || null,
       landmarkConfidence: poseFrame.confidence,
       footPlacementObservable: qualityMetrics.footPlacementObservable,
-      unsupportedMultiPersonInterventionDetection: true,
+      multiPersonInterventionDetection: true,
     },
     structuredValidation: {
       poseFrame: poseFrameResult.validation,
@@ -1189,7 +1225,10 @@ function postPoseFrame({ source, detected, bitmap, sequence = null, analyzedAt =
 
 async function handlePreviewFrame(message) {
   const now = Date.now();
-  if (session?.active) return;
+  if (session?.active) {
+    closeQueuedFrameInput(message);
+    return;
+  }
   if (isStaleFrameMessage(message, now)) {
     postFrameSkipped({
       message,
@@ -1197,10 +1236,17 @@ async function handlePreviewFrame(message) {
       reason: 'stale-before-inference',
       now,
     });
+    closeQueuedFrameInput(message);
     return;
   }
-  if (isAnalyzingFrame) return;
-  if (now - latestAnalyzeAt < MIN_FRAME_INTERVAL_MS) return;
+  if (isAnalyzingFrame) {
+    closeQueuedFrameInput(message);
+    return;
+  }
+  if (now - latestAnalyzeAt < MIN_FRAME_INTERVAL_MS) {
+    closeQueuedFrameInput(message);
+    return;
+  }
   latestAnalyzeAt = now;
   isAnalyzingFrame = true;
   setSelectedTest(message.selectedTest);
@@ -1300,6 +1346,7 @@ async function handlePreviewFrame(message) {
     });
   } finally {
     if (bitmap) bitmap.close?.();
+    else closeQueuedFrameInput(message);
     isAnalyzingFrame = false;
     scheduleFramePump();
   }
@@ -1308,7 +1355,10 @@ async function handlePreviewFrame(message) {
 async function handleFrame(message) {
   const now = Date.now();
   latestFrameAt = now;
-  if (!session?.active) return;
+  if (!session?.active) {
+    closeQueuedFrameInput(message);
+    return;
+  }
   if (!isMessageForActiveSession(message)) {
     if (!frameQueueStats) resetFrameQueueStats();
     frameQueueStats.staleSessionFrameCount += 1;
@@ -1318,6 +1368,7 @@ async function handleFrame(message) {
       reason: 'stale-session-before-inference',
       now,
     });
+    closeQueuedFrameInput(message);
     return;
   }
   if (isStaleFrameMessage(message, now)) {
@@ -1327,10 +1378,17 @@ async function handleFrame(message) {
       reason: 'stale-before-inference',
       now,
     });
+    closeQueuedFrameInput(message);
     return;
   }
-  if (isAnalyzingFrame) return;
-  if (now - latestAnalyzeAt < MIN_FRAME_INTERVAL_MS) return;
+  if (isAnalyzingFrame) {
+    closeQueuedFrameInput(message);
+    return;
+  }
+  if (now - latestAnalyzeAt < MIN_FRAME_INTERVAL_MS) {
+    closeQueuedFrameInput(message);
+    return;
+  }
   latestAnalyzeAt = now;
   isAnalyzingFrame = true;
 
@@ -1355,6 +1413,18 @@ async function handleFrame(message) {
       bitmap,
       sequence: nextSequence,
     });
+    const smoothed = poseSmoother.smooth(detected.landmarks, { timestampMs });
+    const steadiFrame = steadiLandmarkSeries.push({
+      sequence: nextSequence,
+      timestampMs,
+      receivedAt: detected.inputReceivedAt,
+      landmarks: smoothed.landmarks,
+      worldLandmarks: detected.worldLandmarks,
+      retainedNormalizedLandmarks: detected.landmarks,
+      retainedWorldLandmarks: detected.rawWorldLandmarks,
+      confidence: detected.confidence,
+    }, { includeSeriesFrames: false });
+    frameSequence = nextSequence;
     if (!shouldRunMovementAnalysisPipeline()) return;
 
     if (usesFastRawAnalysis()) {
@@ -1457,7 +1527,6 @@ async function handleFrame(message) {
       return;
     }
 
-    const smoothed = poseSmoother.smooth(detected.landmarks, { timestampMs });
     const shouldRefreshQuality = shouldRunAnalysisQualityPipeline() || !latestAnalysisQualityPayload;
     let qualityPayload = null;
     let brightnessStats = latestAnalysisQualityPayload?.brightness || null;
@@ -1504,7 +1573,7 @@ async function handleFrame(message) {
       qualityDecision,
       brightness: brightnessStats,
     });
-    const blockedFrame = qualityDecision.legacy.movementBlocked
+    const blockedFrame = (selectedTest !== 'four_stage_balance' && qualityDecision.legacy.movementBlocked)
       || structuredQualityBlocksAnalysis(structured.qualityStatus);
     const calibrationBlocked = !structured.calibrationStatus?.canStartAssessment;
     let poseFrame = null;
@@ -1527,16 +1596,9 @@ async function handleFrame(message) {
         trackingPaused: true,
       };
     } else {
-      const steadiFrame = steadiLandmarkSeries.push({
-        sequence: nextSequence,
-        timestampMs,
-        receivedAt: detected.inputReceivedAt,
-        landmarks: qualityPayload.landmarks,
-        confidence: qualityPayload.trackingQualityScore,
-      }, { includeSeriesFrames: false });
       poseFrame = {
         timestampMs,
-        landmarks: steadiFrame.frame.landmarks,
+        landmarks: steadiFrame?.frame.landmarks || qualityPayload.landmarks,
         rawLandmarks: qualityPayload.rawLandmarks,
         confidence: qualityPayload.trackingQualityScore,
         metrics: steadiFrame.metrics,
@@ -1562,7 +1624,6 @@ async function handleFrame(message) {
           : null,
       };
     }
-    frameSequence = nextSequence;
     const analyzedAt = Date.now();
     if (isStaleDetectedFrame(detected, analyzedAt)) {
       postFrameSkipped({
@@ -1579,6 +1640,13 @@ async function handleFrame(message) {
       inferenceDurationMs: detected.inferenceDurationMs,
     });
     noteFrameProcessed(detected, analyzedAt);
+
+    if (selectedTest === 'chair_stand' && (state?.armUseOccurrenceCount || 0) > 0) {
+      armUseOccurrencesByAssessmentSession.set(
+        session?.assessmentSessionId || session?.id,
+        state.armUseOccurrenceCount,
+      );
+    }
 
     postWorkerFrameResult({
       source: 'analysis-frame',
@@ -1634,6 +1702,7 @@ async function handleFrame(message) {
     });
   } finally {
     if (bitmap) bitmap.close?.();
+    else closeQueuedFrameInput(message);
     isAnalyzingFrame = false;
     scheduleFramePump();
   }
@@ -1644,6 +1713,8 @@ function hasQueuedFrameMessage() {
 }
 
 function clearQueuedFrameMessages() {
+  closeQueuedFrameInput(pendingPreviewFrame);
+  closeQueuedFrameInput(pendingAnalysisFrame);
   pendingPreviewFrame = null;
   pendingAnalysisFrame = null;
   framePumpScheduled = false;
@@ -1658,6 +1729,7 @@ function dropStaleQueuedFrameMessages() {
       reason: 'stale-in-queue',
       now,
     });
+    closeQueuedFrameInput(pendingPreviewFrame);
     pendingPreviewFrame = null;
   }
   if (pendingAnalysisFrame && isStaleFrameMessage(pendingAnalysisFrame, now)) {
@@ -1667,6 +1739,7 @@ function dropStaleQueuedFrameMessages() {
       reason: 'stale-in-queue',
       now,
     });
+    closeQueuedFrameInput(pendingAnalysisFrame);
     pendingAnalysisFrame = null;
   }
 }
@@ -1675,6 +1748,7 @@ function nextQueuedFrameMessage() {
   if (session?.active) {
     const message = pendingAnalysisFrame;
     pendingAnalysisFrame = null;
+    closeQueuedFrameInput(pendingPreviewFrame);
     pendingPreviewFrame = null;
     return message;
   }
@@ -1748,6 +1822,7 @@ function queueFrameMessage(message) {
       reason: frameDecision.reason,
       now,
     });
+    closeQueuedFrameInput(message);
     return;
   }
   if (frameDecision.supersededFrame) {
@@ -1765,6 +1840,7 @@ function queueFrameMessage(message) {
       reason: 'stale-session',
       now,
     });
+    closeQueuedFrameInput(message);
     return;
   }
   const frameId = frameIdFromMessage(message);
@@ -1778,6 +1854,7 @@ function queueFrameMessage(message) {
         reason: 'duplicate-frame',
         now,
       });
+      closeQueuedFrameInput(message);
       return;
     }
     seenFrameIds.add(scopedFrameId);
@@ -1792,6 +1869,7 @@ function queueFrameMessage(message) {
       reason: 'stale-before-queue',
       now,
     });
+    closeQueuedFrameInput(message);
     return;
   }
   if (message.type === 'frame') {
@@ -1802,6 +1880,7 @@ function queueFrameMessage(message) {
         nextFrameId: frameId,
         frameQueue: frameQueueTelemetry(),
       });
+      closeQueuedFrameInput(pendingAnalysisFrame);
     }
     pendingAnalysisFrame = message;
   } else {
@@ -1812,6 +1891,7 @@ function queueFrameMessage(message) {
         nextFrameId: frameId,
         frameQueue: frameQueueTelemetry(),
       });
+      closeQueuedFrameInput(pendingPreviewFrame);
     }
     pendingPreviewFrame = message;
   }
@@ -1820,10 +1900,18 @@ function queueFrameMessage(message) {
 
 function startSession(message) {
   const startedAt = message.startedAt || Date.now();
-  setSelectedTest(message.selectedTest || 'chair_stand');
+  setSelectedTest(message.selectedTest || AssessmentTestTypes.ChairStand);
   clearQueuedFrameMessages();
-  analyzer = createMovementAnalyzer(selectedTest);
   const sessionId = messageSessionId(message) || `analysis-${startedAt}`;
+  const assessmentSessionId = message.assessmentSessionId || sessionId;
+  analyzer = createMovementAnalyzer(selectedTest, {
+    supportRoiNormalized: message.supportRoiNormalized || message.operationalContext?.supportRoiNormalized || null,
+    armUseOccurrenceCount: Math.max(
+      Number(message.armUseOccurrenceCount) || 0,
+      armUseOccurrencesByAssessmentSession.get(assessmentSessionId) || 0,
+    ),
+    profile: message.profile || null,
+  });
   session = {
     id: sessionId,
     active: true,
@@ -1831,11 +1919,13 @@ function startSession(message) {
     selectedTest,
     startedAt,
     manualTest: false,
+    assessmentSessionId,
   };
   analyzer.startSession(session.userId, startedAt, sessionId);
   frameSequence = 0;
   steadiLandmarkSeries.reset();
   poseSmoother.reset();
+  worldPoseSmoother.reset();
   latestQualitySample = null;
   resetCachedAnalysisQuality();
   resetBrightnessSampling();
@@ -1843,7 +1933,7 @@ function startSession(message) {
   resetSessionQuality();
   resetProcessingTelemetry();
   resetFrameQueueStats();
-  resetStructuredSessionState({ sessionId, startedAt });
+  resetStructuredSessionState({ sessionId, startedAt, preserveValidCalibration: true });
   postMessage({
     type: 'SESSION_READY',
     sessionId,
@@ -1914,6 +2004,31 @@ function finishSession(message) {
     generatedAt: Date.now(),
   });
   const structuredFinal = buildStructuredFinalResponse(result);
+  const structuredResult = structuredFinal?.structuredAssessmentResult || null;
+  const landmarkSeries = {
+    schemaVersion: stage2Operational.landmarkSeries.schemaVersion,
+    analysisSessionId: session.id,
+    assessmentSessionId: session.assessmentSessionId,
+    assessmentType: structuredResult?.assessmentType || assessmentTypeForTestType(selectedTest),
+    status: structuredResult?.status === 'VALID' ? 'VALID' : 'INVALID',
+    targetFps: stage2Operational.landmarkSeries.targetFps,
+    startedAt: session.startedAt,
+    completedAt,
+    samples: steadiLandmarkSeries.getFrames()
+      .filter((frame) => (
+        frame.retainedNormalizedLandmarks.length === stage2Operational.landmarkSeries.landmarkCount
+        && frame.retainedWorldLandmarks.length === stage2Operational.landmarkSeries.landmarkCount
+        && [...frame.retainedNormalizedLandmarks, ...frame.retainedWorldLandmarks].every((point) => (
+          [point.x, point.y, point.z, point.visibility].every(Number.isFinite)
+        ))
+      ))
+      .map((frame) => ({
+        sequence: frame.sequence,
+        timestampMs: frame.timestampMs,
+        normalizedLandmarks: frame.retainedNormalizedLandmarks.map(({ index, x, y, z, visibility }) => ({ index, x, y, z, visibility })),
+        worldLandmarks: frame.retainedWorldLandmarks.map(({ index, x, y, z, visibility }) => ({ index, x, y, z, visibility })),
+      })),
+  };
   session = session ? { ...session, active: false, completedAt } : null;
   postMessage({
     type: 'FINAL_RESULT',
@@ -1928,6 +2043,7 @@ function finishSession(message) {
       ...(structuredFinal || {}),
     },
     ...(structuredFinal || {}),
+    landmarkSeries,
     state: analyzer.getCurrentState(completedAt),
   });
 }
@@ -1944,6 +2060,7 @@ function resetSession(message = {}) {
   latestAnalyzeAt = 0;
   steadiLandmarkSeries.reset();
   poseSmoother.reset();
+  worldPoseSmoother.reset();
   latestQualitySample = null;
   resetCachedAnalysisQuality();
   resetBrightnessSampling();

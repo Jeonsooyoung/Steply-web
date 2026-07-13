@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   AppHeader,
   CameraPreview,
@@ -8,38 +8,17 @@ import {
   SessionProgress,
 } from '../components/foundation/SteplyDesignSystem';
 import { OTAGO_EXERCISE_CATALOG } from '../pipeline/recommendation/otagoExerciseEngine.js';
-
-function queryParams() {
-  if (typeof window === 'undefined') return new URLSearchParams();
-  return new URLSearchParams(window.location.search);
-}
-
-function queryValue(name, fallback = '') {
-  return queryParams().get(name) || fallback;
-}
+import { navigateSpa } from './spaNavigation';
 
 function goTo(path) {
-  if (typeof window !== 'undefined') window.location.assign(path);
+  navigateSpa(path);
 }
 
-function routeWithParams(path, updates = {}) {
-  const params = queryParams();
-  Object.entries(updates).forEach(([key, value]) => {
-    if (value === null || value === undefined || value === '') {
-      params.delete(key);
-    } else {
-      params.set(key, value);
-    }
-  });
-  const query = params.toString();
-  return query ? `${path}?${query}` : path;
-}
-
-function currentExerciseId(fallback = 'tandem_stance') {
-  if (typeof window === 'undefined') return fallback;
+function currentExerciseId() {
+  if (typeof window === 'undefined') return '';
   const parts = window.location.pathname.split('/').filter(Boolean);
   const index = parts.indexOf('exercises');
-  return index >= 0 && parts[index + 1] ? decodeURIComponent(parts[index + 1]) : fallback;
+  return index >= 0 && parts[index + 1] ? decodeURIComponent(parts[index + 1]) : '';
 }
 
 function StepIcon({ tone = 'info' }) {
@@ -75,7 +54,7 @@ function SessionShell({
         title={title}
         description={description}
         connection={connection}
-        actions={<EmergencyStopButton label="Stop Session" onClick={() => goTo('/display/session/complete?status=partial')} />}
+        actions={<EmergencyStopButton label="Stop Session" onClick={() => goTo('/display/error/safety-stop')} />}
       />
       {progress}
       {children}
@@ -83,7 +62,10 @@ function SessionShell({
   );
 }
 
-const CATALOG_BY_ID = Object.fromEntries(OTAGO_EXERCISE_CATALOG.map((exercise) => [exercise.exerciseId, exercise]));
+const CATALOG_BY_ID = Object.fromEntries(OTAGO_EXERCISE_CATALOG.flatMap((exercise) => [
+  [exercise.exerciseId, exercise],
+  [String(exercise.exerciseId).toLowerCase(), exercise],
+]));
 
 const exerciseDisplay = {
   front_knee_strengthening: {
@@ -256,14 +238,6 @@ const exerciseDisplay = {
   },
 };
 
-const scenarioExercises = {
-  strength: ['front_knee_strengthening', 'sit_to_stand'],
-  balance: ['tandem_stance', 'calf_raises'],
-  supported: ['tandem_stance', 'side_hip_strengthening'],
-  manual: ['sideways_walking', 'tandem_stance'],
-  both: ['tandem_stance', 'front_knee_strengthening', 'sideways_walking'],
-};
-
 function finite(value) {
   if (value === null || value === undefined || value === '') return null;
   const number = Number(value);
@@ -292,10 +266,10 @@ function titleCase(value = '') {
 }
 
 function safeExerciseName(exercise = {}) {
-  const key = normalizeKey(exercise.exerciseId || exercise.exerciseKey || exercise.id || exercise.arInputKey || exercise.displayName || exercise.title);
+  const key = normalizeKey(exercise.exerciseId || exercise.exerciseKey || exercise.id || exercise.arInputKey || exercise.displayName);
   const mapped = exerciseDisplay[key];
   if (mapped?.name) return mapped.name;
-  const raw = exercise.otagoSourceName || exercise.displayName || exercise.title || exercise.name || '';
+  const raw = exercise.displayName || '';
   if (/^[A-Z]\d+$/i.test(String(raw).trim())) return 'Recommended Exercise';
   return titleCase(raw || 'Recommended Exercise');
 }
@@ -306,6 +280,9 @@ function supportText(value) {
   if (key.includes('professional')) return 'Professional review is required before starting';
   if (key.includes('caregiver')) return 'Have a caregiver nearby';
   if (key.includes('stable_support')) return 'Hold a stable table or countertop';
+  if (key.includes('two_hand')) return 'Use both hands on a fixed stable support';
+  if (key.includes('one_hand')) return 'Use one hand on a fixed stable support';
+  if (key.includes('walking_aid')) return 'Use the prescribed walking aid';
   return String(value)
     .replace(/[_-]+/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -313,6 +290,7 @@ function supportText(value) {
 
 function levelText(value) {
   const key = normalizeKey(value);
+  if (['a', 'b', 'c', 'd'].includes(key)) return `Level ${key.toUpperCase()}`;
   if (key.includes('seated')) return 'Seated level';
   if (key.includes('two_hand')) return 'Two-hand supported level';
   if (key.includes('supported')) return 'Supported level';
@@ -335,7 +313,6 @@ function isWalkingExercise(exercise = {}, meta = {}) {
     exercise.exerciseKey,
     exercise.id,
     exercise.displayName,
-    exercise.title,
     exercise.arInputKey,
     meta.name,
   ].filter(Boolean).join(' '));
@@ -345,22 +322,26 @@ function isWalkingExercise(exercise = {}, meta = {}) {
 function cameraSupported(exercise = {}, meta = {}) {
   const cameraMode = normalizeKey(exercise.cameraVerification || exercise.cameraFeedback || exercise.cameraMode);
   if (isWalkingExercise(exercise, meta)) return false;
-  if (cameraMode.includes('not_supported')) return false;
+  if (cameraMode.includes('not_supported') || cameraMode.includes('manual_only')) return false;
   if (exercise.cameraVerifiable === false) return false;
   return true;
 }
 
 function prescriptionLine(exercise = {}, meta = {}) {
-  const reps = whole(exercise.repetitions ?? exercise.defaultReps ?? exercise.reps, 0);
+  const reps = whole(exercise.repetitions ?? exercise.repetitionsPerSide ?? exercise.defaultReps ?? exercise.reps, 0);
+  const steps = whole(exercise.steps, 0);
   const sets = whole(exercise.sets, 1) || 1;
   const duration = whole(exercise.durationSeconds ?? exercise.holdSeconds ?? meta.holdSeconds, 0);
   if (duration > 0 && reps <= 2) return `${duration} seconds, ${sets} ${sets === 1 ? 'set' : 'sets'}`;
+  if (steps > 0) return `${steps} steps, ${sets} ${sets === 1 ? 'set' : 'sets'}`;
+  if (exercise.repetitionsPerSide > 0) return `${reps} repetitions per side, ${sets} ${sets === 1 ? 'set' : 'sets'}`;
   if (reps > 0) return `${reps} ${reps === 1 ? 'repetition' : 'repetitions'}, ${sets} ${sets === 1 ? 'set' : 'sets'}`;
   if (duration > 0) return `${duration} seconds`;
   return 'Follow the prescribed amount';
 }
 
 function estimateMinutes(exercises = []) {
+  if (!exercises.length) return 0;
   const seconds = exercises.reduce((total, item) => {
     const reps = whole(item.repetitions ?? item.defaultReps ?? item.reps, 0);
     const sets = whole(item.sets, 1) || 1;
@@ -377,65 +358,25 @@ function resultFromDashboard(dashboard) {
 
 function planFromResult(result = {}) {
   return result?.recommendationPlan
-    || result?.carePipeline?.agent?.currentExercisePlan
-    || result?.carePipeline?.finalResultPatch?.recommendationPlan
     || result?.structuredPipeline?.exercisePlan
+    || result?.carePipeline?.agent?.currentExercisePlan
     || {};
 }
 
-function scenarioPlan() {
-  const scenario = queryValue('scenario', queryValue('exercise', 'both'));
-  const support = queryValue('support', '');
-  const restricted = queryValue('restricted', '') === '1'
-    || scenario === 'restricted'
-    || scenario === 'professional'
-    || scenario === 'high'
-    || support === 'high'
-    || support === 'professional';
-  if (restricted) {
-    return {
-      status: 'PENDING_REVIEW',
-      requiresProfessionalReview: true,
-      selectedExercises: [],
-      safetyNotices: ['Professional review required before unsupported or advanced exercises.'],
-    };
-  }
-  const ids = scenarioExercises[scenario] || scenarioExercises.both;
-  return {
-    status: 'ACTIVE',
-    selectedExercises: ids.map((id) => {
-      const catalog = CATALOG_BY_ID[id] || {};
-      const meta = exerciseDisplay[id] || {};
-      return {
-        ...catalog,
-        exerciseId: id,
-        displayName: meta.name || catalog.displayName,
-        category: catalog.category || (id.includes('walking') || id.includes('tandem') ? 'balance' : 'strength'),
-        level: id === 'sideways_walking' ? 'supported' : catalog.availableLevels?.[0]?.level || 'supported',
-        repetitions: id.includes('tandem') || id.includes('walking') ? 2 : catalog.availableLevels?.[0]?.repetitions || 6,
-        sets: id.includes('sit_to_stand') ? 2 : catalog.availableLevels?.[0]?.sets || 1,
-        supportRequirement: catalog.availableLevels?.[0]?.supportRequirement || 'STABLE_SUPPORT',
-        cameraVerification: id.includes('walking') ? 'NOT_SUPPORTED' : 'SUPPORTED',
-        reasonMessages: [id.includes('tandem') ? 'Selected because balance practice may help the observed movement pattern.' : 'Selected because strength practice may help the observed movement pattern.'],
-        safetyMessageKeys: catalog.safetyMessageKeys,
-      };
-    }),
-  };
-}
-
-function selectedExercisesFromPlan(plan = {}, result = {}) {
+function selectedExercisesFromPlan(plan = {}) {
   const selected = plan.selectedExercises
     || plan.recommendedExercises
-    || result.recommendedExercises
-    || result.recommendations
     || [];
   return Array.isArray(selected) ? selected : [];
 }
 
 function planContext(dashboard) {
   const result = resultFromDashboard(dashboard) || {};
-  const plan = Object.keys(planFromResult(result)).length ? planFromResult(result) : scenarioPlan();
-  const selected = selectedExercisesFromPlan(plan, result);
+  const resultPlan = planFromResult(result);
+  const storedPlan = dashboard?.assessmentSession?.exercisePrescription?.plan
+    || dashboard?.session?.assessmentSession?.exercisePrescription?.plan;
+  const plan = Object.keys(resultPlan).length ? resultPlan : storedPlan || {};
+  const selected = selectedExercisesFromPlan(plan);
   const exercises = selected.map((exercise, index) => normalizeExercise(exercise, index));
   const cameraCount = exercises.filter((exercise) => exercise.cameraSupported).length;
   const manualCount = exercises.length - cameraCount;
@@ -451,14 +392,16 @@ function planContext(dashboard) {
     manualCount,
     restricted,
     estimatedMinutes: estimateMinutes(exercises),
-    supportSummary: exercises.some((exercise) => exercise.supportRequirement.includes('stable') || exercise.supportRequirement.includes('Hold'))
+    supportSummary: !exercises.length
+      ? 'No prescribed exercises'
+      : exercises.some((exercise) => exercise.supportRequirement.includes('stable') || exercise.supportRequirement.includes('Hold'))
       ? 'Stable support surface needed'
       : 'Follow each exercise support note',
   };
 }
 
 function normalizeExercise(exercise = {}, index = 0) {
-  const rawKey = normalizeKey(exercise.exerciseId || exercise.exerciseKey || exercise.id || exercise.arInputKey || exercise.displayName || exercise.title);
+  const rawKey = normalizeKey(exercise.exerciseId || exercise.exerciseKey || exercise.id || exercise.arInputKey || exercise.displayName);
   const mappedKey = rawKey === 'balance_practice' ? 'tandem_stance' : rawKey;
   const catalog = CATALOG_BY_ID[mappedKey] || {};
   const meta = exerciseDisplay[mappedKey] || exerciseDisplay[rawKey] || {};
@@ -469,9 +412,14 @@ function normalizeExercise(exercise = {}, index = 0) {
   };
   const displayMeta = exerciseDisplay[normalizeKey(merged.exerciseId)] || meta;
   const camera = cameraSupported(merged, displayMeta);
-  const reps = whole(merged.repetitions ?? merged.defaultReps ?? merged.reps, 0);
+  const reps = whole(merged.repetitions ?? merged.repetitionsPerSide ?? merged.steps ?? merged.defaultReps ?? merged.reps, 0);
   const sets = whole(merged.sets, 1) || 1;
   const duration = whole(merged.durationSeconds ?? merged.holdSeconds ?? displayMeta.holdSeconds, 0);
+  const targetSideLabel = merged.targetSide === 'RIGHT'
+    ? 'Right side priority'
+    : merged.targetSide === 'LEFT'
+      ? 'Left side priority'
+      : merged.targetSide === 'BILATERAL' ? 'Both sides' : null;
 
   return {
     ...merged,
@@ -491,16 +439,24 @@ function normalizeExercise(exercise = {}, index = 0) {
     supportRequirement: supportText(merged.supportRequirement || displayMeta.support),
     cameraSupported: camera,
     feedbackLabel: camera ? 'Camera feedback available' : 'Self-reported completion',
+    recommendationRank: whole(merged.recommendationRank, index + 1) || index + 1,
+    recommendationScore: Number.isFinite(merged.recommendationScore) ? merged.recommendationScore : null,
+    targetSide: merged.targetSide || 'UNSPECIFIED',
+    targetSideLabel,
+    functionalRole: merged.functionalRole || null,
     demo: displayMeta.demo || 'standing',
-    reason: merged.reasonMessages?.[0] || merged.reason || 'Selected from your Otago Exercise Programme plan.',
-    restSeconds: whole(merged.restSeconds ?? merged.requiredRestSeconds, 30) || 30,
+    reason: merged.reasonMessages?.[0]
+      || merged.reason
+      || (targetSideLabel && merged.reasonVulnerabilityIds?.includes('V9') ? `${targetSideLabel} based on the repeated movement asymmetry pattern.` : null)
+      || (merged.reasonVulnerabilityIds?.length ? `Selected for ${merged.reasonVulnerabilityIds.join(', ')}.` : 'Selected from your Otago Exercise Programme plan.'),
+    restSeconds: whole(merged.restMinSeconds ?? merged.restSeconds ?? merged.requiredRestSeconds, 30) || 30,
   };
 }
 
 function exerciseById(context, id) {
   const normalized = normalizeKey(id);
   return context.exercises.find((exercise) => normalizeKey(exercise.exerciseId) === normalized || normalizeKey(exercise.hrefId) === normalized)
-    || normalizeExercise({ exerciseId: normalized }, 0);
+    || null;
 }
 
 function ExerciseDemo({ exercise, large = false }) {
@@ -537,6 +493,26 @@ function PlanRestriction({ context }) {
         <p>A healthcare professional should review your results before you begin more challenging exercises.</p>
       </div>
     </section>
+  );
+}
+
+function ExerciseNotReady({ context }) {
+  return (
+    <SessionShell
+      eyebrow="Exercise not ready"
+      title="No Prescribed Exercise Available"
+      description="Steply does not create an exercise when the deterministic plan has no matching item."
+      connection={<ConnectionIndicator status="waiting" label="Exercise unavailable" detail="Stored prescription required" />}
+      progress={<SessionProgress current={10} total={12} label="Session progress" />}
+    >
+      <main className="step-seven-plan">
+        <div className="step-seven-empty-plan">
+          <h2>No matching exercise is available</h2>
+          <p>{context.exercises.length ? 'Return to the prescribed exercise list and choose an available item.' : 'Complete a valid assessment before starting exercise.'}</p>
+        </div>
+        <PrimaryActionBar primaryLabel="Return to Exercise Plan" onPrimary={() => goTo('/display/exercises/plan')} />
+      </main>
+    </SessionShell>
   );
 }
 
@@ -615,7 +591,7 @@ export function DisplayExercisePlanScreen({ dashboard }) {
           tertiaryLabel="View Today's Results"
           primaryDisabled={context.restricted || !context.exercises.length}
           onPrimary={() => goTo(startPath)}
-          onSecondary={() => goTo(routeWithParams('/display/exercises/plan', { split: '1' }))}
+          onSecondary={() => goTo('/display/exercises/plan')}
           onTertiary={() => goTo('/display/results/summary')}
         />
       </main>
@@ -641,8 +617,8 @@ export function DisplayExercisePreviewScreen({ dashboard }) {
           <PrimaryActionBar
             primaryLabel="View Professional Guidance"
             secondaryLabel="Return to Exercise Plan"
-            onPrimary={() => goTo('/display/reports?view=professional')}
-            onSecondary={() => goTo('/display/exercises/plan?restricted=1')}
+            onPrimary={() => goTo('/display/reports')}
+            onSecondary={() => goTo('/display/exercises/plan')}
           />
         </main>
       </SessionShell>
@@ -650,6 +626,7 @@ export function DisplayExercisePreviewScreen({ dashboard }) {
   }
 
   const exercise = exerciseById(context, currentExerciseId());
+  if (!exercise) return <ExerciseNotReady context={context} />;
   const voice = `${exercise.displayName}. ${exercise.starting} ${exercise.sequence}`;
 
   return (
@@ -713,20 +690,32 @@ export function DisplayExercisePreviewScreen({ dashboard }) {
   );
 }
 
-function exerciseSessionState(exercise) {
-  const count = whole(queryValue('count', ''), whole(queryValue('rep', ''), 0));
-  const target = whole(queryValue('target', ''), exercise.repetitions || 1) || 1;
-  const set = whole(queryValue('set', ''), 1) || 1;
-  const remaining = whole(queryValue('remaining', ''), Math.max(0, target - count));
-  const paused = queryValue('paused', '') === '1';
+function storedExerciseResult(dashboard, exercise) {
+  const result = resultFromDashboard(dashboard) || {};
+  const results = result.structuredPipeline?.exercisePlan?.sessionResults
+    || result.exercisePrescription?.sessionResults
+    || dashboard?.session?.assessmentSession?.exercisePrescription?.sessionResults
+    || [];
+  return results.find((entry) => normalizeKey(entry.exerciseId) === normalizeKey(exercise.exerciseId)) || null;
+}
+
+function exerciseSessionState(dashboard, exercise, paused) {
+  const stored = storedExerciseResult(dashboard, exercise);
+  const completedDosage = stored?.completedDosage || {};
+  const count = whole(completedDosage.repetitions ?? completedDosage.repetitionsPerSide ?? completedDosage.steps, 0);
+  const target = exercise.repetitions || exercise.durationSeconds || 1;
+  const set = whole(completedDosage.sets, 1) || 1;
+  const remaining = Math.max(0, target - count);
   return {
     count,
     target,
     set,
     remaining,
     paused,
-    cue: paused ? 'Paused. Start again when you feel ready.' : queryValue('cue', exercise.cue),
-    restSeconds: whole(queryValue('rest', ''), exercise.restSeconds),
+    cue: paused ? 'Paused. Start again when you feel ready.' : exercise.cue,
+    restSeconds: exercise.restSeconds,
+    safetyEvents: stored?.safetyEvents || [],
+    stored,
   };
 }
 
@@ -739,7 +728,7 @@ function LiveMetric({ label, value }) {
   );
 }
 
-function RestScreen({ exercise, session }) {
+function RestScreen({ exercise, session, onContinue, onEnd }) {
   return (
     <main className="step-seven-rest">
       <section className="step-seven-rest-card">
@@ -757,15 +746,15 @@ function RestScreen({ exercise, session }) {
         <PrimaryActionBar
           primaryLabel="Start Next Set"
           secondaryLabel="End This Exercise"
-          onPrimary={() => goTo(routeWithParams(`/display/exercises/${exercise.hrefId}/live`, { state: '', set: session.set + 1, count: 0 }))}
-          onSecondary={() => goTo(`/display/exercises/${exercise.hrefId}/complete`)}
+          onPrimary={onContinue}
+          onSecondary={onEnd}
         />
       </section>
     </main>
   );
 }
 
-function ManualExerciseScreen({ exercise }) {
+function ManualExerciseScreen({ exercise, onComplete, onSkip, onSymptom }) {
   return (
     <main className="step-seven-manual">
       <section className="step-seven-manual__demo">
@@ -797,24 +786,19 @@ function ManualExerciseScreen({ exercise }) {
           primaryLabel="I Completed This Exercise"
           secondaryLabel="Skip This Exercise"
           tertiaryLabel="I Felt Discomfort"
-          onPrimary={() => goTo(`/display/exercises/${exercise.hrefId}/complete?status=completed`)}
-          onSecondary={() => goTo(`/display/exercises/${exercise.hrefId}/complete?status=skipped`)}
-          onTertiary={() => goTo(`/display/exercises/${exercise.hrefId}/live?state=symptom&symptom=discomfort`)}
+          onPrimary={onComplete}
+          onSecondary={onSkip}
+          onTertiary={onSymptom}
         />
       </section>
     </main>
   );
 }
 
-function SymptomSafetyScreen({ exercise }) {
-  const symptom = queryValue('symptom', 'discomfort');
-  const message = symptom === 'pain'
-    ? 'Pain was reported during this exercise.'
-    : symptom === 'dizziness'
-      ? 'Dizziness was reported during this exercise.'
-      : symptom === 'breath'
-        ? 'Shortness of breath was reported during this exercise.'
-        : 'Discomfort was reported during this exercise.';
+function SymptomSafetyScreen({ exercise, safetyEvent }) {
+  const message = safetyEvent
+    ? `${titleCase(safetyEvent)} was recorded during this exercise.`
+    : 'Discomfort was reported during this exercise.';
   return (
     <main className="step-seven-symptom">
       <section className="step-seven-symptom-card" role="alert">
@@ -827,7 +811,7 @@ function SymptomSafetyScreen({ exercise }) {
         <PrimaryActionBar
           primaryLabel="End Session"
           secondaryLabel="Return Home"
-          onPrimary={() => goTo('/display/session/complete?status=symptom')}
+          onPrimary={() => goTo('/display/session/complete')}
           onSecondary={() => goTo('/display/home')}
         />
       </section>
@@ -838,8 +822,8 @@ function SymptomSafetyScreen({ exercise }) {
 export function DisplayExerciseLiveScreen({ dashboard }) {
   const context = useMemo(() => planContext(dashboard), [dashboard]);
   const exercise = exerciseById(context, currentExerciseId());
-  const session = exerciseSessionState(exercise);
-  const state = queryValue('state', exercise.cameraSupported ? 'camera' : 'manual');
+  const [paused, setPaused] = useState(false);
+  const [reportedSafetyEvent, setReportedSafetyEvent] = useState(null);
 
   if (context.restricted) {
     return (
@@ -856,7 +840,13 @@ export function DisplayExerciseLiveScreen({ dashboard }) {
     );
   }
 
-  if (state === 'symptom') {
+  if (!exercise) return <ExerciseNotReady context={context} />;
+
+  const session = exerciseSessionState(dashboard, exercise, paused);
+  const safetyEvent = reportedSafetyEvent || session.safetyEvents[0] || null;
+  const resting = Boolean(session.stored && session.remaining <= 0 && session.set < exercise.sets);
+
+  if (safetyEvent) {
     return (
       <SessionShell
         eyebrow="Safety"
@@ -866,12 +856,12 @@ export function DisplayExerciseLiveScreen({ dashboard }) {
         progress={<SessionProgress current={11} total={12} label="Exercise progress" />}
         className="step-seven-live-shell"
       >
-        <SymptomSafetyScreen exercise={exercise} />
+        <SymptomSafetyScreen exercise={exercise} safetyEvent={safetyEvent} />
       </SessionShell>
     );
   }
 
-  if (state === 'rest') {
+  if (resting) {
     return (
       <SessionShell
         eyebrow="Rest"
@@ -881,12 +871,17 @@ export function DisplayExerciseLiveScreen({ dashboard }) {
         progress={<SessionProgress current={11} total={12} label="Exercise progress" />}
         className="step-seven-live-shell"
       >
-        <RestScreen exercise={exercise} session={session} />
+        <RestScreen
+          exercise={exercise}
+          session={session}
+          onContinue={() => goTo('/display/exercises/plan')}
+          onEnd={() => goTo(`/display/exercises/${exercise.hrefId}/complete`)}
+        />
       </SessionShell>
     );
   }
 
-  if (!exercise.cameraSupported || state === 'manual') {
+  if (!exercise.cameraSupported) {
     return (
       <SessionShell
         eyebrow="Guided exercise"
@@ -896,7 +891,12 @@ export function DisplayExerciseLiveScreen({ dashboard }) {
         progress={<SessionProgress current={11} total={12} label="Exercise progress" />}
         className="step-seven-live-shell"
       >
-        <ManualExerciseScreen exercise={exercise} />
+        <ManualExerciseScreen
+          exercise={exercise}
+          onComplete={() => goTo(`/display/exercises/${exercise.hrefId}/complete`)}
+          onSkip={() => goTo('/display/exercises/plan')}
+          onSymptom={() => setReportedSafetyEvent('DISCOMFORT')}
+        />
       </SessionShell>
     );
   }
@@ -918,9 +918,12 @@ export function DisplayExerciseLiveScreen({ dashboard }) {
         </section>
         <section className="step-seven-live__camera">
           <CameraPreview
-            frameSrc={dashboard?.remoteCameraFrame?.src}
+            frameSrc={dashboard?.activeCameraFrame?.src}
+            mediaStream={dashboard?.activeCameraStream}
             label="Exercise camera preview"
             guide="Stay inside the marked exercise area"
+            onFrameLoaded={dashboard?.handleCameraFrameLoaded}
+            onFrameError={dashboard?.handleCameraFrameError}
           >
             <div className="step-seven-position-overlay" aria-hidden="true" />
           </CameraPreview>
@@ -945,8 +948,8 @@ export function DisplayExerciseLiveScreen({ dashboard }) {
           primaryLabel={session.paused ? 'Resume' : 'Pause'}
           secondaryLabel="I Felt Discomfort"
           tertiaryLabel="End This Exercise"
-          onPrimary={() => goTo(routeWithParams(`/display/exercises/${exercise.hrefId}/live`, { paused: session.paused ? '' : '1' }))}
-          onSecondary={() => goTo(`/display/exercises/${exercise.hrefId}/live?state=symptom&symptom=discomfort`)}
+          onPrimary={() => setPaused((value) => !value)}
+          onSecondary={() => setReportedSafetyEvent('DISCOMFORT')}
           onTertiary={() => goTo(`/display/exercises/${exercise.hrefId}/complete`)}
         />
       </footer>
@@ -954,35 +957,24 @@ export function DisplayExerciseLiveScreen({ dashboard }) {
   );
 }
 
-function recordSafetySelection(value, exercise) {
-  if (value !== 'symptom' || typeof window === 'undefined') return;
-  try {
-    window.sessionStorage.setItem('steply:lastExerciseSafetyEvent', JSON.stringify({
-      exerciseName: exercise.displayName,
-      type: 'reported_symptoms',
-      createdAt: new Date().toISOString(),
-    }));
-  } catch {
-    // Session storage is optional. The UI still stops the flow if storage is unavailable.
-  }
-}
-
 export function DisplayExerciseCompleteScreen({ dashboard }) {
   const context = useMemo(() => planContext(dashboard), [dashboard]);
   const exercise = exerciseById(context, currentExerciseId());
-  const [selected, setSelected] = useState(queryValue('symptom', '') ? 'symptom' : '');
-  const status = queryValue('status', 'completed');
+  const stored = exercise ? storedExerciseResult(dashboard, exercise) : null;
+  const [selected, setSelected] = useState(stored?.safetyEvents?.length ? 'symptom' : '');
+  const status = stored ? 'completed' : 'not_recorded';
   const symptomatic = selected === 'symptom';
+
+  if (!exercise) return <ExerciseNotReady context={context} />;
 
   function select(value) {
     setSelected(value);
-    recordSafetySelection(value, exercise);
   }
 
   return (
     <SessionShell
       eyebrow="Post-exercise check"
-      title={status === 'skipped' ? 'Exercise Skipped' : 'Exercise Complete'}
+      title={status === 'completed' ? 'Exercise Complete' : 'Exercise Completion Not Recorded'}
       description="Check how you felt before moving on."
       connection={<ConnectionIndicator status={symptomatic ? 'lost' : 'connected'} label={symptomatic ? 'Session stopped' : 'Exercise saved'} detail={exercise.displayName} />}
       progress={<SessionProgress current={12} total={12} label="Exercise progress" />}
@@ -1015,7 +1007,7 @@ export function DisplayExerciseCompleteScreen({ dashboard }) {
         ) : (
           <section className="step-seven-check-summary">
             <StepIcon tone="success" />
-            <h2>{status === 'skipped' ? 'Exercise marked as skipped' : 'Exercise saved'}</h2>
+            <h2>{status === 'completed' ? 'Exercise result stored' : 'No stored exercise result is available'}</h2>
             <p>{selected === 'mild' ? 'Mild difficulty was recorded. Keep the next activity gentle.' : 'Take a moment before the next activity.'}</p>
           </section>
         )}
@@ -1023,7 +1015,7 @@ export function DisplayExerciseCompleteScreen({ dashboard }) {
         <PrimaryActionBar
           primaryLabel={symptomatic ? 'End Session' : 'Continue'}
           secondaryLabel="Return to Exercise Plan"
-          onPrimary={() => goTo(symptomatic ? '/display/session/complete?status=symptom' : '/display/session/complete?status=completed')}
+          onPrimary={() => goTo(symptomatic ? '/display/error/safety-stop' : '/display/session/complete')}
           onSecondary={() => goTo('/display/exercises/plan')}
         />
       </main>
@@ -1031,33 +1023,29 @@ export function DisplayExerciseCompleteScreen({ dashboard }) {
   );
 }
 
-function formatDateFromQuery(name, fallbackDays) {
-  const value = queryValue(name, '');
-  if (value) return value;
-  const date = new Date();
-  date.setDate(date.getDate() + fallbackDays);
-  return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric' }).format(date);
+function formatScheduledDate(value) {
+  const timestamp = finite(value);
+  if (timestamp === null) return 'Not scheduled';
+  return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric' }).format(new Date(timestamp));
 }
 
 export function DisplaySessionCompleteScreen({ dashboard }) {
   const context = useMemo(() => planContext(dashboard), [dashboard]);
-  const status = queryValue('status', 'completed');
-  const partial = status === 'partial' || status === 'symptom';
-  const exercisesCompleted = partial
-    ? whole(queryValue('completed', ''), Math.max(0, context.exercises.length - 1))
-    : whole(queryValue('completed', ''), context.exercises.length);
-  const activeMinutes = whole(queryValue('minutes', ''), context.estimatedMinutes);
-  const weeklyCount = whole(queryValue('weekly', ''), partial ? 1 : 2);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      window.sessionStorage.removeItem('steply:lastExerciseSafetyEvent');
-      window.sessionStorage.removeItem('steply:publicDisplaySession');
-    } catch {
-      // Session cleanup should never block the completion screen.
-    }
-  }, []);
+  const assessment = dashboard?.assessmentSession || dashboard?.session?.assessmentSession || null;
+  const assessmentSlots = assessment?.functionalTests || {};
+  const assessmentsCompleted = Object.values(assessmentSlots).filter((slot) => slot?.status === 'COMPLETED').length;
+  const exerciseResults = assessment?.exercisePrescription?.sessionResults || [];
+  const completedExerciseIds = new Set(exerciseResults.map((result) => result.exerciseId).filter(Boolean));
+  const exercisesCompleted = completedExerciseIds.size;
+  const activeMs = exerciseResults.reduce((sum, result) => {
+    const started = finite(result.startedAt);
+    const completed = finite(result.completedAt);
+    return started !== null && completed !== null && completed >= started ? sum + completed - started : sum;
+  }, 0);
+  const activeMinutes = activeMs > 0 ? Math.round(activeMs / 60000) : null;
+  const partial = assessment?.status !== 'COMPLETED' || exercisesCompleted < context.exercises.length;
+  const projection = dashboard?.session?.careAgentProjection || null;
+  const nextSessionAt = projection?.currentSessionPlan?.scheduledAtMs || projection?.currentSessionPlan?.scheduledAt;
 
   return (
     <div className="foundation-shell step-seven-shell step-seven-session-complete-shell">
@@ -1074,12 +1062,12 @@ export function DisplaySessionCompleteScreen({ dashboard }) {
           <p>Consistent practice helps you track changes over time.</p>
         </section>
         <section className="step-seven-complete-grid" aria-label="Session completion summary">
-          <SummaryMetric label="Assessments completed" value={queryValue('assessments', '2')} />
+          <SummaryMetric label="Assessments completed" value={String(assessmentsCompleted)} />
           <SummaryMetric label="Exercises completed" value={`${exercisesCompleted} of ${context.exercises.length}`} />
-          <SummaryMetric label="Total active time" value={`${activeMinutes} minutes`} />
-          <SummaryMetric label="Weekly completion count" value={`${weeklyCount} of 3`} />
-          <SummaryMetric label="Next session date" value={formatDateFromQuery('nextSession', 2)} />
-          <SummaryMetric label="Next reassessment date" value={formatDateFromQuery('nextReassessment', 28)} />
+          <SummaryMetric label="Total active time" value={activeMinutes === null ? 'No stored duration' : `${activeMinutes} minutes`} />
+          <SummaryMetric label="Weekly completion count" value="View stored progress" />
+          <SummaryMetric label="Next session date" value={formatScheduledDate(nextSessionAt)} />
+          <SummaryMetric label="Next reassessment date" value={formatScheduledDate(projection?.nextReassessmentAt)} />
         </section>
         <PrimaryActionBar
           primaryLabel="Return Home"

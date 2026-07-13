@@ -2,8 +2,6 @@
 @import './layout.css';
 @import './primitives.css';
 @import './foundation.css';
-@import './rail.css';
-@import './flow.css';
 @import './screens/start.css';
 @import './screens/analysis.css';
 @import './screens/result.css';
@@ -42,7 +40,7 @@
 }
 
 .home-logo-link:focus-visible {
-  outline: 3px solid var(--primary);
+  outline: 3px solid rgba(19, 26, 42, 0.16);
   outline-offset: 4px;
 }
 
@@ -86,7 +84,51 @@
   object-fit: cover;
 }
 
-button:not(.qr-link-modal__backdrop):not(.ds-button),
+/* Laptop frames stay landscape and unmirrored so video, landmarks, and ROI share coordinates. */
+.step-three-camera-stage .camera-preview--local,
+.step-three-calibration-stage .camera-preview--local,
+.step-four-live-preview .camera-preview--local,
+.step-five-preview .camera-preview--local {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.step-three-camera-stage .camera-preview--local video,
+.step-three-calibration-stage .camera-preview--local video,
+.step-four-live-preview .camera-preview--local video,
+.step-five-preview .camera-preview--local video {
+  object-fit: contain;
+}
+
+.step-three-auto-start-countdown {
+  position: absolute;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  min-width: 180px;
+  min-height: 180px;
+  padding: 20px;
+  border: 4px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(8, 30, 40, 0.84);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(8px);
+}
+
+.step-three-auto-start-countdown strong {
+  font-size: clamp(4.5rem, 10vw, 7rem);
+  line-height: 0.85;
+}
+
+.step-three-auto-start-countdown span {
+  font-size: 1.1rem;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+}
+
+button:not(.qr-link-modal__backdrop):not(.ds-button):not(.ref-app *),
 .steply-button,
 .primary-nav__item,
 .senior-support-link,
@@ -106,7 +148,7 @@ button:not(.qr-link-modal__backdrop):not(.ds-button),
   -webkit-backdrop-filter: blur(18px) saturate(1.18);
 }
 
-button:not(.qr-link-modal__backdrop):not(.ds-button):hover:not(:disabled),
+button:not(.qr-link-modal__backdrop):not(.ds-button):not(.ref-app *):hover:not(:disabled),
 .steply-button:hover:not(:disabled),
 .primary-nav__item:hover,
 .senior-support-link:hover,
@@ -140,7 +182,7 @@ button:not(.qr-link-modal__backdrop):not(.ds-button):hover:not(:disabled),
 }
 
 .steply-button:focus-visible,
-button:not(.qr-link-modal__backdrop):not(.ds-button):focus-visible {
+button:not(.qr-link-modal__backdrop):not(.ds-button):not(.ref-app *):focus-visible {
   outline: 0;
   border-color: var(--primary) !important;
   box-shadow: var(--focus-ring), 0 12px 28px color-mix(in srgb, var(--primary) 14%, transparent) !important;

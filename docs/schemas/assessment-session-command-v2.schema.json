@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/assessment-session-command-v2.schema.json",
+  "title": "Steply AssessmentSession v2 command envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "messageId", "baseRevision"],
+  "properties": {
+    "schemaVersion": { "const": "assessment_session.v2" },
+    "messageId": { "type": "string", "minLength": 1 },
+    "baseRevision": { "type": "integer", "minimum": 0 },
+    "session": { "$ref": "assessment-session-v2.schema.json" },
+    "event": { "$ref": "#/$defs/event" }
+  },
+  "oneOf": [
+    { "required": ["session"], "not": { "required": ["event"] } },
+    { "required": ["event"], "not": { "required": ["session"] } }
+  ],
+  "$defs": {
+    "event": {
+      "type": "object",
+      "required": ["type"],
+      "oneOf": [
+        { "$ref": "#/$defs/operationalContextUpdated" },
+        { "$ref": "#/$defs/testResultAccepted" },
+        { "$ref": "#/$defs/testResultInvalid" },
+        { "$ref": "#/$defs/testLifecycle" },
+        { "$ref": "#/$defs/professionalApprovalRecorded" },
+        { "$ref": "#/$defs/progressionProposed" },
+        { "$ref": "#/$defs/progressionApprovalRecorded" },
+        { "$ref": "#/$defs/exerciseSessionResultRecorded" }
+      ]
+    },
+    "operationalContextUpdated": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "operationalContext"],
+      "properties": {
+        "type": { "const": "OPERATIONAL_CONTEXT_UPDATED" },
+        "operationalContext": { "$ref": "assessment-session-v2.schema.json#/$defs/operationalContext" }
+      }
+    },
+    "testResultAccepted": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "slot", "attemptId", "acceptedResult"],
+      "properties": {
+        "type": { "const": "TEST_RESULT_ACCEPTED" },
+        "slot": { "enum": ["CHAIR_STAND_30S", "FOUR_STAGE_BALANCE"] },
+        "attemptId": { "type": "string", "minLength": 1 },
+        "acceptedResult": {
+          "allOf": [
+            { "$ref": "assessment-session-v2.schema.json#/$defs/stage2Result" },
+            { "properties": { "status": { "const": "VALID" } } }
+          ]
+        }
+      }
+    },
+    "testResultInvalid": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "slot", "attemptId", "attemptResult"],
+      "properties": {
+        "type": { "const": "TEST_RESULT_INVALID" },
+        "slot": { "enum": ["CHAIR_STAND_30S", "FOUR_STAGE_BALANCE"] },
+        "attemptId": { "type": "string", "minLength": 1 },
+        "attemptResult": {
+          "allOf": [
+            { "$ref": "assessment-session-v2.schema.json#/$defs/stage2Result" },
+            { "properties": { "status": { "enum": ["INVALID", "TRACKING_FAILED"] } } }
+          ]
+        }
+      }
+    },
+    "testLifecycle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "slot", "attemptId"],
+      "properties": {
+        "type": { "enum": ["TEST_STARTED", "TEST_NEEDS_RETRY"] },
+        "slot": { "enum": ["CHAIR_STAND_30S", "FOUR_STAGE_BALANCE"] },
+        "attemptId": { "type": "string", "minLength": 1 },
+        "analysisSessionId": { "type": "string", "minLength": 1 },
+        "startedAt": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "professionalApprovalRecorded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "professionalApproval"],
+      "properties": {
+        "type": { "const": "PROFESSIONAL_APPROVAL_RECORDED" },
+        "professionalApproval": {
+          "allOf": [
+            { "$ref": "stage3-exercise-prescription-v1.schema.json#/$defs/professionalApproval" },
+            { "properties": { "status": { "const": "APPROVED" } } }
+          ]
+        }
+      }
+    },
+    "progressionApprovalRecorded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "proposalId", "approval"],
+      "properties": {
+        "type": { "const": "PROGRESSION_APPROVAL_RECORDED" },
+        "proposalId": { "type": "string", "minLength": 1 },
+        "approval": { "$ref": "stage3-progression-v1.schema.json#/$defs/approval" }
+      }
+    },
+    "progressionProposed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "proposal"],
+      "properties": {
+        "type": { "const": "PROGRESSION_PROPOSED" },
+        "proposal": {
+          "allOf": [
+            { "$ref": "stage3-progression-v1.schema.json" },
+            { "properties": { "status": { "const": "PENDING_APPROVAL" }, "approval": { "type": "null" } } }
+          ]
+        }
+      }
+    },
+    "exerciseSessionResultRecorded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "result"],
+      "properties": {
+        "type": { "const": "EXERCISE_SESSION_RESULT_RECORDED" },
+        "result": { "$ref": "stage3-exercise-session-result-v1.schema.json" }
+      }
+    }
+  }
+}

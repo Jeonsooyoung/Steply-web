@@ -9,12 +9,10 @@ import {
 import { createAssessmentEvent } from '../events.js';
 import {
   LandmarkIndexes,
-  bodyScale,
-  footCenter,
-  hipCenter,
-  landmarkByIndex,
   normalizeSittingToStandingProgress,
-  shoulderCenter,
+  worldHipCenter,
+  worldLandmarkByIndex,
+  worldShoulderCenter,
 } from '../../pose/coordinateMapping.js';
 
 export const ChairStandMachineStates = {
@@ -26,6 +24,7 @@ export const ChairStandMachineStates = {
   Paused: 'PAUSED',
   Completed: 'COMPLETED',
   Invalid: 'INVALID',
+  RestartRequired: 'RESTART_REQUIRED',
 };
 
 export const ChairStandArmStates = {
@@ -39,6 +38,7 @@ export const ChairStandArmStates = {
 const TERMINAL_STATES = new Set([
   ChairStandMachineStates.Completed,
   ChairStandMachineStates.Invalid,
+  ChairStandMachineStates.RestartRequired,
 ]);
 
 function finite(value) {
@@ -56,36 +56,38 @@ function average(values = []) {
 }
 
 function point(frame, index) {
-  return landmarkByIndex(frame, index);
+  return worldLandmarkByIndex(frame, index);
 }
 
-function visible(point, minVisibility = 0.25) {
+function visible(point, minVisibility = chairStandConfig.geometry.minimumVisibility) {
   return Boolean(point && finite(point.x) && finite(point.y) && (point.visibility ?? 0) >= minVisibility);
 }
 
 function distance(first, second) {
   if (!visible(first, 0) || !visible(second, 0)) return null;
-  return Math.hypot(first.x - second.x, first.y - second.y);
+  return Math.hypot(first.x - second.x, first.y - second.y, (first.z ?? 0) - (second.z ?? 0));
 }
 
 function angleDegrees(first, center, third) {
   if (!visible(first, 0) || !visible(center, 0) || !visible(third, 0)) return null;
   const ax = first.x - center.x;
   const ay = first.y - center.y;
+  const az = (first.z ?? 0) - (center.z ?? 0);
   const bx = third.x - center.x;
   const by = third.y - center.y;
-  const magnitude = Math.max(Math.hypot(ax, ay) * Math.hypot(bx, by), 0.000001);
-  const cosine = clamp((ax * bx + ay * by) / magnitude, -1, 1);
+  const bz = (third.z ?? 0) - (center.z ?? 0);
+  const magnitude = Math.max(Math.hypot(ax, ay, az) * Math.hypot(bx, by, bz), 0.000001);
+  const cosine = clamp((ax * bx + ay * by + az * bz) / magnitude, -1, 1);
   return Math.acos(cosine) * 180 / Math.PI;
 }
 
 function trunkAngleDegrees(frame) {
-  const shoulders = shoulderCenter(frame, 0.25);
-  const hips = hipCenter(frame, 0.25);
+  const shoulders = worldShoulderCenter(frame, chairStandConfig.geometry.minimumVisibility);
+  const hips = worldHipCenter(frame, chairStandConfig.geometry.minimumVisibility);
   if (!shoulders || !hips) return null;
-  const dx = shoulders.x - hips.x;
-  const dy = shoulders.y - hips.y;
-  return Math.abs(Math.atan2(dx, dy || 0.000001) * 180 / Math.PI);
+  const horizontal = Math.hypot(shoulders.x - hips.x, shoulders.z - hips.z);
+  const vertical = Math.abs(shoulders.y - hips.y);
+  return Math.abs(Math.atan2(horizontal, vertical || 0.000001) * 180 / Math.PI);
 }
 
 function sideJointAngles(frame, side) {
@@ -97,31 +99,6 @@ function sideJointAngles(frame, side) {
   return {
     knee: angleDegrees(hip, knee, ankle),
     hip: angleDegrees(shoulder, hip, knee),
-  };
-}
-
-function footStability(frame, previousFeatures, calibrationProfile, config) {
-  const left = footCenter(frame, 'left', 0.25);
-  const right = footCenter(frame, 'right', 0.25);
-  const previousLeft = previousFeatures?.footCenters?.left;
-  const previousRight = previousFeatures?.footCenters?.right;
-  const scale = bodyScale(frame);
-  const footLength = calibrationProfile?.bodyScale?.averageFootLength
-    || scale.averageFootLength
-    || 0.08;
-  const leftDelta = distance(left, previousLeft);
-  const rightDelta = distance(right, previousRight);
-  const normalizedDisplacement = average([
-    finite(leftDelta) ? leftDelta / footLength : null,
-    finite(rightDelta) ? rightDelta / footLength : null,
-  ]);
-  const stable = !finite(normalizedDisplacement)
-    || normalizedDisplacement <= config.footStabilityMaxDisplacementFootLengths;
-  return {
-    stable,
-    normalizedDisplacement,
-    left,
-    right,
   };
 }
 
@@ -152,15 +129,18 @@ function chestAndThighRegions(frame, armConfig) {
   const rightHip = point(frame, LandmarkIndexes.RightHip);
   const leftKnee = point(frame, LandmarkIndexes.LeftKnee);
   const rightKnee = point(frame, LandmarkIndexes.RightKnee);
-  if (![leftShoulder, rightShoulder, leftHip, rightHip].every((item) => visible(item, 0.2))) {
+  if (![leftShoulder, rightShoulder, leftHip, rightHip].every((item) => visible(item, chairStandConfig.geometry.armMinimumVisibility))) {
     return { chest: null, thigh: null };
   }
-  const shoulderWidth = distance(leftShoulder, rightShoulder) || 0.2;
-  const torsoLength = distance(shoulderCenter(frame, 0.2), hipCenter(frame, 0.2)) || 0.25;
+  const shoulderWidth = distance(leftShoulder, rightShoulder) || chairStandConfig.geometry.fallbackShoulderWidthMeters;
+  const torsoLength = distance(
+    worldShoulderCenter(frame, chairStandConfig.geometry.armMinimumVisibility),
+    worldHipCenter(frame, chairStandConfig.geometry.armMinimumVisibility),
+  ) || chairStandConfig.geometry.fallbackTorsoLengthMeters;
   const minX = Math.min(leftShoulder.x, rightShoulder.x) - shoulderWidth * armConfig.chestHorizontalMarginShoulderWidths;
   const maxX = Math.max(leftShoulder.x, rightShoulder.x) + shoulderWidth * armConfig.chestHorizontalMarginShoulderWidths;
   const minChestY = Math.min(leftShoulder.y, rightShoulder.y) - torsoLength * armConfig.chestVerticalMarginTorsoLengths;
-  const maxChestY = Math.max(leftHip.y, rightHip.y) + torsoLength * 0.2;
+  const maxChestY = Math.max(leftHip.y, rightHip.y) + torsoLength * armConfig.chestVerticalMarginTorsoLengths;
   const kneeY = average([leftKnee?.y, rightKnee?.y]) ?? (maxChestY + torsoLength);
   const minThighY = Math.min(leftHip.y, rightHip.y) - torsoLength * armConfig.thighRegionMarginTorsoLengths;
   const maxThighY = kneeY + torsoLength * armConfig.thighRegionMarginTorsoLengths;
@@ -195,14 +175,23 @@ function rawArmObservation(frame, config) {
   const supportPoints = [leftWrist, rightWrist].filter((item) => pointInThighRegion(item, thigh, confirmedMin));
   const wristConfidence = average([leftWrist?.visibility, rightWrist?.visibility].filter(finite)) ?? 0;
   const armConfidence = average(armPoints.map((item) => item?.visibility).filter(finite)) ?? 0;
-  const foldedCandidate = chestPoints.length >= 2;
-  const supportCandidate = supportPoints.length >= 1 && armConfidence >= confirmedMin;
+  const dFold = config.calibrationProfile?.references?.D_fold;
+  const crossDistances = [distance(leftWrist, point(frame, LandmarkIndexes.RightShoulder)), distance(rightWrist, point(frame, LandmarkIndexes.LeftShoulder))];
+  const foldedCandidate = finite(dFold)
+    ? crossDistances.every((value) => finite(value) && value <= armConfig.foldedDistanceMultiplier * dFold)
+    : false;
+  const hips = worldHipCenter(frame, confirmedMin);
+  const wristBelowHip = Boolean(hips && [leftWrist, rightWrist].some((wrist) => visible(wrist, confirmedMin) && wrist.y < hips.y));
+  const supportCandidate = (supportPoints.length >= 1 || wristBelowHip) && armConfidence >= confirmedMin;
+  const armsMeasurable = [leftWrist, rightWrist].every((item) => visible(item, confirmedMin));
   const outsideChestCandidate = visibleArmPoints.length > 0 && chestPoints.length < 2;
+  const notFoldedCandidate = armsMeasurable && !foldedCandidate;
   const lowConfidence = armConfidence > 0 && armConfidence < confirmedMin;
   return {
     foldedCandidate,
     supportCandidate,
-    suspectedCandidate: !supportCandidate && (outsideChestCandidate || lowConfidence),
+    confirmedCandidate: supportCandidate || notFoldedCandidate,
+    suspectedCandidate: !supportCandidate && !notFoldedCandidate && (outsideChestCandidate || lowConfidence),
     wristConfidence,
     armConfidence,
     chestPointCount: chestPoints.length,
@@ -220,7 +209,7 @@ function updateArmState(previous, observation, timestampMs, config) {
     userMessage: previous?.userMessage || null,
   };
   let candidate = ChairStandArmStates.Unknown;
-  if (observation.supportCandidate) candidate = ChairStandArmStates.ArmUseConfirmed;
+  if (observation.confirmedCandidate) candidate = ChairStandArmStates.ArmUseConfirmed;
   else if (observation.foldedCandidate) candidate = ChairStandArmStates.FoldedArmsConfirmed;
   else if (observation.suspectedCandidate) candidate = ChairStandArmStates.ArmUseSuspected;
   else if (observation.armConfidence <= 0) candidate = ChairStandArmStates.NotMeasurable;
@@ -279,8 +268,7 @@ export function calculateChairStandFeatures({
   const verticalVelocity = dtSeconds && dtSeconds > 0 && finite(progressResult.sittingToStandingProgress) && finite(previousFeatures.hipProgress)
     ? (progressResult.sittingToStandingProgress - previousFeatures.hipProgress) / dtSeconds
     : 0;
-  const feet = footStability(poseFrame, previousFeatures, calibrationProfile, config.stateMachine);
-  const armObservation = rawArmObservation(poseFrame, config);
+  const armObservation = rawArmObservation(poseFrame, { ...config, calibrationProfile });
   const armState = updateArmState(previousArmState, armObservation, timestampMs, config);
   const landmarkConfidence = {
     overall: poseFrame?.confidence?.overall ?? 0,
@@ -308,13 +296,10 @@ export function calculateChairStandFeatures({
     },
     trunkAngle,
     verticalVelocity,
+    rawVerticalVelocity: verticalVelocity,
     footStability: {
-      stable: feet.stable,
-      normalizedDisplacement: feet.normalizedDisplacement,
-    },
-    footCenters: {
-      left: feet.left,
-      right: feet.right,
+      stable: true,
+      normalizedDisplacement: null,
     },
     armState,
     armObservation,
@@ -336,7 +321,6 @@ function isSitPose(features, config) {
     features.valid
       && features.hipProgress <= config.sitEnterProgressMax
       && bothAnglesAtMost(features.kneeAngles, config.sittingKneeAngleMaxDegrees)
-      && bothAnglesAtMost(features.hipAngles, config.sittingHipAngleMaxDegrees)
   );
 }
 
@@ -346,7 +330,6 @@ function isStandPose(features, config) {
       && features.hipProgress >= config.standProgressMin
       && bothAnglesAtLeast(features.kneeAngles, config.standingKneeAngleMinDegrees)
       && bothAnglesAtLeast(features.hipAngles, config.standingHipAngleMinDegrees)
-      && features.footStability.stable
   );
 }
 
@@ -421,14 +404,31 @@ function emptyObservationState() {
     maxKneeAsymmetryDegrees: 0,
     incompleteRepetitionCount: 0,
     pauseCount: 0,
+    maxAsymmetryRatio: 0,
+    asymmetryRepeatCount: 0,
+    suspectedWeakerSideCounts: { left: 0, right: 0 },
   };
 }
 
+export function suspectedWeakerSideFromVelocities(leftVelocity, rightVelocity) {
+  if (!finite(leftVelocity) || !finite(rightVelocity)) return 'UNDETERMINED';
+  const leftMagnitude = Math.abs(leftVelocity);
+  const rightMagnitude = Math.abs(rightVelocity);
+  if (Math.abs(leftMagnitude - rightMagnitude) < 0.000001) return 'UNDETERMINED';
+  return leftMagnitude < rightMagnitude ? 'LEFT' : 'RIGHT';
+}
+
 function observationSnapshot(observations) {
-  const firstHalf = observations.repDurationsMs.slice(0, Math.ceil(observations.repDurationsMs.length / 2));
-  const secondHalf = observations.repDurationsMs.slice(Math.ceil(observations.repDurationsMs.length / 2));
-  const firstHalfMean = average(firstHalf);
-  const secondHalfMean = average(secondHalf);
+  const firstThree = observations.repDurationsMs.slice(0, 3);
+  const lastThree = observations.repDurationsMs.slice(-3);
+  const firstHalfMean = average(firstThree);
+  const secondHalfMean = average(lastThree);
+  const leftSideCount = observations.suspectedWeakerSideCounts.left;
+  const rightSideCount = observations.suspectedWeakerSideCounts.right;
+  const sideVoteCount = leftSideCount + rightSideCount;
+  const suspectedWeakerSide = leftSideCount === rightSideCount
+    ? 'UNDETERMINED'
+    : leftSideCount > rightSideCount ? 'LEFT' : 'RIGHT';
   return {
     repetitionDurationsSeconds: observations.repDurationsMs.map((duration) => duration / 1000),
     speedChangeRatio: firstHalfMean && secondHalfMean ? secondHalfMean / firstHalfMean : null,
@@ -436,6 +436,11 @@ function observationSnapshot(observations) {
     maxLeftRightKneeAngleDifferenceDegrees: observations.maxKneeAsymmetryDegrees,
     incompleteRepetitionCount: observations.incompleteRepetitionCount,
     pauseCount: observations.pauseCount,
+    asymmetryRatio: observations.maxAsymmetryRatio,
+    asymmetryRepeatCount: observations.asymmetryRepeatCount,
+    suspectedWeakerSide,
+    sideConfidence: sideVoteCount ? Math.max(leftSideCount, rightSideCount) / sideVoteCount : 0,
+    suspectedWeakerSideCounts: { ...observations.suspectedWeakerSideCounts },
   };
 }
 
@@ -445,10 +450,10 @@ export function evaluatePartialRepetitionAtEnd({
   config = chairStandConfig.stateMachine,
 } = {}) {
   const eligibleState = !config.partialRepetitionRequiresRisingState
-    || [ChairStandMachineStates.Rising, ChairStandMachineStates.Descending].includes(state);
+    || [ChairStandMachineStates.Rising, ChairStandMachineStates.Stand].includes(state);
   if (eligibleState && maxProgressSinceLastSit >= config.partialRepetitionCreditProgressMin) {
     return {
-      partialRepetitionCredit: 0.5,
+      partialRepetitionCredit: 1,
       partialRepetitionRuleStatus: 'APPLIED',
       reasonCode: 'PARTIAL_REPETITION_AT_TIME_LIMIT',
     };
@@ -466,6 +471,7 @@ export function createChairStandStateMachine({
   config = chairStandConfig,
   startedAtMs = null,
   durationSeconds = config.durationSeconds,
+  armUseOccurrenceCount = 0,
 } = {}) {
   const transitionConfig = config.stateMachine;
   let state = ChairStandMachineStates.WaitingForSit;
@@ -479,6 +485,8 @@ export function createChairStandStateMachine({
   let cycleStartedFromSit = false;
   let cycleReachedStand = false;
   let currentCycleIncompleteRecorded = false;
+  let currentCycleMaxAsymmetryRatio = 0;
+  let currentCycleSuspectedWeakerSide = 'UNDETERMINED';
   let maxProgressSinceLastSit = 0;
   let sitCandidate = null;
   let standCandidate = null;
@@ -487,6 +495,11 @@ export function createChairStandStateMachine({
   let debugTimeline = [];
   let invalidReason = null;
   let completedAtMs = null;
+  let armUseCount = Math.max(0, armUseOccurrenceCount);
+  let armUseCdcZero = false;
+  let finalPartialRepetition = null;
+  let kinematicHistory = [];
+  let angularVelocityHistory = [];
 
   function transition(to, features, eventType, reasonCode = null) {
     if (state === to) return;
@@ -543,8 +556,11 @@ export function createChairStandStateMachine({
       secondaryObservations: observationSnapshot(observations),
       debugTimeline: debugTimeline.slice(),
       invalidReason,
+      armUseOccurrenceCount: armUseCount,
+      armUseRestartRequired: state === ChairStandMachineStates.RestartRequired,
+      armUseCdcZero,
       completedAtMs,
-      partialRepetition: evaluatePartialRepetitionAtEnd({
+      partialRepetition: finalPartialRepetition || evaluatePartialRepetitionAtEnd({
         state,
         maxProgressSinceLastSit,
         config: transitionConfig,
@@ -592,6 +608,34 @@ export function createChairStandStateMachine({
       previousArmState: armState,
       config,
     });
+    features.rawKneeAngles = { ...features.kneeAngles };
+    features.rawHipAngles = { ...features.hipAngles };
+    const kinematicSample = {
+      timestampMs: features.timestampMs,
+      hipProgress: features.hipProgress,
+      kneeAngles: { ...features.kneeAngles },
+      hipAngles: { ...features.hipAngles },
+    };
+    kinematicHistory.push(kinematicSample);
+    if (kinematicHistory.length > transitionConfig.angleMovingAverageFrames) kinematicHistory.shift();
+    const smoothSide = (key, side) => average(kinematicHistory.map((item) => item[key]?.[side]));
+    features.kneeAngles = { left: smoothSide('kneeAngles', 'left'), right: smoothSide('kneeAngles', 'right') };
+    features.hipAngles = { left: smoothSide('hipAngles', 'left'), right: smoothSide('hipAngles', 'right') };
+    kinematicSample.smoothedKneeAngles = { ...features.kneeAngles };
+    const central = kinematicHistory.length >= 3 ? kinematicHistory[kinematicHistory.length - 3] : null;
+    if (central && features.timestampMs > central.timestampMs) {
+      const centralDt = (features.timestampMs - central.timestampMs) / 1000;
+      features.verticalVelocity = (features.hipProgress - central.hipProgress) / centralDt;
+      angularVelocityHistory.push({
+        left: (features.kneeAngles.left - central.smoothedKneeAngles.left) / centralDt,
+        right: (features.kneeAngles.right - central.smoothedKneeAngles.right) / centralDt,
+      });
+      if (angularVelocityHistory.length > transitionConfig.angularVelocityMovingAverageFrames) angularVelocityHistory.shift();
+      features.kneeAngularVelocities = {
+        left: average(angularVelocityHistory.map((item) => item.left)),
+        right: average(angularVelocityHistory.map((item) => item.right)),
+      };
+    }
     armState = features.armState;
     if (finite(features.trunkAngle)) {
       observations.maxTrunkAngleDegrees = Math.max(observations.maxTrunkAngleDegrees, features.trunkAngle);
@@ -599,6 +643,18 @@ export function createChairStandStateMachine({
     const kneeAsymmetry = Math.abs((features.kneeAngles.left ?? 0) - (features.kneeAngles.right ?? 0));
     if (finite(kneeAsymmetry)) {
       observations.maxKneeAsymmetryDegrees = Math.max(observations.maxKneeAsymmetryDegrees, kneeAsymmetry);
+      const asymmetryRatio = features.kneeAngularVelocities
+        ? Math.abs(features.kneeAngularVelocities.left - features.kneeAngularVelocities.right)
+          / Math.max(Math.abs(features.kneeAngularVelocities.left), Math.abs(features.kneeAngularVelocities.right), 0.000001)
+        : 0;
+      observations.maxAsymmetryRatio = Math.max(observations.maxAsymmetryRatio, asymmetryRatio);
+      if (asymmetryRatio >= currentCycleMaxAsymmetryRatio && features.kneeAngularVelocities) {
+        currentCycleSuspectedWeakerSide = suspectedWeakerSideFromVelocities(
+          features.kneeAngularVelocities.left,
+          features.kneeAngularVelocities.right,
+        );
+      }
+      currentCycleMaxAsymmetryRatio = Math.max(currentCycleMaxAsymmetryRatio, asymmetryRatio);
     }
 
     if (qualityStatus.state === QualityStates.Invalid) {
@@ -632,7 +688,10 @@ export function createChairStandStateMachine({
     }
 
     if (armState?.state === ChairStandArmStates.ArmUseConfirmed) {
-      invalidReason = 'ARM_USE_CONFIRMED';
+      armUseCount += 1;
+      const restartAllowed = armUseCount <= config.armUse.maximumRestartCount;
+      invalidReason = restartAllowed ? 'ARM_USE_RESTART_REQUIRED' : null;
+      armUseCdcZero = !restartAllowed;
       pushEvent(events, createAssessmentEvent({
         sessionId,
         assessmentType: AssessmentTypes.ChairStand30s,
@@ -647,7 +706,13 @@ export function createChairStandStateMachine({
           to: 'ARM_SUPPORT_USED',
         },
       }).value);
-      transition(ChairStandMachineStates.Invalid, features, AssessmentEventTypes.AssessmentInvalid, invalidReason);
+      transition(
+        restartAllowed ? ChairStandMachineStates.RestartRequired : ChairStandMachineStates.Completed,
+        features,
+        restartAllowed ? AssessmentEventTypes.AssessmentIncomplete : AssessmentEventTypes.AssessmentCompleted,
+        restartAllowed ? invalidReason : 'ARM_USE_SECOND_OCCURRENCE_CDC_ZERO',
+      );
+      if (!restartAllowed) completedAtMs = features.timestampMs;
       previousTimestampMs = poseFrame.timestampMs;
       previousFeatures = features;
       recordDebug(features, AssessmentEventTypes.ArmUseConfirmed);
@@ -677,6 +742,8 @@ export function createChairStandStateMachine({
         cycleStartedFromSit = true;
         cycleReachedStand = false;
         currentCycleIncompleteRecorded = false;
+        currentCycleMaxAsymmetryRatio = 0;
+        currentCycleSuspectedWeakerSide = 'UNDETERMINED';
         maxProgressSinceLastSit = features.hipProgress ?? 0;
         transition(ChairStandMachineStates.Sit, features, AssessmentEventTypes.SitConfirmed);
       }
@@ -684,7 +751,9 @@ export function createChairStandStateMachine({
       if (
         cycleStartedFromSit
         && features.hipProgress >= transitionConfig.sitExitProgressMin
-        && features.verticalVelocity >= transitionConfig.minimumRisingVelocityPerSecond
+        && Math.max(features.verticalVelocity, features.rawVerticalVelocity) > transitionConfig.minimumRisingVelocityPerSecond
+        && ([features.kneeAngles.left, features.kneeAngles.right, features.rawKneeAngles.left, features.rawKneeAngles.right]
+          .some((angle) => angle > transitionConfig.sittingKneeExitDegrees))
       ) {
         currentRepStartedAtMs = features.timestampMs;
         transition(ChairStandMachineStates.Rising, features, AssessmentEventTypes.RisingStarted);
@@ -694,22 +763,24 @@ export function createChairStandStateMachine({
         cycleReachedStand = true;
         transition(ChairStandMachineStates.Stand, features, AssessmentEventTypes.StandConfirmed);
       } else if (
-        features.verticalVelocity <= transitionConfig.minimumDescendingVelocityPerSecond
-        && features.hipProgress < transitionConfig.standExitProgressMax
+        Math.min(features.verticalVelocity, features.rawVerticalVelocity) < transitionConfig.minimumDescendingVelocityPerSecond
+        && ([features.kneeAngles.left, features.kneeAngles.right, features.rawKneeAngles.left, features.rawKneeAngles.right]
+          .some((angle) => angle < transitionConfig.standingKneeExitDegrees))
       ) {
         markIncompleteAttempt();
         transition(ChairStandMachineStates.Descending, features, AssessmentEventTypes.DescendingStarted, 'DESCENDING_BEFORE_STAND');
       }
     } else if (state === ChairStandMachineStates.Stand) {
       if (
-        features.verticalVelocity <= transitionConfig.minimumDescendingVelocityPerSecond
-        && features.hipProgress < transitionConfig.standExitProgressMax
+        Math.min(features.verticalVelocity, features.rawVerticalVelocity) < transitionConfig.minimumDescendingVelocityPerSecond
+        && ([features.kneeAngles.left, features.kneeAngles.right, features.rawKneeAngles.left, features.rawKneeAngles.right]
+          .some((angle) => angle < transitionConfig.standingKneeExitDegrees))
       ) {
         transition(ChairStandMachineStates.Descending, features, AssessmentEventTypes.DescendingStarted);
       }
     } else if (state === ChairStandMachineStates.Descending) {
       if (
-        features.verticalVelocity >= transitionConfig.minimumRisingVelocityPerSecond
+        Math.max(features.verticalVelocity, features.rawVerticalVelocity) > transitionConfig.minimumRisingVelocityPerSecond
         && features.hipProgress > transitionConfig.sitExitProgressMin
       ) {
         transition(ChairStandMachineStates.Rising, features, AssessmentEventTypes.RisingStarted, 'ROSE_BEFORE_SITTING');
@@ -717,12 +788,16 @@ export function createChairStandStateMachine({
         if (
           cycleStartedFromSit
           && cycleReachedStand
-          && (!finite(lastRepCompletedAtMs) || features.timestampMs - lastRepCompletedAtMs >= transitionConfig.repRefractoryMs)
         ) {
           repetitionCount += 1;
           const durationMs = finite(currentRepStartedAtMs) ? features.timestampMs - currentRepStartedAtMs : null;
           if (finite(durationMs) && durationMs > 0) observations.repDurationsMs.push(durationMs);
           lastRepCompletedAtMs = features.timestampMs;
+          if (currentCycleMaxAsymmetryRatio >= transitionConfig.asymmetryRatio) {
+            observations.asymmetryRepeatCount += 1;
+            if (currentCycleSuspectedWeakerSide === 'LEFT') observations.suspectedWeakerSideCounts.left += 1;
+            if (currentCycleSuspectedWeakerSide === 'RIGHT') observations.suspectedWeakerSideCounts.right += 1;
+          }
           pushEvent(events, createRepEvent({
             sessionId,
             timestampMs: features.timestampMs,
@@ -737,6 +812,8 @@ export function createChairStandStateMachine({
         cycleStartedFromSit = true;
         cycleReachedStand = false;
         currentCycleIncompleteRecorded = false;
+        currentCycleMaxAsymmetryRatio = 0;
+        currentCycleSuspectedWeakerSide = 'UNDETERMINED';
         currentRepStartedAtMs = null;
         maxProgressSinceLastSit = features.hipProgress ?? 0;
         transition(ChairStandMachineStates.Sit, features, AssessmentEventTypes.SitConfirmed);
@@ -751,6 +828,11 @@ export function createChairStandStateMachine({
 
   function finish({ completedAt = previousTimestampMs ?? Date.now() } = {}) {
     if (!TERMINAL_STATES.has(state)) {
+      finalPartialRepetition = evaluatePartialRepetitionAtEnd({
+        state,
+        maxProgressSinceLastSit,
+        config: transitionConfig,
+      });
       completedAtMs = completedAt;
       const terminalState = state === ChairStandMachineStates.Invalid
         ? ChairStandMachineStates.Invalid

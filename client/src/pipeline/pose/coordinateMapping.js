@@ -67,6 +67,32 @@ export function landmarkByIndex(frameOrLandmarks, index) {
   return landmarks.find((point) => point?.index === index) || null;
 }
 
+export function worldLandmarkByIndex(frameOrLandmarks, index) {
+  const landmarks = Array.isArray(frameOrLandmarks)
+    ? frameOrLandmarks
+    : frameOrLandmarks?.worldLandmarks || [];
+  const point = landmarks.find((candidate) => candidate?.index === index) || null;
+  if (!point) return null;
+  const normalized = Array.isArray(frameOrLandmarks)
+    ? null
+    : landmarkByIndex(frameOrLandmarks?.normalizedLandmarks || [], index);
+  const x = finite(point.xMeters) ? point.xMeters : point.x;
+  const y = finite(point.yMeters) ? point.yMeters : point.y;
+  const z = finite(point.zMeters) ? point.zMeters : point.z;
+  if (![x, y, z].every(finite)) return null;
+  return {
+    index,
+    x,
+    y,
+    z,
+    visibility: point.visibility ?? normalized?.visibility ?? 0,
+  };
+}
+
+export function worldLandmarks(frame) {
+  return (frame?.worldLandmarks || []).map((point) => worldLandmarkByIndex(frame, point.index)).filter(Boolean);
+}
+
 function visiblePoint(frameOrLandmarks, index, minVisibility = 0.35) {
   const point = landmarkByIndex(frameOrLandmarks, index);
   if (!point || !finite(point.x) || !finite(point.y)) return null;
@@ -81,6 +107,60 @@ function midpoint(first, second) {
     y: (first.y + second.y) / 2,
     z: average([first.z, second.z]),
     visibility: average([first.visibility ?? 1, second.visibility ?? 1]) ?? 0,
+  };
+}
+
+export function worldMidpoint(frame, firstIndex, secondIndex, minVisibility = 0.35) {
+  const first = worldLandmarkByIndex(frame, firstIndex);
+  const second = worldLandmarkByIndex(frame, secondIndex);
+  if (!first || !second || (first.visibility ?? 0) < minVisibility || (second.visibility ?? 0) < minVisibility) return null;
+  return midpoint(first, second);
+}
+
+export function worldHipCenter(frame, minVisibility = 0.35) {
+  return worldMidpoint(frame, LandmarkIndexes.LeftHip, LandmarkIndexes.RightHip, minVisibility);
+}
+
+export function worldShoulderCenter(frame, minVisibility = 0.35) {
+  return worldMidpoint(frame, LandmarkIndexes.LeftShoulder, LandmarkIndexes.RightShoulder, minVisibility);
+}
+
+export function worldFootCenter(frame, side, minVisibility = 0.35) {
+  const indexes = side === 'left'
+    ? [LandmarkIndexes.LeftAnkle, LandmarkIndexes.LeftHeel, LandmarkIndexes.LeftFootIndex]
+    : [LandmarkIndexes.RightAnkle, LandmarkIndexes.RightHeel, LandmarkIndexes.RightFootIndex];
+  const points = indexes.map((index) => worldLandmarkByIndex(frame, index))
+    .filter((point) => point && (point.visibility ?? 0) >= minVisibility);
+  if (!points.length) return null;
+  return {
+    x: average(points.map((point) => point.x)),
+    y: average(points.map((point) => point.y)),
+    z: average(points.map((point) => point.z)),
+    visibility: average(points.map((point) => point.visibility)) ?? 0,
+  };
+}
+
+export function worldBodyScale(frame, minVisibility = 0.35) {
+  const point = (index) => {
+    const value = worldLandmarkByIndex(frame, index);
+    return value && (value.visibility ?? 0) >= minVisibility ? value : null;
+  };
+  const spatial = (first, second) => first && second
+    ? Math.hypot(first.x - second.x, first.y - second.y, first.z - second.z)
+    : null;
+  const leftShoulder = point(LandmarkIndexes.LeftShoulder);
+  const rightShoulder = point(LandmarkIndexes.RightShoulder);
+  const leftHeel = point(LandmarkIndexes.LeftHeel);
+  const rightHeel = point(LandmarkIndexes.RightHeel);
+  const leftToe = point(LandmarkIndexes.LeftFootIndex);
+  const rightToe = point(LandmarkIndexes.RightFootIndex);
+  const footLengthLeft = spatial(leftHeel, leftToe);
+  const footLengthRight = spatial(rightHeel, rightToe);
+  return {
+    shoulderWidth: spatial(leftShoulder, rightShoulder) ?? undefined,
+    footLengthLeft: footLengthLeft ?? undefined,
+    footLengthRight: footLengthRight ?? undefined,
+    averageFootLength: average([footLengthLeft, footLengthRight]) ?? undefined,
   };
 }
 
@@ -268,9 +348,9 @@ export function createCoordinateOrientation({
 }
 
 export function normalizeSittingToStandingProgress(frame, calibrationProfile, { clamp = false } = {}) {
-  const hip = hipCenter(frame);
-  const sitting = calibrationProfile?.references?.sittingHipPosition;
-  const standing = calibrationProfile?.references?.standingHipPosition;
+  const hip = worldHipCenter(frame);
+  const sitting = calibrationProfile?.references?.H_sit ?? calibrationProfile?.references?.sittingHipPosition;
+  const standing = calibrationProfile?.references?.H_stand ?? calibrationProfile?.references?.standingHipPosition;
   if (!hip || !finite(sitting) || !finite(standing) || standing === sitting) {
     return {
       sittingToStandingProgress: undefined,
@@ -301,4 +381,3 @@ export function foldedArmConfidence(frame) {
   const crossedScore = 1 - Math.min(1, ((leftToRightShoulder || 1) + (rightToLeftShoulder || 1)) / (shoulderWidth * 4));
   return clamp01(crossedScore);
 }
-

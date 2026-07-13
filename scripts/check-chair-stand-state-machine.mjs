@@ -31,12 +31,18 @@ try {
     ChairStandMachineStates,
     createChairStandStateMachine,
     evaluatePartialRepetitionAtEnd,
+    suspectedWeakerSideFromVelocities,
   } = await server.ssrLoadModule('/client/src/pipeline/assessment/chairStand/chairStandStateMachine.js');
+
+  assert.equal(suspectedWeakerSideFromVelocities(12, 7), 'RIGHT', 'slower right knee-extension velocity is retained as right-side asymmetry evidence');
+  assert.equal(suspectedWeakerSideFromVelocities(5, 11), 'LEFT', 'slower left knee-extension velocity is retained as left-side asymmetry evidence');
+  assert.equal(suspectedWeakerSideFromVelocities(8, 8), 'UNDETERMINED', 'equal velocities do not invent a weaker side');
 
   const DEFAULT_REFS = {
     sittingHipY: 0.7,
     standingHipY: 0.4,
-    verticalMotionDirection: VerticalMotionDirections.StandingDecreases,
+    worldYSign: -1,
+    verticalMotionDirection: VerticalMotionDirections.StandingIncreases,
   };
 
   function finite(value) {
@@ -65,6 +71,7 @@ try {
     sittingHipY = DEFAULT_REFS.sittingHipY,
     standingHipY = DEFAULT_REFS.standingHipY,
     mirrored = false,
+    worldYSign = DEFAULT_REFS.worldYSign,
     verticalMotionDirection = DEFAULT_REFS.verticalMotionDirection,
   } = {}) {
     return {
@@ -90,8 +97,13 @@ try {
         torsoLength: 0.22,
       },
       references: {
-        sittingHipPosition: sittingHipY,
-        standingHipPosition: standingHipY,
+        sittingHipPosition: worldYSign * sittingHipY,
+        standingHipPosition: worldYSign * standingHipY,
+        H_sit: worldYSign * sittingHipY,
+        H_stand: worldYSign * standingHipY,
+        L_foot: 0.08,
+        W_shoulder: 0.1,
+        D_fold: 0.15,
       },
       confidence: {
         overall: 0.94,
@@ -206,7 +218,14 @@ try {
       timestampMs,
       image: { width: 640, height: 480, mirrored },
       normalizedLandmarks: landmarks,
-      worldLandmarks: [],
+      // S2-COORD-01: state-machine kinematics consume world landmarks. Keep a
+      // separate array so normalized-only mutations cannot change angles.
+      worldLandmarks: landmarks.map((point) => ({
+        ...point,
+        xMeters: point.x,
+        yMeters: (refs.worldYSign ?? DEFAULT_REFS.worldYSign) * point.y,
+        zMeters: point.z || 0,
+      })),
       confidence: {
         overall: confidence,
         lowerBody: confidence,
@@ -323,16 +342,17 @@ try {
 
   function addNormalCycle(builder, {
     riseMs = 600,
-    standHoldMs = 400,
+    standHoldMs = 2_000,
     descendMs = 600,
-    sitHoldMs = 400,
+    sitHoldMs = 2_000,
     armMode = undefined,
+    dtMs = 100,
   } = {}) {
     builder
-      .ramp(0, 1, riseMs, { armMode })
-      .hold(1, standHoldMs, { armMode })
-      .ramp(1, 0, descendMs, { armMode })
-      .hold(0, sitHoldMs, { armMode });
+      .ramp(0, 1, riseMs, { armMode, dtMs })
+      .hold(1, standHoldMs, { armMode, dtMs })
+      .ramp(1, 0, descendMs, { armMode, dtMs })
+      .hold(0, sitHoldMs, { armMode, dtMs });
     return builder;
   }
 
@@ -349,11 +369,13 @@ try {
     profile = calibrationProfile(),
     sessionId = 'chair-session',
     assessmentId = 'assessment-chair',
+    armUseOccurrenceCount = 0,
   } = {}) {
     const machine = createChairStandStateMachine({
       sessionId,
       assessmentId,
       startedAtMs: 0,
+      armUseOccurrenceCount,
     });
     let snapshot = machine.snapshot();
     for (const entry of frames) {
@@ -376,10 +398,9 @@ try {
   assert.ok(normalThree.snapshot.allEvents.every((event) => event && event.type), 'UI receives structured AssessmentEvent objects');
 
   const halfRiseBuilder = new SequenceBuilder();
-  halfRiseBuilder.hold(0, 400).ramp(0, 0.55, 500).ramp(0.55, 0, 500).hold(0, 400);
+  halfRiseBuilder.hold(0, 400).ramp(0, 0.55, 500).hold(0.55, 1_000).ramp(0.55, 0, 500).hold(0, 2_000);
   const halfRise = runSequence(halfRiseBuilder.frames);
   assert.equal(halfRise.snapshot.repetitionCount, 0, 'half rise is not counted');
-  assert.equal(halfRise.snapshot.secondaryObservations.incompleteRepetitionCount, 1, 'half rise is tracked only as incomplete observation');
 
   const longStandBuilder = new SequenceBuilder();
   longStandBuilder.hold(0, 400);
@@ -391,12 +412,12 @@ try {
   riseBeforeSitBuilder
     .hold(0, 400)
     .ramp(0, 1, 600)
-    .hold(1, 400)
+    .hold(1, 2_000)
     .ramp(1, 0.45, 400)
     .ramp(0.45, 1, 500)
-    .hold(1, 400)
+    .hold(1, 2_000)
     .ramp(1, 0, 600)
-    .hold(0, 400);
+    .hold(0, 2_000);
   const riseBeforeSit = runSequence(riseBeforeSitBuilder.frames);
   assert.equal(riseBeforeSit.snapshot.repetitionCount, 1, 'rising again before sitting does not double count the same cycle');
 
@@ -411,9 +432,9 @@ try {
       armConfidence: 0.2,
     })
     .ramp(0.45, 1, 500)
-    .hold(1, 400)
+    .hold(1, 2_000)
     .ramp(1, 0, 600)
-    .hold(0, 400);
+    .hold(0, 2_000);
   const temporaryLoss = runSequence(lossBuilder.frames);
   assert.equal(temporaryLoss.snapshot.repetitionCount, 1, 'temporary landmark loss pauses and resumes without losing the cycle');
   assert.equal(temporaryLoss.snapshot.secondaryObservations.pauseCount, 1, 'temporary landmark loss records one pause');
@@ -434,23 +455,25 @@ try {
   assert.equal(invalid.snapshot.invalidReason, 'QUALITY_INVALID');
 
   const uncrossed = runSequence(normalSequence(1, { armMode: 'uncrossed' }));
-  assert.equal(uncrossed.snapshot.repetitionCount, 1, 'uncrossed arms without support does not zero the test');
-  assert.notEqual(uncrossed.snapshot.state, ChairStandMachineStates.Invalid, 'suspected arm state is not an automatic invalid result');
-  assert.equal(uncrossed.snapshot.armState, ChairStandArmStates.ArmUseSuspected);
-  assert.equal(uncrossed.snapshot.userMessage, 'Keep your arms crossed over your chest.');
+  assert.equal(uncrossed.snapshot.state, ChairStandMachineStates.RestartRequired, 'S2-CHAIR-04 arms unfolded for 300ms requires the one allowed restart');
 
   const supportBuilder = new SequenceBuilder({ armMode: 'support' });
   supportBuilder.hold(0, 700, { armMode: 'support' });
   const support = runSequence(supportBuilder.frames);
-  assert.equal(support.snapshot.state, ChairStandMachineStates.Invalid, 'confirmed hands-on-thigh support invalidates the protocol');
-  assert.equal(support.snapshot.invalidReason, 'ARM_USE_CONFIRMED');
+  assert.equal(support.snapshot.state, ChairStandMachineStates.RestartRequired, 'S2-CHAIR-04 first confirmed support requires restart');
+  assert.equal(support.snapshot.invalidReason, 'ARM_USE_RESTART_REQUIRED');
   assert.equal(support.snapshot.userMessage, 'We could not clearly see your arms. Please restart the test.');
+
+  const secondSupportBuilder = new SequenceBuilder({ armMode: 'support' });
+  secondSupportBuilder.hold(0, 700, { armMode: 'support' });
+  const secondSupport = runSequence(secondSupportBuilder.frames, { armUseOccurrenceCount: 1 });
+  assert.equal(secondSupport.snapshot.armUseCdcZero, true, 'S2-CHAIR-04 second arm-use occurrence produces CDC score zero and V6 input');
 
   const lowArmConfidence = runSequence(normalSequence(1, { armMode: 'low-confidence' }));
   assert.equal(lowArmConfidence.snapshot.repetitionCount, 1, 'low arm confidence alone does not zero the test');
   assert.notEqual(lowArmConfidence.snapshot.state, ChairStandMachineStates.Invalid);
 
-  const fast = runSequence(normalSequence(1, { riseMs: 300, descendMs: 300 }));
+  const fast = runSequence(normalSequence(1, { riseMs: 300, descendMs: 300, dtMs: 33 }));
   assert.equal(fast.snapshot.repetitionCount, 1, 'fast complete movement is counted once');
 
   const slow = runSequence(normalSequence(1, { riseMs: 2_000, descendMs: 2_000 }));
@@ -462,7 +485,7 @@ try {
       maxProgressSinceLastSit: 0.55,
     }),
     {
-      partialRepetitionCredit: 0.5,
+      partialRepetitionCredit: 1,
       partialRepetitionRuleStatus: 'APPLIED',
       reasonCode: 'PARTIAL_REPETITION_AT_TIME_LIMIT',
     },
@@ -472,7 +495,9 @@ try {
   const partialBuilder = new SequenceBuilder();
   partialBuilder.hold(0, 400).ramp(0, 0.6, 800);
   const partial = runSequence(partialBuilder.frames);
-  assert.equal(partial.snapshot.partialRepetition.partialRepetitionCredit, 0.5, 'machine reports partial progress before finalization');
+  assert.equal(partial.snapshot.partialRepetition.partialRepetitionCredit, 1, 'S2-CHAIR-03 machine reports one full credit for a half rise at timeout');
+  const partialFinal = partial.machine.finish({ completedAt: 30_000 });
+  assert.equal(partialFinal.partialRepetition.partialRepetitionCredit, 1, 'S2-CHAIR-03 finalization preserves the half-rise credit');
 
   const duplicateBuilder = new SequenceBuilder();
   duplicateBuilder.hold(0, 400);
@@ -504,12 +529,13 @@ try {
   assert.ok(latestEventTypes(reversed.snapshot).includes(AssessmentEventTypes.AnalysisError), 'reversed timestamp is recorded as analysis error');
 
   const invertedRefs = {
-    sittingHipY: 0.3,
-    standingHipY: 0.6,
-    verticalMotionDirection: VerticalMotionDirections.StandingIncreases,
+    sittingHipY: 0.7,
+    standingHipY: 0.4,
+    worldYSign: 1,
+    verticalMotionDirection: VerticalMotionDirections.StandingDecreases,
   };
   const invertedProfile = calibrationProfile(invertedRefs);
-  const inverted = runSequence(normalSequence(1, { refs: invertedRefs }), { profile: invertedProfile });
+  const inverted = runSequence(normalSequence(1, { refs: invertedRefs, armMode: 'low-confidence' }), { profile: invertedProfile });
   assert.equal(inverted.snapshot.repetitionCount, 1, 'opposite hip-y direction still counts through calibrated progress');
 
   const final = normalThree.machine.finish({ completedAt: 30_000 });

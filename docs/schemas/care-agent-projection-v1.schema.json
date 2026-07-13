@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/care-agent-projection-v1.schema.json",
+  "title": "Steply Care Agent Web Projection v1",
+  "description": "Session-scoped projection produced by Mobile Room and stored by Web in memory only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "profileId", "stateVersion", "currentSessionPlan", "nextReassessmentAt", "latestDecision", "updatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "care_agent_projection.v1" },
+    "profileId": { "$ref": "#/$defs/id" },
+    "stateVersion": { "type": "integer", "minimum": 0 },
+    "currentSessionPlan": { "oneOf": [{ "$ref": "#/$defs/stringMap" }, { "type": "null" }] },
+    "nextReassessmentAt": { "oneOf": [{ "$ref": "#/$defs/epoch" }, { "type": "null" }] },
+    "latestDecision": { "oneOf": [{ "$ref": "#/$defs/decisionSummary" }, { "type": "null" }] },
+    "updatedAt": { "$ref": "#/$defs/epoch" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "epoch": { "type": "integer", "minimum": 0 },
+    "stringMap": { "type": "object", "additionalProperties": { "type": "string" } },
+    "decisionSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["decisionId", "selectedBranch", "selectedActions", "createdAt"],
+      "properties": {
+        "decisionId": { "$ref": "#/$defs/id" },
+        "selectedBranch": { "enum": ["safety_event", "fall_reported", "high_or_v6_v7", "declining_trend", "reassessment_due", "low_adherence", "progression_available", "maintenance"] },
+        "selectedActions": { "type": "array", "items": { "$ref": "care-agent-action-v1.schema.json" } },
+        "createdAt": { "$ref": "#/$defs/epoch" }
+      }
+    }
+  }
+}

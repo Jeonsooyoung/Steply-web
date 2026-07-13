@@ -1,5 +1,4 @@
 import {
-  AgentActionTypes,
   ArmUseStates,
   AssessmentEventTypes,
   AssessmentResultStatuses,
@@ -584,19 +583,6 @@ export function validateExercisePlan(plan, { sourceAssessments = [] } = {}) {
       }
     }
   }
-  return done(ctx);
-}
-
-export function validateAgentAction(action) {
-  const ctx = context(action);
-  if (!action || typeof action !== 'object') {
-    add(ctx, 'INVALID_AGENT_ACTION', '', 'AgentAction must be an object.', action);
-    return done(ctx);
-  }
-  requireEnum(ctx, action.type, AgentActionTypes, 'type');
-  requireString(ctx, action.reasonCode, 'reasonCode');
-  if (action.type === AgentActionTypes.RequestAssessment) requireEnum(ctx, action.assessmentType, AssessmentTypes, 'assessmentType');
-  if (action.type === AgentActionTypes.ScheduleReassessment) requireFinite(ctx, action.scheduledAtMs, 'scheduledAtMs');
   return done(ctx);
 }
 

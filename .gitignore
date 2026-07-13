@@ -29,5 +29,9 @@ Thumbs.db
 /client/public/demo-videos/
 /public/demo-videos/
 
+# generated MediaPipe runtime assets (sources: /models and npm package)
+/client/public/models/
+/client/src/vendor/mediapipe/wasm/
+
 # generated browser and validation output
 /artifacts/

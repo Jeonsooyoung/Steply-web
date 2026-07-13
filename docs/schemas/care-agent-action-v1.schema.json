@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/care-agent-action-v1.schema.json",
+  "title": "Steply Care Agent Action Candidate v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "actionId", "idempotencyKey", "eventId", "profileId", "branch", "actionType", "toolId", "target", "reasonCodes", "payload"],
+  "properties": {
+    "schemaVersion": { "const": "care_agent_action.v1" },
+    "actionId": { "$ref": "#/$defs/id" },
+    "idempotencyKey": { "$ref": "#/$defs/id" },
+    "eventId": { "$ref": "#/$defs/id" },
+    "profileId": { "$ref": "#/$defs/id" },
+    "branch": { "$ref": "#/$defs/branch" },
+    "actionType": { "enum": ["stop_session", "request_immediate_reassessment", "recommend_medical_review", "require_professional_review", "hold_progression", "advance_reassessment", "schedule_due_reassessment", "schedule_session", "adjust_reminder", "propose_split_session", "notify_consented_caregiver", "propose_progression", "maintain_plan", "compose_weekly_report"] },
+    "toolId": { "enum": ["scheduler", "notifier", "report_composer", "progress_store"] },
+    "target": { "$ref": "#/$defs/id" },
+    "reasonCodes": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+    "payload": { "$ref": "#/$defs/payload" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "epochOrNull": { "type": ["integer", "null"], "minimum": 0 },
+    "branch": { "enum": ["safety_event", "fall_reported", "high_or_v6_v7", "declining_trend", "reassessment_due", "low_adherence", "progression_available", "maintenance"] },
+    "payload": {
+      "type": "object", "additionalProperties": false,
+      "required": ["scheduledAtMs", "messageTemplateId", "recipientId", "reportPeriodStartMs", "reportPeriodEndMs", "parameters"],
+      "properties": {
+        "scheduledAtMs": { "$ref": "#/$defs/epochOrNull" },
+        "messageTemplateId": { "type": ["string", "null"], "minLength": 1 },
+        "recipientId": { "type": ["string", "null"], "minLength": 1 },
+        "reportPeriodStartMs": { "$ref": "#/$defs/epochOrNull" },
+        "reportPeriodEndMs": { "$ref": "#/$defs/epochOrNull" },
+        "parameters": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -37,6 +37,14 @@ export function createQualityStateMachine({
   let pauseStartedAtMs = null;
   let latestGoodStatus = null;
   let startedAtMs = sessionStartedAtMs;
+  let previousTimestampMs = null;
+  const gateStats = new Map(['G1', 'G2', 'G4', 'G5'].map((gate) => [gate, {
+    gate, violationFrameCount: 0, violationDurationMs: 0, violationStartedAtMs: null,
+  }]));
+  let g3ViolationDurationMs = 0;
+  let g3ViolationFrameCount = 0;
+  let invalidLatched = false;
+  let latestGates = [];
 
   function reset({ startedAt = null } = {}) {
     state = QualityStates.NotReady;
@@ -47,6 +55,12 @@ export function createQualityStateMachine({
     pauseStartedAtMs = null;
     latestGoodStatus = null;
     startedAtMs = startedAt;
+    previousTimestampMs = null;
+    g3ViolationDurationMs = 0;
+    g3ViolationFrameCount = 0;
+    invalidLatched = false;
+    latestGates = [];
+    for (const entry of gateStats.values()) Object.assign(entry, { violationFrameCount: 0, violationDurationMs: 0, violationStartedAtMs: null });
   }
 
   function accumulatedPauseAt(timestampMs) {
@@ -74,8 +88,31 @@ export function createQualityStateMachine({
     const sessionId = frame?.sessionId;
     const pass = Boolean(metrics?.pass);
     const reasons = uniqueReasons(metrics?.reasons || []);
+    const deltaMs = finite(previousTimestampMs) ? Math.max(0, timestampMs - previousTimestampMs) : 0;
+    const violated = (metrics?.gates || []).filter((gate) => !gate.pass);
+    const g3Violated = violated.some((gate) => gate.gate === 'G1' || gate.gate === 'G2');
+    if (g3Violated) {
+      g3ViolationDurationMs += deltaMs;
+      g3ViolationFrameCount += 1;
+    }
+    for (const stat of gateStats.values()) {
+      const isViolation = violated.some((gate) => gate.gate === stat.gate);
+      if (isViolation) {
+        stat.violationFrameCount += 1;
+        stat.violationDurationMs += deltaMs;
+        stat.violationStartedAtMs ??= timestampMs;
+      } else {
+        stat.violationStartedAtMs = null;
+      }
+    }
+    previousTimestampMs = timestampMs;
+    const elapsedMs = finite(startedAtMs) ? Math.max(0, timestampMs - startedAtMs) : 0;
+    const violationRatio = elapsedMs > 0 ? g3ViolationDurationMs / elapsedMs : 0;
 
-    if (pass) {
+    if (invalidLatched) {
+      enterPause(timestampMs);
+      state = QualityStates.Invalid;
+    } else if (pass) {
       latestGoodAtMs = timestampMs;
       lossStartedAtMs = null;
       if (!recoveryStartedAtMs) recoveryStartedAtMs = timestampMs;
@@ -94,10 +131,14 @@ export function createQualityStateMachine({
         state = latestGoodStatus.state === QualityStates.Ready ? QualityStates.Ready : latestGoodStatus.state;
       } else if (
         lossDurationMs >= config.invalidAfterLossMs
-        || pauseRatioAt(timestampMs) > config.maxAccumulatedPauseRatio
+        || (
+          lossDurationMs >= config.pauseAfterLossMs
+          && violationRatio > config.maxAccumulatedPauseRatio
+        )
       ) {
         enterPause(timestampMs);
         state = QualityStates.Invalid;
+        invalidLatched = true;
       } else if (lossDurationMs >= config.pauseAfterLossMs) {
         enterPause(timestampMs);
         state = QualityStates.Paused;
@@ -107,6 +148,16 @@ export function createQualityStateMachine({
     }
 
     const currentFailureDurationMs = lossStartedAtMs ? Math.max(0, timestampMs - lossStartedAtMs) : 0;
+    latestGates = [...gateStats.values(), {
+      gate: 'G3',
+      violationFrameCount: g3ViolationFrameCount,
+      violationDurationMs: g3ViolationDurationMs,
+    }].sort((first, second) => first.gate.localeCompare(second.gate)).map((gate) => ({
+      gate: gate.gate,
+      violationFrameCount: gate.violationFrameCount,
+      violationDurationMs: gate.violationDurationMs,
+      violationRatio: elapsedMs > 0 ? gate.violationDurationMs / elapsedMs : 0,
+    }));
     const status = {
       sessionId,
       frameId,
@@ -128,6 +179,8 @@ export function createQualityStateMachine({
         accumulatedPauseDurationMs: accumulatedPauseAt(timestampMs),
       },
       camera: metrics?.camera || null,
+      gates: latestGates,
+      violationRatio,
       footPlacementObservable: metrics?.footPlacementObservable ?? false,
     };
     const validation = validateQualityStatus(status, { poseFrame: frame });
@@ -142,9 +195,10 @@ export function createQualityStateMachine({
       lossStartedAtMs,
       accumulatedPauseDurationMs: accumulatedPauseAt(timestampMs),
       pauseRatio: pauseRatioAt(timestampMs),
+      gates: latestGates,
+      g3ViolationRatio: latestGates.find((gate) => gate.gate === 'G3')?.violationRatio || 0,
     };
   }
 
   return { reset, update, snapshot };
 }
-

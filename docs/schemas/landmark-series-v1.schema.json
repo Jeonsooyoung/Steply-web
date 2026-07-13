@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/landmark-series-v1.schema.json",
+  "title": "Steply pose landmark series v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "seriesId", "profileId", "assessmentSessionId", "attemptId", "analysisSessionId", "resultId", "assessmentType", "status", "targetFps", "startedAt", "completedAt", "samples"],
+  "properties": {
+    "schemaVersion": { "const": "landmark_series.v1" },
+    "seriesId": { "$ref": "#/$defs/id" },
+    "profileId": { "$ref": "#/$defs/id" },
+    "assessmentSessionId": { "$ref": "#/$defs/id" },
+    "attemptId": { "$ref": "#/$defs/id" },
+    "analysisSessionId": { "$ref": "#/$defs/id" },
+    "resultId": { "$ref": "#/$defs/id" },
+    "assessmentType": { "enum": ["CHAIR_STAND_30S", "FOUR_STAGE_BALANCE"] },
+    "status": { "enum": ["VALID", "INVALID", "TRACKING_FAILED", "CANCELLED", "FAILED"] },
+    "targetFps": { "const": 30 },
+    "startedAt": { "$ref": "#/$defs/epoch" },
+    "completedAt": { "$ref": "#/$defs/epoch" },
+    "samples": { "type": "array", "maxItems": 2700, "items": { "$ref": "#/$defs/sample" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "epoch": { "type": "integer", "minimum": 0 },
+    "point": {
+      "type": "object", "additionalProperties": false,
+      "required": ["index", "x", "y", "z", "visibility"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0, "maximum": 32 },
+        "x": { "type": "number" }, "y": { "type": "number" }, "z": { "type": "number" },
+        "visibility": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "sample": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sequence", "timestampMs", "normalizedLandmarks", "worldLandmarks"],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 0 },
+        "timestampMs": { "type": "number", "minimum": 0 },
+        "normalizedLandmarks": { "type": "array", "minItems": 33, "maxItems": 33, "items": { "$ref": "#/$defs/point" } },
+        "worldLandmarks": { "type": "array", "minItems": 33, "maxItems": 33, "items": { "$ref": "#/$defs/point" } }
+      }
+    }
+  }
+}

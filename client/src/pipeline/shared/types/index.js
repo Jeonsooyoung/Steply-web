@@ -257,25 +257,6 @@ export const ExercisePlanStatuses = {
   Expired: 'EXPIRED',
 };
 
-export const AgentActionTypes = {
-  ReadProgressState: 'READ_PROGRESS_STATE',
-  RequestAssessment: 'REQUEST_ASSESSMENT',
-  ScheduleReassessment: 'SCHEDULE_REASSESSMENT',
-  ShowCameraSetup: 'SHOW_CAMERA_SETUP',
-  RequestCameraSetupTutorial: 'REQUEST_CAMERA_SETUP_TUTORIAL',
-  CreateSessionPlan: 'CREATE_SESSION_PLAN',
-  GetExercisePlan: 'GET_EXERCISE_PLAN',
-  CheckProgressionEligibility: 'CHECK_PROGRESSION_ELIGIBILITY',
-  SendReminder: 'SEND_REMINDER',
-  ComposeWeeklyReport: 'COMPOSE_WEEKLY_REPORT',
-  NotifyCaregiver: 'NOTIFY_CAREGIVER',
-  RequestProfessionalReview: 'REQUEST_PROFESSIONAL_REVIEW',
-  CreateProfessionalReviewRequest: 'CREATE_PROFESSIONAL_REVIEW_REQUEST',
-  ProposeSessionSplit: 'PROPOSE_SESSION_SPLIT',
-  RecordAgentDecision: 'RECORD_AGENT_DECISION',
-  NoAction: 'NO_ACTION',
-};
-
 export const WorkerCommandTypes = {
   Init: 'INIT',
   StartSession: 'START_SESSION',

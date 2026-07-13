@@ -1,0 +1,361 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/assessment-session-v2.schema.json",
+  "title": "Steply AssessmentSession v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "assessmentSessionId", "connectionSessionId", "profileId", "revision", "status", "screening", "profileSnapshot", "operationalContext", "functionalTests", "steadi", "vulnerabilityAssessment", "exercisePrescription", "createdAt", "updatedAt", "completedAt"],
+  "properties": {
+    "schemaVersion": { "const": "assessment_session.v2" },
+    "assessmentSessionId": { "$ref": "#/$defs/id" },
+    "connectionSessionId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+    "profileId": { "$ref": "#/$defs/id" },
+    "revision": { "type": "integer", "minimum": 0 },
+    "status": { "enum": ["IN_PROGRESS", "COMPLETED", "CANCELLED"] },
+    "screening": { "$ref": "assessment-session.schema.json#/$defs/screening" },
+    "profileSnapshot": { "$ref": "assessment-session.schema.json#/$defs/profileSnapshot" },
+    "operationalContext": { "$ref": "#/$defs/operationalContext" },
+    "functionalTests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["FOUR_STAGE_BALANCE", "CHAIR_STAND_30S"],
+      "properties": {
+        "FOUR_STAGE_BALANCE": { "$ref": "#/$defs/testSlot" },
+        "CHAIR_STAND_30S": { "$ref": "#/$defs/testSlot" }
+      }
+    },
+    "steadi": { "$ref": "assessment-session.schema.json#/$defs/steadiResult" },
+    "vulnerabilityAssessment": { "oneOf": [{ "$ref": "#/$defs/vulnerabilityAssessment" }, { "type": "null" }] },
+    "exercisePrescription": { "$ref": "#/$defs/exercisePrescription" },
+    "createdAt": { "$ref": "#/$defs/epoch" },
+    "updatedAt": { "$ref": "#/$defs/epoch" },
+    "completedAt": { "oneOf": [{ "$ref": "#/$defs/epoch" }, { "type": "null" }] }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "epoch": { "type": "integer", "minimum": 0 },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "roi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 },
+        "width": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "height": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      }
+    },
+    "operationalContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationalConfigVersion", "supportRoiNormalized"],
+      "properties": {
+        "operationalConfigVersion": { "oneOf": [{ "const": "stage2_operational.v1" }, { "type": "null" }] },
+        "supportRoiNormalized": { "oneOf": [{ "$ref": "#/$defs/roi" }, { "type": "null" }] }
+      }
+    },
+    "testSlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "acceptedAttemptId", "acceptedResult", "attempts"],
+      "properties": {
+        "status": { "enum": ["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "NEEDS_RETRY"] },
+        "acceptedAttemptId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "acceptedResult": { "oneOf": [{ "$ref": "#/$defs/stage2Result" }, { "$ref": "#/$defs/legacyAcceptedResult" }, { "type": "null" }] },
+        "attempts": { "type": "array", "items": { "$ref": "#/$defs/attempt" } }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attemptId", "analysisSessionId", "status", "startedAt", "completedAt", "supersedesAttemptId", "resultHash", "result"],
+      "properties": {
+        "attemptId": { "$ref": "#/$defs/id" },
+        "analysisSessionId": { "$ref": "#/$defs/id" },
+        "status": { "enum": ["IN_PROGRESS", "PAUSED", "VALID", "INVALID", "TRACKING_FAILED", "CANCELLED", "FAILED"] },
+        "startedAt": { "$ref": "#/$defs/epoch" },
+        "completedAt": { "oneOf": [{ "$ref": "#/$defs/epoch" }, { "type": "null" }] },
+        "supersedesAttemptId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "resultHash": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "result": { "oneOf": [{ "$ref": "#/$defs/stage2Result" }, { "type": "null" }] }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sampledDurationMs", "lFootM", "hStandM", "hSitM", "wShoulderM", "dFoldM", "supportRoiNormalized"],
+      "properties": {
+        "sampledDurationMs": { "type": "integer", "minimum": 3000 },
+        "lFootM": { "type": "number", "exclusiveMinimum": 0 },
+        "hStandM": { "type": "number" },
+        "hSitM": { "type": ["number", "null"] },
+        "wShoulderM": { "type": "number", "exclusiveMinimum": 0 },
+        "dFoldM": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "supportRoiNormalized": { "oneOf": [{ "$ref": "#/$defs/roi" }, { "type": "null" }] }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate", "violationFrameCount", "violationDurationMs", "violationRatio"],
+      "properties": {
+        "gate": { "enum": ["G1", "G2", "G3", "G4", "G5"] },
+        "violationFrameCount": { "type": "integer", "minimum": 0 },
+        "violationDurationMs": { "type": "number", "minimum": 0 },
+        "violationRatio": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gates", "g3ViolationRatio", "invalidReasons", "excludeFromTrends"],
+      "properties": {
+        "gates": {
+          "type": "array", "minItems": 5, "maxItems": 5,
+          "prefixItems": [
+            { "allOf": [{ "$ref": "#/$defs/gate" }, { "properties": { "gate": { "const": "G1" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/gate" }, { "properties": { "gate": { "const": "G2" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/gate" }, { "properties": { "gate": { "const": "G3" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/gate" }, { "properties": { "gate": { "const": "G4" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/gate" }, { "properties": { "gate": { "const": "G5" } } }] }
+          ]
+        },
+        "g3ViolationRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "invalidReasons": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+        "excludeFromTrends": { "type": "boolean" }
+      }
+    },
+    "armUse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["occurrenceCount", "restartUsed", "outcome"],
+      "properties": {
+        "occurrenceCount": { "type": "integer", "minimum": 0 },
+        "restartUsed": { "type": "boolean" },
+        "outcome": { "enum": ["NOT_DETECTED", "RESTART_REQUIRED", "DISQUALIFIED", "NOT_MEASURABLE"] }
+      },
+      "oneOf": [
+        { "properties": { "occurrenceCount": { "const": 0 }, "restartUsed": { "const": false }, "outcome": { "enum": ["NOT_DETECTED", "NOT_MEASURABLE"] } } },
+        { "properties": { "occurrenceCount": { "const": 1 }, "restartUsed": { "const": true }, "outcome": { "const": "RESTART_REQUIRED" } } },
+        { "properties": { "occurrenceCount": { "const": 2 }, "restartUsed": { "const": true }, "outcome": { "const": "DISQUALIFIED" } } }
+      ]
+    },
+    "chairStand": {
+      "type": "object", "additionalProperties": false,
+      "required": ["observedRepetitions", "completedRepetitions", "finalRepetitionCredit", "finalState", "armUse", "cdcScoredRepetitions"],
+      "properties": {
+        "observedRepetitions": { "type": "integer", "minimum": 0 },
+        "completedRepetitions": { "type": "integer", "minimum": 0 },
+        "finalRepetitionCredit": { "enum": [0, 1] },
+        "finalState": { "enum": ["SIT", "RISING", "STAND", "DESCENDING"] },
+        "armUse": { "$ref": "#/$defs/armUse" },
+        "cdcScoredRepetitions": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "sway": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mlRmsM", "apRmsM", "initialRmsM", "staticRmsM", "initialToStaticRatio", "mlToApRatio"],
+      "properties": {
+        "mlRmsM": { "type": ["number", "null"], "minimum": 0 },
+        "apRmsM": { "type": ["number", "null"], "minimum": 0 },
+        "initialRmsM": { "type": ["number", "null"], "minimum": 0 },
+        "staticRmsM": { "type": ["number", "null"], "minimum": 0 },
+        "initialToStaticRatio": { "type": ["number", "null"], "minimum": 0 },
+        "mlToApRatio": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "balanceStage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["stage", "onsetLatencyMs", "holdSeconds", "status", "failureCode", "failureReason", "sway"],
+      "properties": {
+        "stage": { "enum": ["SIDE_BY_SIDE", "SEMI_TANDEM", "TANDEM", "ONE_LEG"] },
+        "onsetLatencyMs": { "type": ["number", "null"], "minimum": 0 },
+        "holdSeconds": { "type": "number", "minimum": 0, "maximum": 10 },
+        "status": { "enum": ["PASSED", "FAILED", "UNABLE_TO_ASSUME", "NOT_ATTEMPTED", "INVALID"] },
+        "failureCode": { "oneOf": [{ "enum": ["F1", "F2", "F3", "F4", "F5"] }, { "type": "null" }] },
+        "failureReason": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "sway": { "oneOf": [{ "$ref": "#/$defs/sway" }, { "type": "null" }] }
+      }
+    },
+    "balance": {
+      "type": "object", "additionalProperties": false, "required": ["stages"],
+      "properties": {
+        "stages": {
+          "type": "array", "minItems": 4, "maxItems": 4,
+          "prefixItems": [
+            { "allOf": [{ "$ref": "#/$defs/balanceStage" }, { "properties": { "stage": { "const": "SIDE_BY_SIDE" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/balanceStage" }, { "properties": { "stage": { "const": "SEMI_TANDEM" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/balanceStage" }, { "properties": { "stage": { "const": "TANDEM" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/balanceStage" }, { "properties": { "stage": { "const": "ONE_LEG" } } }] }
+          ]
+        }
+      }
+    },
+    "vulnerabilityEvidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["vulnerabilityId", "sourceResultId", "measurements"],
+      "properties": {
+        "vulnerabilityId": { "enum": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"] },
+        "sourceResultId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "measurements": { "type": "object" }
+      }
+    },
+    "vulnerabilityAssessment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ruleVersion", "activeIds", "evidence"],
+      "properties": {
+        "ruleVersion": { "$ref": "#/$defs/id" },
+        "activeIds": { "type": "array", "items": { "enum": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"] }, "uniqueItems": true },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/vulnerabilityEvidence" } }
+      }
+    },
+    "exercisePrescription": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "plan", "sessionResults"],
+      "properties": {
+        "status": { "enum": ["NOT_GENERATED", "BLOCKED", "ACTIVE", "PENDING_PROFESSIONAL_REVIEW"] },
+        "plan": {
+          "oneOf": [
+            { "$ref": "stage3-exercise-prescription-v1.schema.json" },
+            { "type": "null" }
+          ]
+        },
+        "sessionResults": {
+          "type": "array",
+          "items": { "$ref": "stage3-exercise-session-result-v1.schema.json" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "NOT_GENERATED" } }, "required": ["status"] },
+          "then": { "properties": { "plan": { "type": "null" }, "sessionResults": { "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "BLOCKED" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "plan": { "allOf": [{ "$ref": "stage3-exercise-prescription-v1.schema.json" }, { "properties": { "status": { "const": "BLOCKED" } } }] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "ACTIVE" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "plan": { "allOf": [{ "$ref": "stage3-exercise-prescription-v1.schema.json" }, { "properties": { "status": { "const": "ACTIVE" } } }] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "PENDING_PROFESSIONAL_REVIEW" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "plan": { "allOf": [{ "$ref": "stage3-exercise-prescription-v1.schema.json" }, { "properties": { "status": { "const": "PENDING_PROFESSIONAL_REVIEW" } } }] }
+            }
+          }
+        }
+      ]
+    },
+    "stage2Result": {
+      "type": "object", "additionalProperties": false,
+      "required": ["resultSchemaVersion", "resultId", "resultHash", "attemptId", "analysisSessionId", "assessmentType", "status", "source", "completedAt", "operationalConfigVersion", "calibration", "quality", "vulnerabilityAssessment"],
+      "properties": {
+        "resultSchemaVersion": { "const": "stage2_assessment_result.v1" },
+        "resultId": { "$ref": "#/$defs/id" },
+        "resultHash": { "$ref": "#/$defs/sha256" },
+        "attemptId": { "$ref": "#/$defs/id" },
+        "analysisSessionId": { "$ref": "#/$defs/id" },
+        "assessmentType": { "enum": ["CHAIR_STAND_30S", "FOUR_STAGE_BALANCE"] },
+        "status": { "enum": ["VALID", "INVALID", "TRACKING_FAILED"] },
+        "source": { "enum": ["LIVE_POSE", "REPLAY"] },
+        "completedAt": { "$ref": "#/$defs/epoch" },
+        "operationalConfigVersion": { "const": "stage2_operational.v1" },
+        "calibration": { "$ref": "#/$defs/calibration" },
+        "quality": { "$ref": "#/$defs/quality" },
+        "vulnerabilityAssessment": { "oneOf": [{ "$ref": "#/$defs/vulnerabilityAssessment" }, { "type": "null" }] },
+        "chairStand": { "$ref": "#/$defs/chairStand" },
+        "balance": { "$ref": "#/$defs/balance" }
+      },
+      "oneOf": [
+        { "properties": { "assessmentType": { "const": "CHAIR_STAND_30S" }, "calibration": { "properties": { "hSitM": { "type": "number" }, "dFoldM": { "type": "number", "exclusiveMinimum": 0 } } } }, "required": ["chairStand"], "not": { "required": ["balance"] } },
+        { "properties": { "assessmentType": { "const": "FOUR_STAGE_BALANCE" } }, "required": ["balance"], "not": { "required": ["chairStand"] } }
+      ],
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "VALID" } }, "required": ["status"] },
+          "then": { "properties": { "quality": { "properties": { "g3ViolationRatio": { "maximum": 0.2 }, "excludeFromTrends": { "const": false } } } } }
+        },
+        {
+          "if": { "properties": { "quality": { "properties": { "g3ViolationRatio": { "exclusiveMinimum": 0.2 } }, "required": ["g3ViolationRatio"] } }, "required": ["quality"] },
+          "then": {
+            "properties": {
+              "status": { "enum": ["INVALID", "TRACKING_FAILED"] },
+              "quality": {
+                "properties": {
+                  "excludeFromTrends": { "const": true },
+                  "invalidReasons": { "contains": { "const": "G3_VIOLATION_RATIO_EXCEEDED" } }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "assessmentType": { "const": "CHAIR_STAND_30S" },
+              "chairStand": { "properties": { "armUse": { "properties": { "outcome": { "const": "RESTART_REQUIRED" } }, "required": ["outcome"] } }, "required": ["armUse"] }
+            },
+            "required": ["assessmentType", "chairStand"]
+          },
+          "then": { "properties": { "status": { "enum": ["INVALID", "TRACKING_FAILED"] } } }
+        },
+        {
+          "if": {
+            "properties": {
+              "assessmentType": { "const": "CHAIR_STAND_30S" },
+              "chairStand": { "properties": { "armUse": { "properties": { "outcome": { "const": "DISQUALIFIED" } }, "required": ["outcome"] } }, "required": ["armUse"] }
+            },
+            "required": ["assessmentType", "chairStand"]
+          },
+          "then": {
+            "properties": {
+              "status": { "const": "VALID" },
+              "chairStand": { "properties": { "cdcScoredRepetitions": { "const": 0 } } },
+              "vulnerabilityAssessment": {
+                "type": "object",
+                "required": ["activeIds"],
+                "properties": { "activeIds": { "contains": { "const": "V6" } } }
+              }
+            },
+            "required": ["vulnerabilityAssessment"]
+          }
+        }
+      ]
+    },
+    "legacyAcceptedResult": {
+      "description": "Read-only upcast of an assessment_session.v1 accepted result. New writes must use stage2Result.",
+      "type": "object", "additionalProperties": false,
+      "required": ["resultSchemaVersion", "resultId", "resultHash", "attemptId", "analysisSessionId", "assessmentType", "status", "source", "completedAt", "legacyReadOnly"],
+      "properties": {
+        "resultSchemaVersion": { "const": "legacy_assessment_result.v1" },
+        "resultId": { "$ref": "#/$defs/id" },
+        "resultHash": { "$ref": "#/$defs/sha256" },
+        "attemptId": { "$ref": "#/$defs/id" },
+        "analysisSessionId": { "$ref": "#/$defs/id" },
+        "assessmentType": { "enum": ["CHAIR_STAND_30S", "FOUR_STAGE_BALANCE"] },
+        "status": { "const": "VALID" },
+        "source": { "const": "LIVE_POSE" },
+        "completedAt": { "$ref": "#/$defs/epoch" },
+        "legacyReadOnly": { "const": true },
+        "completedRepetitions": { "type": "number", "minimum": 0 },
+        "armUseConfirmed": { "type": "boolean" },
+        "tandemHoldSeconds": { "type": "number", "minimum": 0, "maximum": 10 }
+      },
+      "oneOf": [
+        { "properties": { "assessmentType": { "const": "CHAIR_STAND_30S" } }, "required": ["completedRepetitions", "armUseConfirmed"], "not": { "required": ["tandemHoldSeconds"] } },
+        { "properties": { "assessmentType": { "const": "FOUR_STAGE_BALANCE" } }, "required": ["tandemHoldSeconds"], "not": { "anyOf": [{ "required": ["completedRepetitions"] }, { "required": ["armUseConfirmed"] }] } }
+      ]
+    }
+  }
+}

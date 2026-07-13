@@ -96,7 +96,7 @@ export function normalizeSteadiGender(gender) {
 
 export function ageYearsFromProfile(profile, referenceDate = new Date()) {
   if (!profile) return null;
-  const directAge = finiteNumber(profile.ageYears ?? profile.age ?? profile.age_years);
+  const directAge = finiteNumber(profile.ageYears);
   if (directAge !== null) return directAge;
 
   const birthYear = finiteNumber(profile.birthYear ?? profile.birth_year ?? profile.yearOfBirth);
@@ -172,7 +172,7 @@ export function balanceRiskSignalFromResult(balanceInput) {
 export function chairStandRiskSignalFromResult(chairStandInput, { ageYears, gender, profile } = {}) {
   const observedValue = chairStandRepetitionCountFromResult(chairStandInput);
   const resolvedAgeYears = finiteNumber(ageYears) ?? ageYearsFromProfile(profile);
-  const resolvedGender = normalizeSteadiGender(gender ?? profile?.gender ?? profile?.sex);
+  const resolvedGender = normalizeSteadiGender(gender ?? profile?.sex);
   const cutoffRepetitions = chairStandBelowAverageThreshold(resolvedAgeYears, resolvedGender);
   const missingInputs = [];
 
@@ -207,7 +207,7 @@ export function calculateSteadiFallRisk({
   profile,
 } = {}) {
   const resolvedAgeYears = finiteNumber(ageYears) ?? ageYearsFromProfile(profile);
-  const resolvedGender = normalizeSteadiGender(gender ?? profile?.gender ?? profile?.sex);
+  const resolvedGender = normalizeSteadiGender(gender ?? profile?.sex);
   const signals = {
     balanceTandem: balanceRiskSignalFromResult(balanceResult),
     chairStandBelowAverage: chairStandRiskSignalFromResult(chairStandResult, {

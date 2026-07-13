@@ -1,10 +1,65 @@
 export const HistoryChallengeTypes = {
   FourStageBalance: 'four_stage_balance',
   ChairStand: 'chair_stand',
-  TimedUpAndGo: 'timed_up_and_go',
 };
 
 const FIVE_RECENT_SESSIONS = 5;
+const canonicalBalanceStageIds = {
+  SIDE_BY_SIDE: 'side_by_side',
+  SEMI_TANDEM: 'semi_tandem',
+  TANDEM: 'tandem',
+  ONE_LEG: 'one_leg',
+};
+
+export const BalancePostureSeries = Object.freeze([
+  { wireId: 'SIDE_BY_SIDE', stageId: 'side_by_side', metricKey: 'sideBySideSeconds', label: 'Side-by-Side', shortLabel: 'Side' },
+  { wireId: 'SEMI_TANDEM', stageId: 'semi_tandem', metricKey: 'semiTandemSeconds', label: 'Semi-Tandem', shortLabel: 'Semi' },
+  { wireId: 'TANDEM', stageId: 'tandem', metricKey: 'tandemSeconds', label: 'Tandem', shortLabel: 'Tandem', emphasized: true },
+  { wireId: 'ONE_LEG', stageId: 'one_leg', metricKey: 'oneLegSeconds', label: 'One-Leg', shortLabel: 'One-Leg' },
+]);
+
+export function historyItemsFromDataContract(dataContract) {
+  if (dataContract?.schemaVersion !== 'steply_data_contract.v1') return [];
+  const recent = Array.isArray(dataContract.recentAssessments) ? dataContract.recentAssessments : [];
+  return recent
+    .filter((assessment) => assessment?.valid === true && assessment?.excludeFromTrends !== true)
+    .flatMap((assessment) => {
+      const stageById = Object.fromEntries(Object.entries(canonicalBalanceStageIds).map(([wireId, id]) => [
+        id,
+        {
+          id,
+          stage: wireId,
+          holdSeconds: finiteNumber(assessment.balanceSecondsByStage?.[wireId]),
+        },
+      ]));
+      const common = {
+        assessmentSessionId: assessment.assessmentSessionId,
+        completedAt: assessment.completedAt,
+        receivedAt: assessment.completedAt,
+        status: 'VALID',
+        valid: true,
+        risk: assessment.risk,
+        vulnerabilityIds: assessment.vulnerabilityIds || [],
+        source: 'MOBILE_DATA_CONTRACT',
+      };
+      return [
+        {
+          ...common,
+          id: `${assessment.assessmentSessionId}:CHAIR_STAND_30S`,
+          testType: HistoryChallengeTypes.ChairStand,
+          repetitionCount: assessment.chairStandRepetitions,
+          chairStandResult: { repetitionCount: assessment.chairStandRepetitions },
+        },
+        {
+          ...common,
+          id: `${assessment.assessmentSessionId}:FOUR_STAGE_BALANCE`,
+          testType: HistoryChallengeTypes.FourStageBalance,
+          primaryValue: stageById.tandem.holdSeconds,
+          balanceResult: { stageById, stages: Object.values(stageById) },
+        },
+      ];
+    });
+}
 
 function finiteNumber(value) {
   if (value === null || value === undefined || value === '') return null;
@@ -27,15 +82,12 @@ export function normalizeHistoryTestType(item) {
   if (raw === HistoryChallengeTypes.ChairStand || raw.includes('chair')) {
     return HistoryChallengeTypes.ChairStand;
   }
-  if (raw === HistoryChallengeTypes.TimedUpAndGo || raw.includes('timed_up') || raw === 'tug') {
-    return HistoryChallengeTypes.TimedUpAndGo;
-  }
   return raw || null;
 }
 
-function tandemStage(balanceResult) {
-  return balanceResult?.stageById?.tandem
-    || balanceResult?.stages?.find((stage) => stage?.id === 'tandem')
+function balanceStage(balanceResult, stageId) {
+  return balanceResult?.stageById?.[stageId]
+    || balanceResult?.stages?.find((stage) => stage?.id === stageId || String(stage?.stage || '').toLowerCase() === stageId)
     || null;
 }
 
@@ -49,14 +101,12 @@ function swayMetric(windowMetrics) {
 
 export function extractBalanceMetrics(item) {
   const balanceResult = item?.balanceResult;
-  const tandem = tandemStage(balanceResult);
-  const holdSeconds = finiteNumber(
-    tandem?.holdSeconds
-      ?? item?.features?.primaryValue
-      ?? item?.primaryValue
-      ?? item?.repetitionCount
-      ?? item?.count,
-  );
+  const stages = Object.fromEntries(BalancePostureSeries.map((posture) => [
+    posture.metricKey,
+    finiteNumber(balanceStage(balanceResult, posture.stageId)?.holdSeconds),
+  ]));
+  const tandem = balanceStage(balanceResult, 'tandem');
+  const tandemSeconds = stages.tandemSeconds;
   const swayRaw = finiteNumber(item?.features?.swayIndex)
     ?? finiteNumber(item?.swayIndex)
     ?? swayMetric(tandem?.totalHold)
@@ -64,7 +114,13 @@ export function extractBalanceMetrics(item) {
     ?? swayMetric(tandem?.dynamicAdjustment);
 
   return {
-    holdSeconds,
+    ...stages,
+    tandemSeconds,
+    balanceSecondsByStage: Object.fromEntries(BalancePostureSeries.map((posture) => [
+      posture.wireId,
+      posture.metricKey === 'tandemSeconds' ? tandemSeconds : stages[posture.metricKey],
+    ])),
+    holdSeconds: tandemSeconds,
     swayIndex: swayRaw === null ? null : Number((swayRaw * 100).toFixed(2)),
   };
 }
@@ -76,19 +132,6 @@ export function extractChairStandMetrics(item) {
         ?? item?.features?.chairStandCount
         ?? item?.features?.primaryValue
         ?? item?.repetitionCount
-        ?? item?.primaryValue
-        ?? item?.count,
-    ),
-  };
-}
-
-export function extractTugMetrics(item) {
-  return {
-    totalTimeSec: finiteNumber(
-      item?.rawMetrics?.totalTimeSec
-        ?? item?.tugResult?.totalTimeSec
-        ?? item?.features?.tugTimeSeconds
-        ?? item?.features?.primaryValue
         ?? item?.primaryValue
         ?? item?.count,
     ),
@@ -115,9 +158,7 @@ export function buildChallengeTrendSeries(historyItems = [], challengeType, limi
     const timestamp = historyTimestamp(item);
     const metrics = challengeType === HistoryChallengeTypes.FourStageBalance
       ? extractBalanceMetrics(item)
-      : challengeType === HistoryChallengeTypes.TimedUpAndGo
-        ? extractTugMetrics(item)
-        : extractChairStandMetrics(item);
+      : extractChairStandMetrics(item);
     return {
       ...metrics,
       id: item.id || `${challengeType}-${timestamp}-${index}`,

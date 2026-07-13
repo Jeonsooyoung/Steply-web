@@ -1,6 +1,7 @@
 import { HistoryPanel } from './HistoryPanel';
 import { MetricCard, SteplyCard } from './SteplyPrimitives';
 import {
+  BalancePostureSeries,
   HistoryChallengeTypes,
   buildChallengeTrendSeries,
   latestMetric,
@@ -16,10 +17,7 @@ function formatTrend(value, suffix = '') {
 export function ProgressPanel({ historyItems = [], historySource }) {
   const balancePoints = buildChallengeTrendSeries(historyItems, HistoryChallengeTypes.FourStageBalance);
   const chairStandPoints = buildChallengeTrendSeries(historyItems, HistoryChallengeTypes.ChairStand);
-  const holdDelta = trendDelta(balancePoints, 'holdSeconds');
-  const stabilityDelta = trendDelta(balancePoints, 'swayIndex', { lowerIsBetter: true });
   const chairDelta = trendDelta(chairStandPoints, 'repetitions');
-  const latestHold = latestMetric(balancePoints, 'holdSeconds');
   const latestReps = latestMetric(chairStandPoints, 'repetitions');
 
   return (
@@ -36,17 +34,19 @@ export function ProgressPanel({ historyItems = [], historySource }) {
       </SteplyCard>
 
       <div className="metric-row">
-        <MetricCard
-          value={latestHold !== null ? `${Number(latestHold).toFixed(1)}s` : '-'}
-          label="Latest Hold Time"
-          detail={formatTrend(holdDelta, 's from first session')}
-          accent
-        />
-        <MetricCard
-          value={Number.isFinite(stabilityDelta) ? formatTrend(stabilityDelta, '') : '-'}
-          label="Stability Trend"
-          detail="Lower sway is shown as progress"
-        />
+        {BalancePostureSeries.map((posture) => {
+          const latest = latestMetric(balancePoints, posture.metricKey);
+          const delta = trendDelta(balancePoints, posture.metricKey);
+          return (
+            <MetricCard
+              key={posture.metricKey}
+              value={latest !== null ? `${Number(latest).toFixed(1)}s` : '-'}
+              label={`Latest ${posture.label}`}
+              detail={`${Number.isFinite(delta) ? formatTrend(delta, 's from first session') : 'Building a baseline'} · 10s target`}
+              accent={posture.emphasized}
+            />
+          );
+        })}
         <MetricCard
           value={latestReps ?? '-'}
           label="Latest Chair Stands"

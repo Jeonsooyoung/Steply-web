@@ -1,0 +1,232 @@
+/* Exercise list */
+.ref-exercise-plan {
+  padding-top: 122px;
+}
+
+.ref-exercise-plan__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 40px;
+}
+
+.ref-plan-banner {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  min-height: 96px;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 16px 22px;
+  border: 1px solid #f4d991;
+  border-radius: 11px;
+  background: linear-gradient(105deg, #fff9e9, #fffdf8);
+}
+
+.ref-plan-banner > span {
+  display: grid;
+  width: 48px;
+  height: 58px;
+  place-items: center;
+  color: #ae7a00;
+  background: #f6c32d;
+  clip-path: polygon(50% 0, 62% 12%, 79% 8%, 85% 24%, 100% 31%, 94% 50%, 100% 67%, 83% 75%, 78% 100%, 51% 89%, 23% 100%, 20% 75%, 2% 67%, 8% 49%, 1% 31%, 16% 24%, 22% 8%, 39% 12%);
+  font-size: 24px;
+}
+
+.ref-plan-banner h2 {
+  margin: 0 0 4px;
+  color: #d99f00;
+  font-size: 21px;
+}
+
+.ref-plan-banner p {
+  margin: 0;
+  color: #535d6f;
+  font-size: 14px;
+}
+
+.ref-plan-banner > b {
+  padding: 10px 17px;
+  border: 1px solid #eecb6a;
+  border-radius: 22px;
+  color: #d99b00;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ref-exercise-list {
+  display: grid;
+  gap: 14px;
+}
+
+.ref-exercise-list > button {
+  display: grid !important;
+  grid-template-columns: 190px 1fr 24px;
+  min-height: 175px;
+  align-items: stretch;
+  gap: 26px;
+  padding: 0 !important;
+  border: 1px solid #dce2df !important;
+  border-radius: 11px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  text-align: left;
+  overflow: hidden;
+}
+
+.ref-exercise-list__number {
+  display: grid;
+  place-items: center;
+  color: rgba(15, 145, 91, 0.62);
+  background:
+    linear-gradient(145deg, rgba(221, 245, 233, 0.72), rgba(249, 250, 246, 0.94)),
+    repeating-linear-gradient(45deg, transparent 0 20px, rgba(24, 173, 113, 0.08) 21px 22px);
+  font-size: 46px;
+  font-weight: 800;
+  letter-spacing: -3px;
+}
+
+.ref-exercise-list > button > div {
+  align-self: center;
+}
+
+.ref-exercise-list h3 {
+  margin: 0 0 7px;
+  font-size: 20px;
+}
+
+.ref-exercise-list p {
+  max-width: 400px;
+  margin: 0 0 16px;
+  color: #596376;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.ref-exercise-meta {
+  display: flex;
+  gap: 22px;
+  color: #4d5667;
+  font-size: 13px;
+}
+
+.ref-exercise-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ref-tags {
+  display: flex;
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.ref-tags i {
+  padding: 4px 10px;
+  border-radius: 4px;
+  color: #078d59;
+  background: #eaf7f1;
+  font-size: 11px;
+  font-style: normal;
+}
+
+.ref-exercise-list > button > b {
+  display: grid;
+  align-self: center;
+  place-items: center;
+  font-size: 31px;
+  font-weight: 350;
+}
+
+.ref-exercise-aside {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+}
+
+.ref-safety-card {
+  min-height: 310px;
+  padding: 22px 24px;
+  border-color: #cce7dc;
+  background: linear-gradient(145deg, #f7fdf9, #f0faf6);
+}
+
+.ref-solid-action,
+.ref-library-action {
+  display: flex !important;
+  min-height: 96px;
+  align-items: center;
+  gap: 17px;
+  padding: 16px 28px !important;
+  border: 1px solid var(--ref-green) !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+  text-align: left;
+}
+
+.ref-app .ref-exercise-aside button.ref-solid-action {
+  color: #fff !important;
+  background-color: #16a96f !important;
+  background-image: linear-gradient(135deg, #16a96f, #22b679) !important;
+}
+
+.ref-library-action {
+  color: var(--ref-green) !important;
+  background: #fff !important;
+}
+
+.ref-solid-action > span,
+.ref-library-action > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--ref-green);
+  background: #fff;
+  font-size: 19px;
+}
+
+.ref-library-action > span {
+  color: var(--ref-green);
+  background: transparent;
+  font-size: 35px;
+}
+
+.ref-solid-action b,
+.ref-library-action b {
+  font-size: 16px;
+}
+
+.ref-solid-action small,
+.ref-library-action small {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 450;
+}
+
+.ref-tip-card {
+  min-height: 125px;
+  padding: 22px;
+  border: 0;
+  background: linear-gradient(135deg, #fff7dc, #fffdf7);
+}
+
+.ref-tip-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: #d89800;
+  font-size: 16px;
+}
+
+.ref-tip-card p {
+  margin: 0;
+  color: #626b7a;
+  font-size: 13px;
+  line-height: 1.6;
+}

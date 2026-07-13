@@ -1,0 +1,153 @@
+{
+  "schemaVersion": "otago_catalog.v1",
+  "catalogVersion": "otago_catalog.v1",
+  "source": "Otago Exercise Programme tables 3, 3.1 and 4 as specified in Steply sections 8.1-8.7",
+  "vulnerabilityObservationConfig": {
+    "classification": "PRESCRIPTION_OBSERVATION_ONLY",
+    "excludedFromSteadiRisk": true,
+    "tandemHoldSeconds": 10,
+    "initialToStaticRatio": 1.5,
+    "mlToApRatio": 1.3,
+    "chairLateSlowdownRatio": 0.2,
+    "trunkForwardLeanDegrees": 30,
+    "asymmetryRatio": 0.15,
+    "asymmetryRepetitionCount": 3
+  },
+  "program": {
+    "warmupMinutes": 5,
+    "strengthFrequencyPerWeek": 3,
+    "strengthRequiresRestDayBetweenSessions": true,
+    "balanceFrequencyPerWeek": 3,
+    "walkingFrequencyPerWeek": 2,
+    "walkingMaximumMinutes": 30,
+    "walkingSplitMinutes": [10, 10, 10],
+    "walkingRequiresStrengthAndBalance": true,
+    "sessionCanBeSplitAcrossDay": true
+  },
+  "exercises": [
+    {
+      "exerciseId": "W1", "category": "WARMUP", "nameKo": "머리 돌리기", "nameEn": "Head movements", "target": "목 가동성", "position": "서거나 앉기", "frequency": "EVERY_SESSION",
+      "variants": [{ "variantId": "W1-A", "level": "A", "dosage": { "repetitions": 5, "sets": 1, "perSide": true }, "supportRequirement": "NONE", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": null, "eccentricSeconds": null, "instruction": "가볍고 편안하게" }, "breathing": "숨을 참지 않고 자연스럽게 호흡", "rest": { "minimumSeconds": 0, "maximumSeconds": 0 }, "cameraVerification": { "mode": "MANUAL_ONLY", "autoCount": false } }]
+    },
+    {
+      "exerciseId": "W2", "category": "WARMUP", "nameKo": "목 뒤로 밀기", "nameEn": "Neck movements", "target": "목 가동성", "position": "서거나 앉기", "frequency": "EVERY_SESSION",
+      "variants": [{ "variantId": "W2-A", "level": "A", "dosage": { "repetitions": 5, "sets": 1, "perSide": false }, "supportRequirement": "NONE", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": null, "eccentricSeconds": null, "instruction": "가볍고 편안하게" }, "breathing": "숨을 참지 않고 자연스럽게 호흡", "rest": { "minimumSeconds": 0, "maximumSeconds": 0 }, "cameraVerification": { "mode": "MANUAL_ONLY", "autoCount": false } }]
+    },
+    {
+      "exerciseId": "W3", "category": "WARMUP", "nameKo": "허리 뒤로 젖히기", "nameEn": "Back extension", "target": "몸통 가동성", "position": "서기", "frequency": "EVERY_SESSION",
+      "variants": [{ "variantId": "W3-A", "level": "A", "dosage": { "repetitions": 5, "sets": 1, "perSide": false }, "supportRequirement": "STABLE_SUPPORT", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": null, "eccentricSeconds": null, "instruction": "가볍고 편안하게" }, "breathing": "숨을 참지 않고 자연스럽게 호흡", "rest": { "minimumSeconds": 0, "maximumSeconds": 0 }, "cameraVerification": { "mode": "MANUAL_ONLY", "autoCount": false } }]
+    },
+    {
+      "exerciseId": "W4", "category": "WARMUP", "nameKo": "몸통 돌리기", "nameEn": "Trunk movements", "target": "몸통 회전 가동성", "position": "서거나 앉기", "frequency": "EVERY_SESSION",
+      "variants": [{ "variantId": "W4-A", "level": "A", "dosage": { "repetitions": 5, "sets": 1, "perSide": true }, "supportRequirement": "NONE", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": null, "eccentricSeconds": null, "instruction": "가볍고 편안하게" }, "breathing": "숨을 참지 않고 자연스럽게 호흡", "rest": { "minimumSeconds": 0, "maximumSeconds": 0 }, "cameraVerification": { "mode": "MANUAL_ONLY", "autoCount": false } }]
+    },
+    {
+      "exerciseId": "W5", "category": "WARMUP", "nameKo": "발목 움직이기", "nameEn": "Ankle movements", "target": "발목 가동성", "position": "앉기", "frequency": "EVERY_SESSION",
+      "variants": [{ "variantId": "W5-A", "level": "A", "dosage": { "repetitions": 10, "sets": 1, "perSide": true }, "supportRequirement": "NONE", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": null, "eccentricSeconds": null, "instruction": "가볍고 편안하게" }, "breathing": "숨을 참지 않고 자연스럽게 호흡", "rest": { "minimumSeconds": 0, "maximumSeconds": 0 }, "cameraVerification": { "mode": "MANUAL_ONLY", "autoCount": false } }]
+    },
+    {
+      "exerciseId": "S1", "category": "STRENGTH", "nameKo": "앞무릎 강화", "nameEn": "Front knee strengthening", "target": "무릎 신전근(대퇴사두근)", "position": "앉기", "frequency": "AT_LEAST_3_PER_WEEK_WITH_REST_DAY",
+      "variants": [
+        { "variantId": "S1-A", "level": "A", "dosage": { "repetitions": 10, "sets": 1, "perSide": true }, "supportRequirement": "NONE", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } },
+        { "variantId": "S1-B", "level": "B", "dosage": { "repetitions": 10, "sets": 1, "perSide": true }, "supportRequirement": "NONE", "weight": { "type": "ANKLE_CUFF", "loadKg": [1, 2] }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } },
+        { "variantId": "S1-C", "level": "C", "dosage": { "repetitions": 10, "sets": 1, "perSide": true }, "supportRequirement": "NONE", "weight": { "type": "FATIGUE_TARGET", "fatigueRepetitionRange": [8, 10], "maximumTrialKg": 8 }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } }
+      ]
+    },
+    {
+      "exerciseId": "S2", "category": "STRENGTH", "nameKo": "뒷무릎 강화", "nameEn": "Back knee strengthening", "target": "무릎 굴근(햄스트링)", "position": "서서 지지대 잡기", "frequency": "AT_LEAST_3_PER_WEEK_WITH_REST_DAY",
+      "variants": [
+        { "variantId": "S2-A", "level": "A", "dosage": { "repetitions": 10, "sets": 1, "perSide": true }, "supportRequirement": "STABLE_SUPPORT", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } },
+        { "variantId": "S2-B", "level": "B", "dosage": { "repetitions": 10, "sets": 1, "perSide": true }, "supportRequirement": "STABLE_SUPPORT", "weight": { "type": "ANKLE_CUFF", "loadKg": [1, 2] }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } },
+        { "variantId": "S2-C", "level": "C", "dosage": { "repetitions": 10, "sets": 1, "perSide": true }, "supportRequirement": "STABLE_SUPPORT", "weight": { "type": "FATIGUE_TARGET", "fatigueRepetitionRange": [8, 10], "maximumTrialKg": 8 }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } }
+      ]
+    },
+    {
+      "exerciseId": "S3", "category": "STRENGTH", "nameKo": "옆엉덩이 강화", "nameEn": "Side hip strengthening", "target": "고관절 외전근(중둔근)", "position": "서서 지지대 잡기", "frequency": "AT_LEAST_3_PER_WEEK_WITH_REST_DAY",
+      "variants": [
+        { "variantId": "S3-A", "level": "A", "dosage": { "repetitions": 10, "sets": 1, "perSide": true }, "supportRequirement": "STABLE_SUPPORT", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } },
+        { "variantId": "S3-B", "level": "B", "dosage": { "repetitions": 10, "sets": 1, "perSide": true }, "supportRequirement": "STABLE_SUPPORT", "weight": { "type": "ANKLE_CUFF", "loadKg": [1, 2] }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } },
+        { "variantId": "S3-C", "level": "C", "dosage": { "repetitions": 10, "sets": 1, "perSide": true }, "supportRequirement": "STABLE_SUPPORT", "weight": { "type": "FATIGUE_TARGET", "fatigueRepetitionRange": [8, 10], "maximumTrialKg": 8 }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } }
+      ]
+    },
+    {
+      "exerciseId": "S4", "category": "STRENGTH", "nameKo": "종아리 들기", "nameEn": "Calf raises", "target": "발목 저측굴근", "position": "서기", "frequency": "AT_LEAST_3_PER_WEEK_WITH_REST_DAY",
+      "variants": [
+        { "variantId": "S4-C", "level": "C", "dosage": { "repetitions": 10, "sets": 2, "perSide": false }, "supportRequirement": "STABLE_SUPPORT", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } },
+        { "variantId": "S4-D", "level": "D", "dosage": { "repetitions": 10, "sets": 2, "perSide": false }, "supportRequirement": "NONE", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } }
+      ]
+    },
+    {
+      "exerciseId": "S5", "category": "STRENGTH", "nameKo": "발끝 들기", "nameEn": "Toe raises", "target": "발목 배측굴근", "position": "서기", "frequency": "AT_LEAST_3_PER_WEEK_WITH_REST_DAY",
+      "variants": [
+        { "variantId": "S5-C", "level": "C", "dosage": { "repetitions": 10, "sets": 2, "perSide": false }, "supportRequirement": "STABLE_SUPPORT", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } },
+        { "variantId": "S5-D", "level": "D", "dosage": { "repetitions": 10, "sets": 2, "perSide": false }, "supportRequirement": "NONE", "weight": { "type": "NONE" }, "tempo": { "concentricSeconds": [2, 3], "eccentricSeconds": [4, 5] }, "breathing": "들기 전 들이쉬고, 들면서 내쉬고, 내리면서 들이쉬며 숨을 참지 않음", "rest": { "minimumSeconds": 60, "maximumSeconds": 120 }, "cameraVerification": { "mode": "FULL", "autoCount": true } }
+      ]
+    },
+    {
+      "exerciseId": "B1", "category": "BALANCE", "nameKo": "무릎 굽히기", "nameEn": "Knee bends", "target": "하지 근력과 균형", "position": "서기", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [
+        { "variantId": "B1-A", "level": "A", "dosage": { "repetitions": 10, "sets": 1 }, "supportRequirement": "STABLE_SUPPORT" },
+        { "variantId": "B1-B", "level": "B", "dosage": { "repetitions": 10, "sets": 1, "alternative": "지지 2세트" }, "supportRequirement": "NONE" },
+        { "variantId": "B1-C", "level": "C", "dosage": { "repetitions": 10, "sets": 2 }, "supportRequirement": "NONE" },
+        { "variantId": "B1-D", "level": "D", "dosage": { "repetitions": 10, "sets": 3 }, "supportRequirement": "NONE" }
+      ]
+    },
+    {
+      "exerciseId": "B2", "category": "BALANCE", "nameKo": "뒤로 걷기", "nameEn": "Backwards walking", "target": "후방 보행 균형", "position": "걷기", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [{ "variantId": "B2-A", "level": "A", "dosage": { "steps": 10, "sets": 4 }, "supportRequirement": "STABLE_SUPPORT" }, { "variantId": "B2-B", "level": "B", "dosage": { "steps": 10, "sets": 4 }, "supportRequirement": "NONE" }]
+    },
+    {
+      "exerciseId": "B3", "category": "BALANCE", "nameKo": "걷다가 돌기", "nameEn": "Walking and turning (figure 8)", "target": "회전과 보행 균형", "position": "걷기", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [{ "variantId": "B3-A", "level": "A", "dosage": { "figureEightRounds": 2, "sets": 1 }, "supportRequirement": "WALKING_AID" }, { "variantId": "B3-B", "level": "B", "dosage": { "figureEightRounds": 2, "sets": 1 }, "supportRequirement": "NONE" }]
+    },
+    {
+      "exerciseId": "B4", "category": "BALANCE", "nameKo": "옆으로 걷기", "nameEn": "Sideways walking", "target": "측방 보행 균형", "position": "걷기", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [{ "variantId": "B4-A", "level": "A", "dosage": { "steps": 10, "sets": 4 }, "supportRequirement": "WALKING_AID" }, { "variantId": "B4-B", "level": "B", "dosage": { "steps": 10, "sets": 4 }, "supportRequirement": "NONE" }]
+    },
+    {
+      "exerciseId": "B5", "category": "BALANCE", "nameKo": "탠덤 서기", "nameEn": "Tandem stance", "target": "좁은 지지면 정적 균형", "position": "서기", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [{ "variantId": "B5-A", "level": "A", "dosage": { "holdSeconds": 10, "sets": 1 }, "supportRequirement": "STABLE_SUPPORT" }, { "variantId": "B5-B", "level": "B", "dosage": { "holdSeconds": 10, "sets": 1 }, "supportRequirement": "NONE" }]
+    },
+    {
+      "exerciseId": "B6", "category": "BALANCE", "nameKo": "탠덤 걷기", "nameEn": "Tandem walk", "target": "좁은 지지면 동적 균형", "position": "걷기", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [{ "variantId": "B6-A", "level": "A", "dosage": { "steps": 10, "repeatAsDirected": true }, "supportRequirement": "STABLE_SUPPORT" }, { "variantId": "B6-B", "level": "B", "dosage": { "steps": 10, "repeatAsDirected": true }, "supportRequirement": "NONE" }]
+    },
+    {
+      "exerciseId": "B7", "category": "BALANCE", "nameKo": "한발 서기", "nameEn": "One leg stand", "target": "고난도 정적 균형", "position": "서기", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [{ "variantId": "B7-A", "level": "A", "dosage": { "holdSeconds": 10, "sets": 1 }, "supportRequirement": "STABLE_SUPPORT" }, { "variantId": "B7-B", "level": "B", "dosage": { "holdSeconds": 10, "sets": 1 }, "supportRequirement": "NONE" }, { "variantId": "B7-C", "level": "C", "dosage": { "holdSeconds": 30, "sets": 1 }, "supportRequirement": "NONE" }]
+    },
+    {
+      "exerciseId": "B8", "category": "BALANCE", "nameKo": "발뒤꿈치로 걷기", "nameEn": "Heel walking", "target": "발목 조절과 동적 균형", "position": "걷기", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [{ "variantId": "B8-A", "level": "A", "dosage": { "steps": 10, "sets": 4 }, "supportRequirement": "STABLE_SUPPORT" }, { "variantId": "B8-B", "level": "B", "dosage": { "steps": 10, "sets": 4 }, "supportRequirement": "NONE" }]
+    },
+    {
+      "exerciseId": "B9", "category": "BALANCE", "nameKo": "발끝으로 걷기", "nameEn": "Toe walking", "target": "발목 조절과 동적 균형", "position": "걷기", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [{ "variantId": "B9-A", "level": "A", "dosage": { "steps": 10, "sets": 4 }, "supportRequirement": "STABLE_SUPPORT" }, { "variantId": "B9-B", "level": "B", "dosage": { "steps": 10, "sets": 4 }, "supportRequirement": "NONE" }]
+    },
+    {
+      "exerciseId": "B10", "category": "BALANCE", "nameKo": "뒤로 탠덤 걷기", "nameEn": "Heel-toe walking backwards", "target": "후방 좁은 지지면 동적 균형", "position": "걷기", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [{ "variantId": "B10-A", "level": "A", "dosage": { "steps": 10, "repeatAsDirected": true }, "supportRequirement": "NONE" }]
+    },
+    {
+      "exerciseId": "B11", "category": "BALANCE", "nameKo": "의자에서 일어서기", "nameEn": "Sit to stand", "target": "기능적 하지 근력", "position": "의자에서 일어서기", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [{ "variantId": "B11-A", "level": "A", "dosage": { "repetitions": 5, "sets": 1 }, "supportRequirement": "TWO_HAND" }, { "variantId": "B11-B", "level": "B", "dosage": { "repetitions": 5, "sets": 1, "alternative": "양손 10회" }, "supportRequirement": "ONE_HAND" }, { "variantId": "B11-C", "level": "C", "dosage": { "repetitions": 10, "sets": 1, "alternative": "한손 2세트" }, "supportRequirement": "NONE" }, { "variantId": "B11-D", "level": "D", "dosage": { "repetitions": 10, "sets": 2 }, "supportRequirement": "NONE" }]
+    },
+    {
+      "exerciseId": "B12", "category": "BALANCE", "nameKo": "계단 오르내리기", "nameEn": "Stair walking", "target": "계단 기능과 동적 균형", "position": "계단", "frequency": "AT_LEAST_3_PER_WEEK",
+      "variants": [{ "variantId": "B12-A", "level": "A", "dosage": { "asDirected": true, "sets": 1 }, "supportRequirement": "STABLE_SUPPORT" }, { "variantId": "B12-B", "level": "B", "dosage": { "asDirected": true, "sets": 1 }, "supportRequirement": "STABLE_SUPPORT" }, { "variantId": "B12-C", "level": "C", "dosage": { "asDirected": true, "sets": 1 }, "supportRequirement": "STABLE_SUPPORT" }, { "variantId": "B12-D", "level": "D", "dosage": { "asDirected": true, "sets": 2 }, "supportRequirement": "STABLE_SUPPORT" }]
+    },
+    {
+      "exerciseId": "WALK", "category": "WALKING", "nameKo": "걷기 계획", "nameEn": "Walking plan", "target": "일상 보행 활동", "position": "걷기", "frequency": "AT_LEAST_2_PER_WEEK",
+      "variants": [{ "variantId": "WALK-A", "level": "A", "dosage": { "maximumMinutes": 30, "splitMinutes": [10, 10, 10], "pace": "USUAL" }, "supportRequirement": "NONE", "weight": { "type": "NONE" }, "tempo": { "instruction": "평소 속도" }, "breathing": "자연스럽게 호흡", "rest": { "minimumSeconds": 0, "maximumSeconds": null }, "cameraVerification": { "mode": "MANUAL_ONLY", "autoCount": false }, "mustAccompanyStrengthAndBalance": true }]
+    }
+  ],
+  "balanceDefaults": {
+    "weight": { "type": "NONE" },
+    "tempo": { "instruction": "천천히 통제하여 수행" },
+    "breathing": "숨을 참지 않고 자연스럽게 호흡",
+    "rest": { "minimumSeconds": 0, "maximumSeconds": null },
+    "cameraByExerciseId": {
+      "B1": { "mode": "FULL", "autoCount": true }, "B2": { "mode": "MANUAL_ONLY", "autoCount": false }, "B3": { "mode": "MANUAL_ONLY", "autoCount": false }, "B4": { "mode": "PARTIAL", "autoCount": false }, "B5": { "mode": "FULL", "autoCount": true }, "B6": { "mode": "MANUAL_ONLY", "autoCount": false }, "B7": { "mode": "FULL", "autoCount": true }, "B8": { "mode": "MANUAL_ONLY", "autoCount": false }, "B9": { "mode": "MANUAL_ONLY", "autoCount": false }, "B10": { "mode": "MANUAL_ONLY", "autoCount": false }, "B11": { "mode": "FULL", "autoCount": true }, "B12": { "mode": "MANUAL_ONLY", "autoCount": false }
+    }
+  }
+}

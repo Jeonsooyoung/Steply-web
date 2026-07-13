@@ -1,20 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ANALYZER_FINAL_TIMEOUT_MS } from '../pose/analysisTimeouts';
-import {
-  AssessmentStatuses,
-  createIncompleteAssessmentResult,
-} from '../pose/assessmentResultMetadata';
+import { AssessmentStatuses } from '../pose/assessmentResultMetadata';
 import {
   UserScreenIds,
   screenFromActiveStep,
 } from '../pipeline/ui/sessionFlow.js';
+import { isSupportedAssessmentTestType } from '../pipeline/shared/assessmentTestTypes.js';
 
 const initialState = {
   repetitionCount: 0,
   elapsedSeconds: 0,
   confidence: 0,
   isFullBodyVisible: false,
-  warningMessage: 'After QR linking, the PC starts analysis when phone camera frames arrive.',
+  warningMessage: 'Steply starts analysis when frames arrive from the selected camera.',
   postureMessage: 'Waiting for analysis.',
   isArmUseSuspected: false,
   isStandingOrRising: false,
@@ -45,10 +42,18 @@ function timingFromFrameMessage(message) {
   };
 }
 
-function isRemoteFrameStale(frame, now = Date.now()) {
+function isCameraFrameStale(frame, now = Date.now()) {
   const receivedAt = Number(frame?.receivedAt);
   if (!Number.isFinite(receivedAt)) return false;
   return now - receivedAt > MAX_REMOTE_FRAME_AGE_MS;
+}
+
+function postCameraFrame(worker, message, frame) {
+  if (typeof ImageBitmap !== 'undefined' && frame instanceof ImageBitmap) {
+    worker.postMessage(message, [frame]);
+    return;
+  }
+  worker.postMessage(message);
 }
 
 function isAssessmentScreen(activeStep) {
@@ -60,10 +65,16 @@ function isAssessmentScreen(activeStep) {
   ].includes(screenFromActiveStep(activeStep));
 }
 
+function priorChairArmUseOccurrenceCount(assessmentSession) {
+  const slot = assessmentSession?.functionalTests?.CHAIR_STAND_30S;
+  const results = [slot?.acceptedResult, ...(slot?.attempts || []).map((attempt) => attempt?.result)].filter(Boolean);
+  return Math.max(0, ...results.map((result) => Number(result?.chairStand?.armUse?.occurrenceCount) || 0));
+}
+
 export function useRemotePoseAnalysis({
   session,
   selectedTest,
-  remoteCameraFrame,
+  cameraFrame,
   activeStep = 'start',
   autoStart = true,
   onFinalResult,
@@ -74,9 +85,7 @@ export function useRemotePoseAnalysis({
   const runningRef = useRef(false);
   const startedAtRef = useRef(0);
   const activeAnalysisSessionIdRef = useRef(null);
-  const autoFinishedRef = useRef(false);
   const analysisStateRef = useRef(initialState);
-  const finishFallbackTimerRef = useRef(null);
   const recoverableErrorCountRef = useRef(0);
   const [analysisSessionState, setAnalysisSessionState] = useState('IDLE');
   const [workerStatus, setWorkerStatus] = useState('booting');
@@ -161,12 +170,9 @@ export function useRemotePoseAnalysis({
         setAnalysisSessionState('IDLE');
       }
       if (message.type === 'SESSION_READY' || message.type === 'session-started') {
-        if (finishFallbackTimerRef.current) window.clearTimeout(finishFallbackTimerRef.current);
-        finishFallbackTimerRef.current = null;
         runningRef.current = true;
         startedAtRef.current = message.startedAt || Date.now();
         activeAnalysisSessionIdRef.current = message.sessionId || activeAnalysisSessionIdRef.current;
-        autoFinishedRef.current = false;
         setError('');
         setIsRunning(true);
         setAnalysisSessionState('ANALYZING');
@@ -238,8 +244,6 @@ export function useRemotePoseAnalysis({
       }
       if (message.type === 'FINAL_RESULT' || message.type === 'session-finished') {
         const finalResult = message.payload || message.result || null;
-        if (finishFallbackTimerRef.current) window.clearTimeout(finishFallbackTimerRef.current);
-        finishFallbackTimerRef.current = null;
         runningRef.current = false;
         startedAtRef.current = 0;
         setIsRunning(false);
@@ -247,15 +251,12 @@ export function useRemotePoseAnalysis({
         setAnalysisResult(finalResult);
         if (message.state) setAnalysisState(message.state);
         setWorkerStatus(finalResult?.status === AssessmentStatuses.Valid ? 'finished' : 'error');
-        onFinalResult?.(finalResult);
+        onFinalResult?.(finalResult, message.landmarkSeries || null);
       }
       if (message.type === 'SESSION_CANCELLED' || message.type === 'session-reset') {
-        if (finishFallbackTimerRef.current) window.clearTimeout(finishFallbackTimerRef.current);
-        finishFallbackTimerRef.current = null;
         runningRef.current = false;
         startedAtRef.current = 0;
         activeAnalysisSessionIdRef.current = null;
-        autoFinishedRef.current = false;
         setIsRunning(false);
         setAnalysisSessionState('CANCELLED');
         setAnalysisResult(null);
@@ -311,7 +312,6 @@ export function useRemotePoseAnalysis({
     worker.postMessage({ type: 'INIT' });
 
     return () => {
-      if (finishFallbackTimerRef.current) window.clearTimeout(finishFallbackTimerRef.current);
       activeAnalysisSessionIdRef.current = null;
       runningRef.current = false;
       worker.terminate();
@@ -321,7 +321,11 @@ export function useRemotePoseAnalysis({
 
   const startAnalysis = useCallback(() => {
     if (!workerRef.current || !session?.id) return;
-    if (finishFallbackTimerRef.current) window.clearTimeout(finishFallbackTimerRef.current);
+    if (!isSupportedAssessmentTestType(selectedTest)) {
+      setError(`Unsupported assessment test type: ${String(selectedTest)}`);
+      setAnalysisSessionState('FAILED');
+      return;
+    }
     const analysisSessionId = createAnalysisSessionId();
     activeAnalysisSessionIdRef.current = analysisSessionId;
     setError('');
@@ -344,10 +348,10 @@ export function useRemotePoseAnalysis({
     setAnalysisRawLandmarks([]);
     setFrameSize(null);
     lastSubmittedFrameRef.current = 0;
-    autoFinishedRef.current = false;
     recoverableErrorCountRef.current = 0;
     const userId = session.profile?.id || session.id;
     const startedAt = Date.now();
+    const assessmentSession = session.assessmentSession || null;
     startedAtRef.current = startedAt;
     setAnalysisSessionState('INITIALIZING');
     workerRef.current.postMessage({
@@ -356,36 +360,13 @@ export function useRemotePoseAnalysis({
       userId,
       selectedTest,
       startedAt,
+      assessmentSessionId: assessmentSession?.assessmentSessionId || null,
+      operationalContext: assessmentSession?.operationalContext || null,
+      supportRoiNormalized: assessmentSession?.operationalContext?.supportRoiNormalized || null,
+      armUseOccurrenceCount: priorChairArmUseOccurrenceCount(assessmentSession),
+      profile: assessmentSession?.profileSnapshot || session.profile || null,
     });
-  }, [selectedTest, session?.id, session?.profile?.id]);
-
-  const finishAnalysis = useCallback(() => {
-    if (!workerRef.current || autoFinishedRef.current) return;
-    const analysisSessionId = activeAnalysisSessionIdRef.current;
-    if (!analysisSessionId) return;
-    autoFinishedRef.current = true;
-    setAnalysisSessionState('FINALIZING');
-    workerRef.current.postMessage({ type: 'FINALIZE_SESSION', sessionId: analysisSessionId, completedAt: Date.now() });
-    if (finishFallbackTimerRef.current) window.clearTimeout(finishFallbackTimerRef.current);
-    finishFallbackTimerRef.current = window.setTimeout(() => {
-      if (!runningRef.current) return;
-      const incompleteResult = createIncompleteAssessmentResult({
-        sessionId: session?.id,
-        analysisSessionId,
-        testType: selectedTest,
-        startedAt: startedAtRef.current,
-        completedAt: Date.now(),
-      });
-      runningRef.current = false;
-      startedAtRef.current = 0;
-      setIsRunning(false);
-      setAnalysisResult(incompleteResult);
-      setAnalysisSessionState('FAILED');
-      setWorkerStatus('error');
-      setError('We could not complete the measurement. Please check the camera connection and try again.');
-      onFinalResult?.(incompleteResult);
-    }, ANALYZER_FINAL_TIMEOUT_MS);
-  }, [onFinalResult, selectedTest, session?.id]);
+  }, [selectedTest, session?.assessmentSession, session?.id, session?.profile?.id]);
 
   const resetAnalysis = useCallback((reason = 'reset') => {
     if (!workerRef.current) return;
@@ -428,9 +409,6 @@ export function useRemotePoseAnalysis({
     startedAtRef.current = 0;
     const previousAnalysisSessionId = activeAnalysisSessionIdRef.current;
     activeAnalysisSessionIdRef.current = null;
-    autoFinishedRef.current = false;
-    if (finishFallbackTimerRef.current) window.clearTimeout(finishFallbackTimerRef.current);
-    finishFallbackTimerRef.current = null;
     setIsRunning(false);
     setAnalysisResult(null);
     setProcessingStats(null);
@@ -465,9 +443,6 @@ export function useRemotePoseAnalysis({
     const previousAnalysisSessionId = activeAnalysisSessionIdRef.current;
     runningRef.current = false;
     activeAnalysisSessionIdRef.current = null;
-    autoFinishedRef.current = false;
-    if (finishFallbackTimerRef.current) window.clearTimeout(finishFallbackTimerRef.current);
-    finishFallbackTimerRef.current = null;
     setIsRunning(false);
     setAnalysisSessionState('CANCELLED');
     workerRef.current.postMessage({
@@ -478,49 +453,57 @@ export function useRemotePoseAnalysis({
   }, [activeStep]);
 
   useEffect(() => {
-    if (!remoteCameraFrame?.src || !session?.id) return;
-    if (isRemoteFrameStale(remoteCameraFrame)) return;
+    const inputFrame = cameraFrame?.frame || cameraFrame?.blob || cameraFrame?.src;
+    if (!inputFrame || !session?.id) return;
+    if (isCameraFrameStale(cameraFrame)) return;
     if (autoStart && !runningRef.current && !analysisResult) {
       startAnalysis();
       return;
     }
-    const frameKey = remoteCameraFrame.sequence || remoteCameraFrame.receivedAt || remoteCameraFrame.src;
+    const frameKey = cameraFrame.sequence || cameraFrame.receivedAt || cameraFrame.src;
     if (lastSubmittedFrameRef.current === frameKey) return;
     lastSubmittedFrameRef.current = frameKey;
     const frameId = String(frameKey);
     if (!runningRef.current) {
       if (analysisResult) return;
-      workerRef.current?.postMessage({
+      postCameraFrame(workerRef.current, {
         type: 'PROCESS_PREVIEW_FRAME',
         frameId,
-        frame: remoteCameraFrame.blob || remoteCameraFrame.src,
-        receivedAt: remoteCameraFrame.receivedAt || Date.now(),
-        cameraFrameSequence: remoteCameraFrame.sequence,
-        mobileSequence: remoteCameraFrame.mobileSequence || null,
+        frame: inputFrame,
+        receivedAt: cameraFrame.receivedAt || Date.now(),
+        cameraFrameSequence: cameraFrame.source === 'phone-camera' ? cameraFrame.sequence : null,
+        mobileSequence: cameraFrame.mobileSequence || null,
+        cameraSource: cameraFrame.source || 'camera',
+        mirrored: cameraFrame.mirrored === true,
         selectedTest,
-      });
+      }, inputFrame);
       return;
     }
     const analysisSessionId = activeAnalysisSessionIdRef.current;
     if (!analysisSessionId) return;
-    workerRef.current?.postMessage({
+    postCameraFrame(workerRef.current, {
       type: 'PROCESS_FRAME',
       sessionId: analysisSessionId,
       frameId,
-      frame: remoteCameraFrame.blob || remoteCameraFrame.src,
-      receivedAt: remoteCameraFrame.receivedAt || Date.now(),
-      cameraFrameSequence: remoteCameraFrame.sequence,
-      mobileSequence: remoteCameraFrame.mobileSequence || null,
+      frame: inputFrame,
+      receivedAt: cameraFrame.receivedAt || Date.now(),
+      cameraFrameSequence: cameraFrame.source === 'phone-camera' ? cameraFrame.sequence : null,
+      mobileSequence: cameraFrame.mobileSequence || null,
+      cameraSource: cameraFrame.source || 'camera',
+      mirrored: cameraFrame.mirrored === true,
       selectedTest,
-    });
+    }, inputFrame);
   }, [
     analysisResult,
     autoStart,
-    remoteCameraFrame?.blob,
-    remoteCameraFrame?.mobileSequence,
-    remoteCameraFrame?.receivedAt,
-    remoteCameraFrame?.sequence,
-    remoteCameraFrame?.src,
+    cameraFrame?.blob,
+    cameraFrame?.frame,
+    cameraFrame?.mirrored,
+    cameraFrame?.mobileSequence,
+    cameraFrame?.receivedAt,
+    cameraFrame?.sequence,
+    cameraFrame?.source,
+    cameraFrame?.src,
     selectedTest,
     session?.id,
     startAnalysis,
@@ -528,40 +511,6 @@ export function useRemotePoseAnalysis({
 
   const durationSeconds = analysisState.durationSeconds || analysisResult?.durationSeconds || 30;
   const progress = Math.min(100, Math.round(((analysisState.elapsedSeconds || 0) / durationSeconds) * 100));
-
-  useEffect(() => {
-    if (!isRunning || !durationSeconds || autoFinishedRef.current) return undefined;
-
-    const tick = () => {
-      const startedAt = startedAtRef.current;
-      if (!startedAt || autoFinishedRef.current) return;
-      const progressMustIgnoreQualityGates = selectedTest === 'four_stage_balance' || selectedTest === 'chair_stand';
-      const paused = !progressMustIgnoreQualityGates && (
-        analysisStateRef.current.trackingPaused
-        || analysisStateRef.current.calibrationReady === false
-        || ['PAUSED', 'INVALID', 'NOT_READY'].includes(qualityStatus?.state)
-      );
-      if (paused) return;
-      const workerElapsedSeconds = Number(analysisStateRef.current.elapsedSeconds);
-      const elapsedSeconds = Math.min(
-        durationSeconds,
-        Number.isFinite(workerElapsedSeconds)
-          ? Math.floor(workerElapsedSeconds)
-          : Math.floor((Date.now() - startedAt) / 1000),
-      );
-      setAnalysisState((current) => {
-        if ((current.elapsedSeconds || 0) === elapsedSeconds) return current;
-        const next = { ...current, elapsedSeconds, durationSeconds };
-        analysisStateRef.current = next;
-        return next;
-      });
-      if (elapsedSeconds >= durationSeconds) finishAnalysis();
-    };
-
-    tick();
-    const intervalId = window.setInterval(tick, 500);
-    return () => window.clearInterval(intervalId);
-  }, [durationSeconds, finishAnalysis, isRunning, qualityStatus?.state, selectedTest]);
 
   return useMemo(() => ({
     workerStatus,
@@ -591,7 +540,6 @@ export function useRemotePoseAnalysis({
     analysisSessionId: activeAnalysisSessionIdRef.current,
     progress,
     startAnalysis,
-    finishAnalysis,
     resetAnalysis,
     probeDebug,
     addManualRepetition,
@@ -625,7 +573,6 @@ export function useRemotePoseAnalysis({
     analysisSessionState,
     progress,
     startAnalysis,
-    finishAnalysis,
     resetAnalysis,
     probeDebug,
     addManualRepetition,

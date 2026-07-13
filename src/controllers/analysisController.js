@@ -14,7 +14,16 @@ async function finalAnalysis(req, res) {
   const result = analysisService.saveFinalResult(body);
 
   if (result.error) return sendJson(res, result.status, { error: result.error, reason: result.reason });
-  return sendJson(res, 200, { ok: true, result: result.result });
+  return sendJson(res, 200, {
+    ok: true,
+    result: result.result,
+    assessmentSession: result.assessmentSession || null,
+    duplicate: Boolean(result.duplicate),
+    invalidAttempt: Boolean(result.invalidAttempt),
+    excludeFromTrends: Boolean(result.excludeFromTrends),
+    resultKey: result.resultKey || null,
+    aggregateComplete: Boolean(result.aggregateComplete),
+  });
 }
 
 module.exports = {

@@ -13,6 +13,9 @@ import {
   bodyScale,
   footCenter,
   landmarkByIndex,
+  worldBodyScale,
+  worldFootCenter,
+  worldLandmarkByIndex,
 } from '../../pose/coordinateMapping.js';
 
 export const BalanceTestMachineStates = {
@@ -34,6 +37,8 @@ export const BalanceFailureReasons = {
   SupportUsed: 'SUPPORT_USED',
   TrackingLost: 'TRACKING_LOST',
   CameraNotObservable: 'CAMERA_NOT_OBSERVABLE',
+  UnableToAssumePosition: 'UNABLE_TO_ASSUME_POSITION',
+  CaregiverIntervention: 'CAREGIVER_INTERVENTION',
 };
 
 export const BALANCE_STAGE_ORDER = [
@@ -63,21 +68,25 @@ function average(values = []) {
 }
 
 function point(frame, index) {
-  return landmarkByIndex(frame, index);
+  return worldLandmarkByIndex(frame, index);
 }
 
-function visible(testPoint, minVisibility = 0.25) {
+function normalizedPoint(frame, index) {
+  return landmarkByIndex(frame?.normalizedLandmarks || [], index);
+}
+
+function visible(testPoint, minVisibility = balanceConfig.geometry.minimumVisibility) {
   return Boolean(testPoint && finite(testPoint.x) && finite(testPoint.y) && (testPoint.visibility ?? 0) >= minVisibility);
 }
 
 function distance(first, second) {
   if (!first || !second || !finite(first.x) || !finite(first.y) || !finite(second.x) || !finite(second.y)) return null;
-  return Math.hypot(first.x - second.x, first.y - second.y);
+  return Math.hypot(first.x - second.x, (first.z ?? 0) - (second.z ?? 0));
 }
 
 function vector(first, second) {
   if (!first || !second || !finite(first.x) || !finite(first.y) || !finite(second.x) || !finite(second.y)) return null;
-  return { x: second.x - first.x, y: second.y - first.y };
+  return { x: second.x - first.x, y: (second.z ?? 0) - (first.z ?? 0) };
 }
 
 function magnitude(item) {
@@ -122,7 +131,7 @@ function footLandmarks(frame, side) {
   };
 }
 
-function pelvisCenter(frame, minVisibility = 0.25) {
+function pelvisCenter(frame, minVisibility = balanceConfig.geometry.minimumVisibility) {
   const leftHip = point(frame, LandmarkIndexes.LeftHip);
   const rightHip = point(frame, LandmarkIndexes.RightHip);
   if (!visible(leftHip, minVisibility) || !visible(rightHip, minVisibility)) return null;
@@ -131,6 +140,16 @@ function pelvisCenter(frame, minVisibility = 0.25) {
     y: (leftHip.y + rightHip.y) / 2,
     z: average([leftHip.z, rightHip.z]),
     visibility: average([leftHip.visibility, rightHip.visibility]) ?? 0,
+  };
+}
+
+function normalizedPelvisCenter(frame, minVisibility = balanceConfig.geometry.minimumVisibility) {
+  const leftHip = normalizedPoint(frame, LandmarkIndexes.LeftHip);
+  const rightHip = normalizedPoint(frame, LandmarkIndexes.RightHip);
+  if (!visible(leftHip, minVisibility) || !visible(rightHip, minVisibility)) return null;
+  return {
+    x: (leftHip.x + rightHip.x) / 2,
+    y: (leftHip.y + rightHip.y) / 2,
   };
 }
 
@@ -148,7 +167,7 @@ function inFrame(pointValue, margin = 0.04) {
 
 function footSnapshot(frame, side, minVisibility) {
   const landmarks = footLandmarks(frame, side);
-  const center = footCenter(frame, side, minVisibility);
+  const center = worldFootCenter(frame, side, minVisibility);
   const heelToeVector = vector(landmarks.heel, landmarks.toe);
   return {
     side,
@@ -179,8 +198,8 @@ function supportObservation(frame, supportRoi, config) {
       sides: [],
     };
   }
-  const leftWrist = point(frame, LandmarkIndexes.LeftWrist);
-  const rightWrist = point(frame, LandmarkIndexes.RightWrist);
+  const leftWrist = normalizedPoint(frame, LandmarkIndexes.LeftWrist);
+  const rightWrist = normalizedPoint(frame, LandmarkIndexes.RightWrist);
   const sides = [];
   if (visible(leftWrist, config.support.wristConfidenceMin) && supportRoiContains(leftWrist, supportRoi)) sides.push('left');
   if (visible(rightWrist, config.support.wristConfidenceMin) && supportRoiContains(rightWrist, supportRoi)) sides.push('right');
@@ -190,6 +209,33 @@ function supportObservation(frame, supportRoi, config) {
     confidence: landmarkConfidence([leftWrist, rightWrist]),
     sides,
   };
+}
+
+function caregiverInterventionObservation(frame, config) {
+  const minVisibility = config.support.personLandmarkVisibilityMin;
+  const leftShoulder = normalizedPoint(frame, LandmarkIndexes.LeftShoulder);
+  const rightShoulder = normalizedPoint(frame, LandmarkIndexes.RightShoulder);
+  const leftHip = normalizedPoint(frame, LandmarkIndexes.LeftHip);
+  const rightHip = normalizedPoint(frame, LandmarkIndexes.RightHip);
+  if (![leftShoulder, rightShoulder, leftHip, rightHip].every((item) => visible(item, minVisibility))) {
+    return { candidate: false, personIndex: null, wristSide: null };
+  }
+  const roi = {
+    minX: Math.min(leftShoulder.x, rightShoulder.x, leftHip.x, rightHip.x),
+    maxX: Math.max(leftShoulder.x, rightShoulder.x, leftHip.x, rightHip.x),
+    minY: Math.min(leftShoulder.y, rightShoulder.y),
+    maxY: Math.max(leftHip.y, rightHip.y),
+  };
+  for (let personIndex = 0; personIndex < (frame?.secondaryPeople || []).length; personIndex += 1) {
+    const landmarks = frame.secondaryPeople[personIndex].normalizedLandmarks || [];
+    for (const [wristSide, index] of [['left', LandmarkIndexes.LeftWrist], ['right', LandmarkIndexes.RightWrist]]) {
+      const wrist = landmarkByIndex(landmarks, index);
+      if (visible(wrist, minVisibility) && wrist.x >= roi.minX && wrist.x <= roi.maxX && wrist.y >= roi.minY && wrist.y <= roi.maxY) {
+        return { candidate: true, personIndex: personIndex + 2, wristSide, torsoRoi: roi };
+      }
+    }
+  }
+  return { candidate: false, personIndex: null, wristSide: null, torsoRoi: roi };
 }
 
 function footReferenceFromCalibration(calibrationProfile) {
@@ -270,10 +316,10 @@ function calculateObservability({
   const calibrationAngle = calibrationProfile?.camera?.estimatedAngleDegrees;
   const cameraView = calibrationProfile?.camera?.view || qualityStatus?.camera?.view || 'UNKNOWN';
   const cameraAngleObservable = cameraView !== 'FRONT'
-    && (!finite(calibrationAngle) || calibrationAngle >= 20);
+    && (!finite(calibrationAngle) || calibrationAngle >= config.camera.minimumObliqueAngleDegrees);
   const footPlaneScore = Math.min(
     vectorObservability / config.camera.minFootVectorVerticalComponent,
-    qualityObservable || cameraAngleObservable ? 1 : 0.35,
+    qualityObservable || cameraAngleObservable ? 1 : config.camera.observabilityFallbackScore,
   );
   const footConfidence = average([left.confidence, right.confidence]) ?? 0;
   const allFootLandmarksVisible = heelsVisible && toesVisible && anklesVisible;
@@ -326,7 +372,7 @@ function calculateBalanceFeatures({
 } = {}) {
   const left = footSnapshot(poseFrame, 'left', config.camera.minFootLandmarkConfidence);
   const right = footSnapshot(poseFrame, 'right', config.camera.minFootLandmarkConfidence);
-  const scale = bodyScale(poseFrame);
+  const scale = worldBodyScale(poseFrame);
   const measuredFootLength = average([
     distance(left.heel, left.toe),
     distance(right.heel, right.toe),
@@ -334,24 +380,28 @@ function calculateBalanceFeatures({
   const footLength = calibrationProfile?.bodyScale?.averageFootLength
     || measuredFootLength
     || scale.averageFootLength
-    || 0.08;
+    || config.geometry.fallbackFootLengthMeters;
   const leftRightCenterDistance = left.center && right.center ? distance(left.center, right.center) : null;
   const ankleDistance = visible(left.ankle, 0) && visible(right.ankle, 0) ? distance(left.ankle, right.ankle) : null;
-  const anteriorPosteriorSeparation = left.center && right.center ? Math.abs(left.center.y - right.center.y) : null;
-  const lateralSeparation = left.center && right.center ? Math.abs(left.center.x - right.center.x) : null;
+  const anteriorPosteriorSeparation = visible(left.ankle, 0) && visible(right.ankle, 0)
+    ? Math.abs(left.ankle.z - right.ankle.z) : null;
+  const lateralSeparation = visible(left.ankle, 0) && visible(right.ankle, 0)
+    ? Math.abs(left.ankle.x - right.ankle.x) : null;
   const heelToeGap = Math.min(
     distance(left.heel, right.toe) ?? Number.POSITIVE_INFINITY,
     distance(right.heel, left.toe) ?? Number.POSITIVE_INFINITY,
   );
   const parallelRaw = normalizedDot(left.heelToeVector, right.heelToeVector);
   const parallelScore = finite(parallelRaw) ? Math.abs(parallelRaw) : 0;
-  const pelvis = pelvisCenter(poseFrame, 0.25);
+  const pelvis = pelvisCenter(poseFrame, config.geometry.minimumVisibility);
+  const normalizedPelvis = normalizedPelvisCenter(poseFrame, config.geometry.minimumVisibility);
   const baseline = calibrationFootBaseline(calibrationProfile, { left, right });
   const leftLift = footLiftFromBaseline(left, baseline.left, footLength);
   const rightLift = footLiftFromBaseline(right, baseline.right, footLength);
   const leftBaselineMove = displacementFromBaseline(left.center, baseline.left?.center, footLength);
   const rightBaselineMove = displacementFromBaseline(right.center, baseline.right?.center, footLength);
   const support = supportObservation(poseFrame, supportRoi, config);
+  const caregiverIntervention = caregiverInterventionObservation(poseFrame, config);
   const observability = calculateObservability({
     frame: poseFrame,
     left,
@@ -373,55 +423,31 @@ function calculateBalanceFeatures({
     rightBaselineMove,
   };
   const footConfidence = observability.footConfidence;
+  const ankleVerticalDifference = visible(left.ankle, 0) && visible(right.ankle, 0)
+    ? (left.ankle.y - right.ankle.y) / footLength : 0;
+  normalized.leftLift = ankleVerticalDifference;
+  normalized.rightLift = -ankleVerticalDifference;
   const maxFootLift = Math.max(normalized.leftLift ?? 0, normalized.rightLift ?? 0);
   const minFootLift = Math.min(normalized.leftLift ?? 0, normalized.rightLift ?? 0);
   const footLiftDominance = maxFootLift - minFootLift;
   const twoFootContactScore = finite(footLiftDominance)
-    ? scoreAtMost(footLiftDominance, config.position.oneLeg.liftedFootMinHeightFootLengths * 0.55)
+    ? scoreAtMost(
+      footLiftDominance,
+      config.position.oneLeg.liftedFootMinHeightFootLengths * config.geometry.twoFootContactLiftFraction,
+    )
     : 1;
-  const sideBySideScore = Math.min(
-    twoFootContactScore,
-    scoreBetween(
-      normalized.lateralSeparation,
-      config.position.sideBySide.lateralMinFootLengths,
-      config.position.sideBySide.lateralMaxFootLengths,
-    ),
-    scoreAtMost(
-      normalized.anteriorPosteriorSeparation,
-      config.position.sideBySide.anteriorPosteriorMaxFootLengths,
-    ),
-    scoreAtLeast(parallelScore, config.position.sideBySide.parallelMin),
-  );
-  const semiTandemScore = Math.min(
-    twoFootContactScore,
-    scoreBetween(
-      normalized.lateralSeparation,
-      config.position.semiTandem.lateralMinFootLengths,
-      config.position.semiTandem.lateralMaxFootLengths,
-    ),
-    scoreBetween(
-      normalized.anteriorPosteriorSeparation,
-      config.position.semiTandem.anteriorPosteriorMinFootLengths,
-      config.position.semiTandem.anteriorPosteriorMaxFootLengths,
-    ),
-    scoreBetween(
-      normalized.heelToToeGap,
-      config.position.semiTandem.heelToeGapMinFootLengths,
-      config.position.semiTandem.heelToeGapMaxFootLengths,
-    ),
-    scoreAtLeast(parallelScore, config.position.semiTandem.parallelMin),
-  );
-  const tandemScore = Math.min(
-    twoFootContactScore,
-    scoreAtMost(normalized.lateralSeparation, config.position.tandem.lateralMaxFootLengths),
-    scoreBetween(
-      normalized.anteriorPosteriorSeparation,
-      config.position.tandem.anteriorPosteriorMinFootLengths,
-      config.position.tandem.anteriorPosteriorMaxFootLengths,
-    ),
-    scoreAtMost(normalized.heelToToeGap, config.position.tandem.heelToeGapMaxFootLengths),
-    scoreAtLeast(parallelScore, config.position.tandem.parallelMin),
-  );
+  const sideBySideScore = twoFootContactScore > 0
+    && normalized.anteriorPosteriorSeparation <= config.position.sideBySide.anteriorPosteriorMaxFootLengths
+    && normalized.lateralSeparation <= config.position.sideBySide.lateralMaxFootLengths ? 1 : 0;
+  const semiTandemScore = twoFootContactScore > 0
+    && normalized.anteriorPosteriorSeparation >= config.position.semiTandem.anteriorPosteriorMinFootLengths
+    && normalized.anteriorPosteriorSeparation <= config.position.semiTandem.anteriorPosteriorMaxFootLengths
+    && normalized.lateralSeparation <= config.position.semiTandem.lateralMaxFootLengths ? 1 : 0;
+  const tandemScore = twoFootContactScore > 0
+    && normalized.anteriorPosteriorSeparation >= config.position.tandem.anteriorPosteriorMinFootLengths
+    && normalized.anteriorPosteriorSeparation <= config.position.tandem.anteriorPosteriorMaxFootLengths
+    && normalized.lateralSeparation <= config.position.tandem.lateralMaxFootLengths
+    && normalized.heelToToeGap <= config.position.tandem.heelToeGapMaxFootLengths ? 1 : 0;
   const leftSupportStable = scoreAtMost(
     normalized.leftBaselineMove,
     config.position.oneLeg.supportFootMaxMovementFootLengths,
@@ -431,14 +457,14 @@ function calculateBalanceFeatures({
     config.position.oneLeg.supportFootMaxMovementFootLengths,
   );
   const oneLegLeftLiftedScore = Math.min(
-    scoreAtLeast(normalized.leftLift, config.position.oneLeg.liftedFootMinHeightFootLengths),
-    rightSupportStable,
-    inFrame(pelvis, config.position.oneLeg.pelvisInFrameMargin) ? 1 : 0,
+    normalized.leftLift >= config.position.oneLeg.liftedFootMinHeightFootLengths ? 1 : 0,
+    rightSupportStable >= 1 ? 1 : 0,
+    inFrame(normalizedPelvis, config.position.oneLeg.pelvisInFrameMargin) ? 1 : 0,
   );
   const oneLegRightLiftedScore = Math.min(
-    scoreAtLeast(normalized.rightLift, config.position.oneLeg.liftedFootMinHeightFootLengths),
-    leftSupportStable,
-    inFrame(pelvis, config.position.oneLeg.pelvisInFrameMargin) ? 1 : 0,
+    normalized.rightLift >= config.position.oneLeg.liftedFootMinHeightFootLengths ? 1 : 0,
+    leftSupportStable >= 1 ? 1 : 0,
+    inFrame(normalizedPelvis, config.position.oneLeg.pelvisInFrameMargin) ? 1 : 0,
   );
   const oneLegScore = Math.max(oneLegLeftLiftedScore, oneLegRightLiftedScore);
   const liftedFoot = oneLegLeftLiftedScore >= oneLegRightLiftedScore ? 'left' : 'right';
@@ -450,6 +476,7 @@ function calculateBalanceFeatures({
     left,
     right,
     pelvis,
+    normalizedPelvis,
     footLength,
     normalized,
     parallelScore,
@@ -473,6 +500,7 @@ function calculateBalanceFeatures({
       rightSupportStable,
     },
     support,
+    caregiverIntervention,
     valid: qualityStatus?.state === QualityStates.Ready
       && observability.footConfidence >= config.position.minimumFootConfidence,
   };
@@ -488,18 +516,10 @@ function bestCompetingScore(scores, targetStage) {
 }
 
 function targetPositionMatched(features, targetStage, config) {
-  if (!features?.observability?.placementObservable) {
-    return {
-      matched: false,
-      reasonCode: BalanceFailureReasons.CameraNotObservable,
-      userMessage: features?.observability?.userMessage || config.camera.ambiguousUserMessage,
-    };
-  }
   const targetScore = features.scores[targetStage] ?? 0;
   const competitor = bestCompetingScore(features.scores, targetStage);
   const scoreMargin = targetScore - competitor;
-  const matched = targetScore >= config.position.minimumTargetScore
-    && scoreMargin >= config.position.minimumScoreMargin
+  const matched = targetScore === 1
     && features.footConfidence >= config.position.minimumFootConfidence;
   return {
     matched,
@@ -516,11 +536,13 @@ function positionSnapshot(features) {
     footPositions: normalizedFootPositions(features),
     left: {
       center: features.left.center,
+      ankle: features.left.ankle,
       heel: features.left.heel,
       toe: features.left.toe,
     },
     right: {
       center: features.right.center,
+      ankle: features.right.ankle,
       heel: features.right.heel,
       toe: features.right.toe,
     },
@@ -587,6 +609,8 @@ function initialStages() {
     status: BalanceStageStatuses.NotAttempted,
     positionConfidence: 0,
     holdDurationSeconds: 0,
+    onsetLatencyMs: null,
+    sway: null,
   }));
 }
 
@@ -627,7 +651,9 @@ export function createBalanceTestStateMachine({
     pelvisPathLengthFootLengths: 0,
     lastPelvis: null,
     invalidatedByCameraMotion: false,
+    pelvisSamples: [],
   };
+  let acquisitionStartedAtMs = startedAtMs;
 
   function currentStage() {
     return BALANCE_STAGE_ORDER[currentStageIndex];
@@ -640,6 +666,7 @@ export function createBalanceTestStateMachine({
         status,
         positionConfidence: features?.scores?.[currentStage()] ?? stage.positionConfidence,
         holdDurationSeconds: holdMs / 1000,
+        sway: finite(holdStartedAtMs) ? swayMetrics() : stage.sway,
         ...(failureReason ? { failureReason } : {}),
       }
       : stage));
@@ -743,6 +770,51 @@ export function createBalanceTestStateMachine({
       if (finite(pelvisDelta)) swayObservation.pelvisPathLengthFootLengths += pelvisDelta;
     }
     swayObservation.lastPelvis = features.pelvis;
+    swayObservation.pelvisSamples.push({
+      timestampMs: features.timestampMs,
+      ml: features.pelvis.x,
+      ap: features.pelvis.z,
+    });
+  }
+
+  function rms(values = []) {
+    if (!values.length) return null;
+    const mean = average(values);
+    return Math.sqrt(average(values.map((value) => (value - mean) ** 2)));
+  }
+
+  function planarRms(samples = []) {
+    if (!samples.length) return null;
+    const meanMl = average(samples.map((sample) => sample.ml));
+    const meanAp = average(samples.map((sample) => sample.ap));
+    return Math.sqrt(average(samples.map((sample) => (
+      (sample.ml - meanMl) ** 2 + (sample.ap - meanAp) ** 2
+    ))));
+  }
+
+  function swayMetrics() {
+    const samples = swayObservation.pelvisSamples || [];
+    const initial = samples.filter((sample) => sample.timestampMs - holdStartedAtMs <= config.sway.initialWindowMs);
+    const stationary = samples.filter((sample) => sample.timestampMs - holdStartedAtMs > config.sway.staticWindowStartMs);
+    const mlRms = rms(samples.map((sample) => sample.ml));
+    const apRms = rms(samples.map((sample) => sample.ap));
+    const initialRms = planarRms(initial);
+    const staticRms = planarRms(stationary);
+    return {
+      observationId: `sway-${assessmentId}-${currentStage()}`,
+      type: 'MEDIOLATERAL_SWAY_PATTERN',
+      confidence: latestFeatures?.footConfidence ?? 0,
+      evidenceEventIds: [],
+      affectsClinicalScore: false,
+      mlRms,
+      apRms,
+      initialRms,
+      staticRms,
+      ratios: {
+        initialToStatic: finite(initialRms) && staticRms > 0 ? initialRms / staticRms : null,
+        mlToAp: finite(mlRms) && apRms > 0 ? mlRms / apRms : null,
+      },
+    };
   }
 
   function startHold(features) {
@@ -754,10 +826,14 @@ export function createBalanceTestStateMachine({
     supportSinceMs = null;
     touchDownSinceMs = null;
     holdBaseline = positionSnapshot(features);
+    stages = stages.map((stage) => stage.stage === currentStage()
+      ? { ...stage, onsetLatencyMs: Math.max(0, features.timestampMs - acquisitionStartedAtMs) }
+      : stage);
     swayObservation = {
       pelvisPathLengthFootLengths: 0,
       lastPelvis: features.pelvis,
       invalidatedByCameraMotion: false,
+      pelvisSamples: [],
     };
     transition(BalanceTestMachineStates.PositionConfirmed, features, AssessmentEventTypes.PositionConfirmed, currentStage(), {
       kind: EvidenceKinds.StateTransition,
@@ -776,20 +852,17 @@ export function createBalanceTestStateMachine({
   }
 
   function holdingFailure(features, matched) {
-    const current = {
-      left: features.left.center,
-      right: features.right.center,
-    };
+    const current = { left: features.left.ankle, right: features.right.ankle };
 
     if (currentStage() === BalanceStages.OneLeg) {
       const liftedFoot = holdBaseline?.oneLeg?.liftedFoot;
       const currentLift = liftedFoot === 'left' ? features.oneLeg.leftLift : features.oneLeg.rightLift;
-      if (currentLift < config.position.oneLeg.liftedFootMinHeightFootLengths * 0.55) {
+      if (currentLift < config.hold.liftedFootTouchDownThreshold) {
         touchDownSinceMs = touchDownSinceMs ?? features.timestampMs;
       } else {
         touchDownSinceMs = null;
       }
-      if (touchDownSinceMs && features.timestampMs - touchDownSinceMs >= config.hold.liftedFootTouchDownDwellMs) {
+      if (touchDownSinceMs !== null && features.timestampMs - touchDownSinceMs >= config.hold.liftedFootTouchDownDwellMs) {
         return {
           eventType: AssessmentEventTypes.LiftedFootTouchedDown,
           reasonCode: BalanceFailureReasons.LiftedFootTouchedDown,
@@ -798,9 +871,19 @@ export function createBalanceTestStateMachine({
       }
     }
 
-    const leftMove = displacementFromBaseline(current.left, holdBaseline?.left?.center, features.footLength);
-    const rightMove = displacementFromBaseline(current.right, holdBaseline?.right?.center, features.footLength);
-    const maxMove = Math.max(leftMove ?? 0, rightMove ?? 0);
+    if (features.caregiverIntervention?.candidate) {
+      return {
+        eventType: AssessmentEventTypes.SupportUsed,
+        reasonCode: BalanceFailureReasons.CaregiverIntervention,
+        evidence: { kind: EvidenceKinds.StateTransition, from: 'NO_INTERVENTION', to: 'SECOND_PERSON_WRIST_IN_TORSO_ROI' },
+      };
+    }
+
+    const leftMove = displacementFromBaseline(current.left, holdBaseline?.left?.ankle, features.footLength);
+    const rightMove = displacementFromBaseline(current.right, holdBaseline?.right?.ankle, features.footLength);
+    const supportFoot = currentStage() === BalanceStages.OneLeg ? holdBaseline?.oneLeg?.supportFoot : null;
+    const relevantMoves = supportFoot === 'left' ? [leftMove] : supportFoot === 'right' ? [rightMove] : [leftMove, rightMove];
+    const maxMove = Math.max(0, ...relevantMoves.filter(finite));
     const simultaneousFootShift = leftMove > config.hold.cameraMotionFootShiftFootLengths
       && rightMove > config.hold.cameraMotionFootShiftFootLengths;
     if (
@@ -813,7 +896,7 @@ export function createBalanceTestStateMachine({
     } else {
       footMoveSinceMs = null;
     }
-    if (footMoveSinceMs && features.timestampMs - footMoveSinceMs >= config.hold.footMoveDwellMs) {
+    if (footMoveSinceMs !== null && features.timestampMs - footMoveSinceMs >= config.hold.footMoveDwellMs) {
       return {
         eventType: AssessmentEventTypes.FootMoved,
         reasonCode: BalanceFailureReasons.FootMoved,
@@ -821,12 +904,12 @@ export function createBalanceTestStateMachine({
       };
     }
 
-    if (!matched.matched && features.observability.placementObservable) {
+    if (!matched.matched) {
       positionLostSinceMs = positionLostSinceMs ?? features.timestampMs;
     } else {
       positionLostSinceMs = null;
     }
-    if (positionLostSinceMs && features.timestampMs - positionLostSinceMs >= config.hold.positionLostDwellMs) {
+    if (positionLostSinceMs !== null && features.timestampMs - positionLostSinceMs >= config.hold.positionLostDwellMs) {
       return {
         eventType: AssessmentEventTypes.PositionLost,
         reasonCode: BalanceFailureReasons.PositionLost,
@@ -843,7 +926,7 @@ export function createBalanceTestStateMachine({
     } else {
       supportSinceMs = null;
     }
-    if (supportSinceMs && features.timestampMs - supportSinceMs >= config.support.roiDwellMs) {
+    if (supportSinceMs !== null && features.timestampMs - supportSinceMs >= config.support.roiDwellMs) {
       return {
         eventType: AssessmentEventTypes.SupportUsed,
         reasonCode: BalanceFailureReasons.SupportUsed,
@@ -910,6 +993,7 @@ export function createBalanceTestStateMachine({
     }
 
     if (state === BalanceTestMachineStates.Setup) {
+      acquisitionStartedAtMs = features.timestampMs;
       setStageStatus(BalanceStageStatuses.NotAttempted, features, 0);
       transition(BalanceTestMachineStates.AcquiringPosition, features, AssessmentEventTypes.PoseAcquired, 'SETUP_READY', transitionEvidence(BalanceTestMachineStates.Setup, BalanceTestMachineStates.AcquiringPosition));
     }
@@ -919,6 +1003,11 @@ export function createBalanceTestStateMachine({
     updateSway(features);
 
     if (state === BalanceTestMachineStates.AcquiringPosition || state === BalanceTestMachineStates.PositionConfirmed) {
+      if (features.timestampMs - acquisitionStartedAtMs >= config.positionEntryTimeoutMs) {
+        fail(features, BalanceFailureReasons.UnableToAssumePosition, AssessmentEventTypes.HoldFailed, durationEvidence(features.timestampMs - acquisitionStartedAtMs, config.positionEntryTimeoutMs));
+        recordDebug(features, AssessmentEventTypes.HoldFailed);
+        return snapshot(events.slice(frameEventsStartIndex));
+      }
       if (matched.matched) {
         positionCandidateSinceMs = positionCandidateSinceMs ?? features.timestampMs;
         if (features.timestampMs - positionCandidateSinceMs >= config.position.confirmationDwellMs) {
@@ -967,11 +1056,23 @@ export function createBalanceTestStateMachine({
     touchDownSinceMs = null;
     failureReason = null;
     latestMatch = null;
+    acquisitionStartedAtMs = previousTimestampMs;
     return { ok: true, completed: false, snapshot: snapshot([]) };
   }
 
   function finish({ completedAt = previousTimestampMs ?? Date.now() } = {}) {
-    if (!TERMINAL_STATES.has(state) && state !== BalanceTestMachineStates.Failed) {
+    if (state === BalanceTestMachineStates.Failed) {
+      completedAtMs = completedAt;
+      pushEvent(events, createEvent({
+        sessionId,
+        type: AssessmentEventTypes.AssessmentCompleted,
+        timestampMs: completedAt,
+        frameId: latestFeatures?.frameId,
+        confidence: latestFeatures?.footConfidence,
+        reasonCode: failureReason || 'PROTOCOL_STOPPED',
+        evidence: durationEvidence(holdElapsedAt(completedAt), config.hold.targetHoldMs),
+      }));
+    } else if (!TERMINAL_STATES.has(state)) {
       completedAtMs = completedAt;
       transition(BalanceTestMachineStates.Completed, latestFeatures, AssessmentEventTypes.AssessmentCompleted, 'FINISHED', durationEvidence(Math.max(0, completedAt - (startedAtMs ?? completedAt)), config.hold.targetHoldMs));
     }
@@ -999,7 +1100,9 @@ export function createBalanceTestStateMachine({
         ...swayObservation,
         affectsClinicalScore: false,
       },
+      swayMetrics: swayMetrics(),
       completedAtMs,
+      supportRoi,
       debugTimeline: debugTimeline.slice(),
     };
   }

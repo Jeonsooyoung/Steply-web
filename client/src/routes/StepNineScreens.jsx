@@ -6,18 +6,10 @@ import {
   PrimaryActionBar,
 } from '../components/foundation/SteplyDesignSystem';
 import { displayNavigationItems } from './steplyRoutes';
-
-function queryParams() {
-  if (typeof window === 'undefined') return new URLSearchParams();
-  return new URLSearchParams(window.location.search);
-}
-
-function queryValue(name, fallback = '') {
-  return queryParams().get(name) || fallback;
-}
+import { navigateSpa } from './spaNavigation';
 
 function goTo(path) {
-  if (typeof window !== 'undefined') window.location.assign(path);
+  navigateSpa(path);
 }
 
 function titleCase(value = '') {
@@ -61,12 +53,19 @@ const exactCameraMessages = [
   'Only one person should remain in the assessment area.',
 ];
 
-function invalidDetails() {
-  const reason = queryValue('reason', 'Camera quality was too low.');
-  const saved = queryValue('saved', 'no') === 'yes'
-    ? 'A partial measurement was saved for review, but it is not used in trends.'
-    : 'No result was saved for this measurement.';
-  const correction = queryValue('correction', 'Adjust the camera so your full body and both feet are visible.');
+function invalidDetails(dashboard) {
+  const result = dashboard?.finalResult || dashboard?.poseAnalysis?.analysisResult || null;
+  const reason = dashboard?.error
+    || dashboard?.poseAnalysis?.error
+    || result?.invalidReason
+    || result?.errorCode
+    || 'No completed measurement is available.';
+  const saved = result?.id
+    ? 'The stored result is available for review according to its recorded validity status.'
+    : 'No completed result was saved for this measurement.';
+  const correction = dashboard?.poseAnalysis?.cameraReadiness?.userMessage
+    || dashboard?.poseAnalysis?.trackingQuality?.userMessage
+    || 'Return to camera setup and follow the current framing guidance.';
   return { reason, saved, correction };
 }
 
@@ -95,7 +94,7 @@ function errorContentFor(type) {
       voice: 'Phone connection lost. The assessment has been paused.',
       primaryLabel: 'Reconnect',
       secondaryLabel: 'End Session',
-      primaryPath: '/display/connect?state=lost',
+      primaryPath: '/display/connect',
       secondaryPath: '/display/error/end-assessment-confirmation',
     };
   }
@@ -111,7 +110,7 @@ function errorContentFor(type) {
       primaryLabel: 'Contact Caregiver',
       secondaryLabel: 'End Session',
       primaryPath: '',
-      secondaryPath: '/display/session/complete?status=symptom',
+      secondaryPath: '/display/session/complete',
     };
   }
 
@@ -125,8 +124,8 @@ function errorContentFor(type) {
       voice: 'A healthcare professional should review your results before you begin more challenging exercises.',
       primaryLabel: 'View Professional Guidance',
       secondaryLabel: 'View Supported Exercises',
-      primaryPath: '/display/reports?view=professional',
-      secondaryPath: '/display/exercises/plan?restricted=1',
+      primaryPath: '/display/reports',
+      secondaryPath: '/display/exercises/plan',
     };
   }
 
@@ -140,7 +139,7 @@ function errorContentFor(type) {
       voice: 'End this assessment? Current timers and live analysis will stop.',
       primaryLabel: 'End Assessment',
       secondaryLabel: 'Return to Assessment',
-      primaryPath: '/display/session/complete?status=partial',
+      primaryPath: '/display/session/complete',
       secondaryPath: '/display/home',
     };
   }
@@ -159,10 +158,10 @@ function errorContentFor(type) {
   };
 }
 
-export function DisplayErrorStateScreen() {
+export function DisplayErrorStateScreen({ dashboard }) {
   const type = currentErrorState();
   const state = errorContentFor(type);
-  const invalid = invalidDetails();
+  const invalid = invalidDetails(dashboard);
   const [status, setStatus] = useState('');
 
   function handlePrimary() {
@@ -178,7 +177,7 @@ export function DisplayErrorStateScreen() {
       setStatus('Open your browser camera settings and allow camera access for Steply.');
       return;
     }
-    goTo(state.secondaryPath || '/display/session/complete?status=partial');
+    goTo(state.secondaryPath || '/display/session/complete');
   }
 
   return (

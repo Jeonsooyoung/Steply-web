@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/care-agent-state-v1.schema.json",
+  "title": "Steply Care Agent State v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "profileId", "stateVersion", "input", "latestDecisionId", "updatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "care_agent_state.v1" },
+    "profileId": { "$ref": "#/$defs/id" },
+    "stateVersion": { "type": "integer", "minimum": 0 },
+    "input": { "$ref": "#/$defs/input" },
+    "latestDecisionId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+    "updatedAt": { "$ref": "#/$defs/epoch" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "epoch": { "type": "integer", "minimum": 0 },
+    "vulnerabilityIds": { "type": "array", "items": { "enum": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"] }, "uniqueItems": true },
+    "profile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profileId", "birthYear", "sex", "sourceUpdatedAt"],
+      "properties": {
+        "profileId": { "$ref": "#/$defs/id" },
+        "birthYear": { "type": "integer", "minimum": 1900 },
+        "sex": { "type": ["string", "null"], "enum": ["MALE", "FEMALE", null] },
+        "sourceUpdatedAt": { "$ref": "#/$defs/epoch" }
+      }
+    },
+    "clinicalReference": {
+      "type": "object", "additionalProperties": false,
+      "required": ["assessmentSessionId", "assessmentRevision", "steadiRuleVersion", "risk", "vulnerabilityRuleVersion", "vulnerabilityIds", "prescriptionPlanId", "prescriptionSchemaVersion", "professionalApprovalStatus", "professionalApprovalId"],
+      "properties": {
+        "assessmentSessionId": { "$ref": "#/$defs/id" },
+        "assessmentRevision": { "type": "integer", "minimum": 0 },
+        "steadiRuleVersion": { "$ref": "#/$defs/id" },
+        "risk": { "enum": ["NOT_SCORABLE", "LOW", "MODERATE", "HIGH"] },
+        "vulnerabilityRuleVersion": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "vulnerabilityIds": { "$ref": "#/$defs/vulnerabilityIds" },
+        "prescriptionPlanId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "prescriptionSchemaVersion": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "professionalApprovalStatus": { "enum": ["NOT_REQUIRED", "PENDING", "APPROVED"] },
+        "professionalApprovalId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] }
+      }
+    },
+    "assessment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["assessmentSessionId", "completedAt", "chairStandRepetitions", "tandemHoldSeconds", "valid"],
+      "properties": {
+        "assessmentSessionId": { "$ref": "#/$defs/id" },
+        "completedAt": { "$ref": "#/$defs/epoch" },
+        "chairStandRepetitions": { "type": "integer", "minimum": 0 },
+        "tandemHoldSeconds": { "type": "number", "minimum": 0, "maximum": 10 },
+        "valid": { "const": true }
+      }
+    },
+    "trend": {
+      "type": "object", "additionalProperties": false,
+      "required": ["declining", "consecutiveDeclines"],
+      "properties": { "declining": { "type": "boolean" }, "consecutiveDeclines": { "type": "integer", "minimum": 0 } }
+    },
+    "adherence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["completedSessionsByWeek", "targetSessionsPerWeek", "consecutiveLowWeeks"],
+      "properties": {
+        "completedSessionsByWeek": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+        "targetSessionsPerWeek": { "type": "integer", "minimum": 1 },
+        "consecutiveLowWeeks": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "safetyEvent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["eventId", "type", "occurredAt", "active"],
+      "properties": { "eventId": { "$ref": "#/$defs/id" }, "type": { "$ref": "#/$defs/id" }, "occurredAt": { "$ref": "#/$defs/epoch" }, "active": { "type": "boolean" } }
+    },
+    "fallReport": {
+      "type": "object", "additionalProperties": false,
+      "required": ["eventId", "occurredAt", "injurious", "unresolved"],
+      "properties": { "eventId": { "$ref": "#/$defs/id" }, "occurredAt": { "$ref": "#/$defs/epoch" }, "injurious": { "type": "boolean" }, "unresolved": { "type": "boolean" } }
+    },
+    "input": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profile", "canonicalClinicalReference", "recentAssessments", "trend", "adherence", "safetyEvents", "fallReports", "invalidAttemptNumerator", "invalidAttemptDenominator", "invalidAttemptRatio", "reassessmentDueAt", "nextPlannedSessionAt", "progressionEligible", "caregiverNotificationsConsented", "perceivedAt"],
+      "properties": {
+        "profile": { "$ref": "#/$defs/profile" },
+        "canonicalClinicalReference": { "$ref": "#/$defs/clinicalReference" },
+        "recentAssessments": { "type": "array", "maxItems": 5, "items": { "$ref": "#/$defs/assessment" } },
+        "trend": { "$ref": "#/$defs/trend" },
+        "adherence": { "$ref": "#/$defs/adherence" },
+        "safetyEvents": { "type": "array", "items": { "$ref": "#/$defs/safetyEvent" } },
+        "fallReports": { "type": "array", "items": { "$ref": "#/$defs/fallReport" } },
+        "invalidAttemptNumerator": { "type": "integer", "minimum": 0 },
+        "invalidAttemptDenominator": { "type": "integer", "minimum": 0 },
+        "invalidAttemptRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "reassessmentDueAt": { "$ref": "#/$defs/epoch" },
+        "nextPlannedSessionAt": { "oneOf": [{ "$ref": "#/$defs/epoch" }, { "type": "null" }] },
+        "progressionEligible": { "type": "boolean" },
+        "caregiverNotificationsConsented": { "type": "boolean" },
+        "perceivedAt": { "$ref": "#/$defs/epoch" }
+      }
+    }
+  }
+}

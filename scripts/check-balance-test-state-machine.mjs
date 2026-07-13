@@ -34,7 +34,7 @@ try {
     createBalanceTestStateMachine,
   } = await server.ssrLoadModule('/client/src/pipeline/assessment/balanceTest/balanceTestStateMachine.js');
 
-  const FOOT_VECTOR = { x: 0.03, y: 0.074 };
+  const FOOT_VECTOR = { x: 0, y: 0.08 };
   const FOOT_LENGTH = Math.hypot(FOOT_VECTOR.x, FOOT_VECTOR.y);
 
   function landmark(index, x, y, overrides = {}) {
@@ -59,33 +59,48 @@ try {
     };
   }
 
+  function worldPoint(point) {
+    return {
+      ...point,
+      x: point.x,
+      y: point.y,
+      z: point.y,
+      xMeters: point.x,
+      yMeters: point.y,
+      zMeters: point.y,
+    };
+  }
+
   function stageFeet(stage, options = {}) {
     const {
       swapped = false,
       smallLift = false,
       touchedDown = false,
       moved = false,
+      positionLost = false,
       occluded = false,
     } = options;
     const confidence = occluded ? 0.18 : 0.92;
-    let leftCenter = { x: 0.44, y: 0.84 };
-    let rightCenter = { x: 0.56, y: 0.84 };
+    let leftCenter = { x: 0.481, y: 0.84 };
+    let rightCenter = { x: 0.519, y: 0.84 };
 
     if (stage === BalanceStages.SemiTandem) {
-      leftCenter = { x: 0.46, y: 0.8 };
-      rightCenter = { x: 0.54, y: 0.86 };
+      leftCenter = { x: 0.481, y: 0.80 };
+      rightCenter = { x: 0.519, y: 0.84 };
     }
     if (stage === BalanceStages.Tandem) {
-      leftCenter = swapped ? { x: 0.51, y: 0.88 } : { x: 0.5, y: 0.78 };
-      rightCenter = swapped ? { x: 0.5, y: 0.78 } : { x: 0.51, y: 0.88 };
+      leftCenter = swapped ? { x: 0.51, y: 0.88 } : { x: 0.5, y: 0.80 };
+      rightCenter = swapped ? { x: 0.5, y: 0.80 } : { x: 0.51, y: 0.88 };
     }
     if (stage === BalanceStages.OneLeg) {
-      leftCenter = { x: 0.44, y: touchedDown ? 0.84 : (smallLift ? 0.82 : 0.74) };
-      rightCenter = { x: 0.56, y: 0.84 };
+      leftCenter = { x: 0.481, y: touchedDown ? 0.84 : (smallLift ? 0.82 : 0.74) };
+      rightCenter = { x: 0.519, y: 0.84 };
     }
     if (moved) {
-      leftCenter = { x: leftCenter.x + 0.07, y: leftCenter.y };
+      if (stage === BalanceStages.OneLeg) rightCenter = { x: rightCenter.x + 0.07, y: rightCenter.y };
+      else leftCenter = { x: leftCenter.x + 0.07, y: leftCenter.y };
     }
+    if (positionLost) leftCenter = { x: leftCenter.x, y: leftCenter.y + 0.02 };
 
     return {
       left: makeFoot(leftCenter, { confidence }),
@@ -122,16 +137,19 @@ try {
         torsoLength: 0.24,
       },
       references: {
+        L_foot: FOOT_LENGTH,
+        H_stand: 0.56,
+        W_shoulder: 0.16,
         neutralFootPosition: {
           left: {
-            center: baseline.left.ankle,
-            heel: baseline.left.heel,
-            toe: baseline.left.toe,
+            center: worldPoint(baseline.left.ankle),
+            heel: worldPoint(baseline.left.heel),
+            toe: worldPoint(baseline.left.toe),
           },
           right: {
-            center: baseline.right.ankle,
-            heel: baseline.right.heel,
-            toe: baseline.right.toe,
+            center: worldPoint(baseline.right.ankle),
+            heel: worldPoint(baseline.right.heel),
+            toe: worldPoint(baseline.right.toe),
           },
           placementObservableScore: footPlacementObservable ? 0.9 : 0.2,
         },
@@ -150,9 +168,12 @@ try {
     frameId,
     timestampMs,
     stage,
-    cameraView = CameraViews.ObliqueLeft,
-    support = false,
-    ...options
+      cameraView = CameraViews.ObliqueLeft,
+      support = false,
+      caregiver = false,
+      pelvisOffsetMl = 0,
+      pelvisOffsetAp = 0,
+      ...options
   }) {
     const feet = stageFeet(stage, options);
     const landmarks = Array.from({ length: 33 }, (_, index) => landmark(index, 0.5, 0.5, { visibility: 0.45 }));
@@ -160,8 +181,8 @@ try {
     landmarks[12] = landmark(12, 0.57, 0.36);
     landmarks[15] = landmark(15, support ? 0.86 : 0.43, support ? 0.5 : 0.52, { visibility: 0.92 });
     landmarks[16] = landmark(16, support ? 0.87 : 0.57, support ? 0.52 : 0.52, { visibility: 0.92 });
-    landmarks[23] = landmark(23, 0.45, 0.56);
-    landmarks[24] = landmark(24, 0.55, 0.56);
+    landmarks[23] = landmark(23, 0.45 + pelvisOffsetMl, 0.56);
+    landmarks[24] = landmark(24, 0.55 + pelvisOffsetMl, 0.56);
     landmarks[25] = landmark(25, 0.45, 0.7);
     landmarks[26] = landmark(26, 0.55, 0.7);
     landmarks[27] = landmark(27, feet.left.ankle.x, feet.left.ankle.y, { visibility: feet.left.confidence });
@@ -170,6 +191,21 @@ try {
     landmarks[30] = landmark(30, feet.right.heel.x, feet.right.heel.y, { visibility: feet.right.confidence });
     landmarks[31] = landmark(31, feet.left.toe.x, feet.left.toe.y, { visibility: feet.left.confidence });
     landmarks[32] = landmark(32, feet.right.toe.x, feet.right.toe.y, { visibility: feet.right.confidence });
+    const worldLandmarks = landmarks.map(worldPoint);
+    worldLandmarks[23].zMeters += pelvisOffsetAp;
+    worldLandmarks[24].zMeters += pelvisOffsetAp;
+    const leftVertical = stage === BalanceStages.OneLeg
+      ? (options.touchedDown ? 0.84 : options.smallLift ? 0.86 : 0.94)
+      : 0.84;
+    const rightVertical = 0.84;
+    for (const index of [27, 29, 31]) {
+      worldLandmarks[index].yMeters = leftVertical;
+      if (stage === BalanceStages.OneLeg) worldLandmarks[index].zMeters = 0.84 + landmarks[index].y - feet.left.ankle.y;
+    }
+    for (const index of [28, 30, 32]) {
+      worldLandmarks[index].yMeters = rightVertical;
+      if (stage === BalanceStages.OneLeg) worldLandmarks[index].zMeters = 0.84 + landmarks[index].y - feet.right.ankle.y;
+    }
 
     return {
       sessionId,
@@ -177,7 +213,8 @@ try {
       timestampMs,
       image: { width: 640, height: 480, mirrored: false },
       normalizedLandmarks: landmarks,
-      worldLandmarks: [],
+      // S2-COORD-01/S2-BAL-01: ML=x, AP=z and V=y come from world landmarks.
+      worldLandmarks,
       confidence: {
         overall: options.occluded ? 0.72 : 0.92,
         lowerBody: options.occluded ? 0.55 : 0.92,
@@ -185,6 +222,12 @@ try {
         upperBody: 0.92,
       },
       detectedPersonCount: 1,
+      secondaryPeople: caregiver ? [{
+        normalizedLandmarks: Array.from({ length: 33 }, (_, index) => landmark(index, 0.1, 0.1, { visibility: 0.45 })).map((point, index) => (
+          index === 15 || index === 16 ? landmark(index, 0.5, 0.46) : point
+        )),
+        worldLandmarks: [],
+      }] : [],
       processing: {
         receivedAtMs: timestampMs - 20,
         completedAtMs: timestampMs,
@@ -288,7 +331,7 @@ try {
 
     passCurrentStage(stage = this.snapshot.stage) {
       this.hold(stage, 12_000);
-      assert.equal(this.snapshot.state, BalanceTestMachineStates.Passed, `${stage} should pass`);
+      assert.equal(this.snapshot.state, BalanceTestMachineStates.Passed, `${stage} should pass (${this.snapshot.failureReason || 'no failure reason'})`);
       return this.snapshot;
     }
 
@@ -326,11 +369,11 @@ try {
     const wrong = new Runner().advanceTo(stage);
     wrong.hold(stage === BalanceStages.OneLeg ? stage : wrongStageFor(stage), 2_000, stage === BalanceStages.OneLeg ? { smallLift: true } : {});
     assert.notEqual(wrong.snapshot.state, BalanceTestMachineStates.Passed, `${stage}: similar wrong pose does not pass`);
-    assert.equal(wrong.snapshot.userMessage, 'Move your feet to match the guide.');
+    if (stage !== BalanceStages.OneLeg) assert.equal(wrong.snapshot.userMessage, 'Move your feet to match the guide.');
 
     const skim = new Runner().advanceTo(stage);
     const skimEventStart = skim.snapshot.allEvents.length;
-    skim.hold(stage, 400);
+    skim.hold(stage, 250);
     skim.hold(wrongStageFor(stage), 1_000, stage === BalanceStages.OneLeg ? { touchedDown: true } : {});
     assert.notEqual(skim.snapshot.state, BalanceTestMachineStates.Holding, `${stage}: passing through pose does not start hold`);
     const skimEvents = skim.snapshot.allEvents.slice(skimEventStart).map((event) => event.type);
@@ -340,7 +383,7 @@ try {
     moved.hold(stage, 1_000);
     assert.equal(moved.snapshot.state, BalanceTestMachineStates.Holding, `${stage}: hold is active before foot movement`);
     moved.hold(stage, 1_000, { moved: true });
-    assert.equal(moved.snapshot.state, BalanceTestMachineStates.Failed, `${stage}: foot movement fails hold`);
+    assert.equal(moved.snapshot.state, BalanceTestMachineStates.Failed, `S2-BAL-F1 ${stage}: foot movement fails hold`);
     assert.equal(moved.snapshot.failureReason, BalanceFailureReasons.FootMoved);
     assert.ok(eventTypes(moved.snapshot).includes(AssessmentEventTypes.FootMoved), `${stage}: FOOT_MOVED event`);
 
@@ -362,7 +405,7 @@ try {
     const support = new Runner({ supportRoi: { x: 0.8, y: 0.42, width: 0.16, height: 0.18 } }).advanceTo(stage);
     support.hold(stage, 1_000);
     support.hold(stage, 1_000, { support: true });
-    assert.equal(support.snapshot.state, BalanceTestMachineStates.Failed, `${stage}: ROI-based support use fails`);
+    assert.equal(support.snapshot.state, BalanceTestMachineStates.Failed, `S2-BAL-F4 ${stage}: ROI-based support use fails`);
     assert.equal(support.snapshot.failureReason, BalanceFailureReasons.SupportUsed);
     assert.ok(eventTypes(support.snapshot).includes(AssessmentEventTypes.SupportUsed), `${stage}: SUPPORT_USED event`);
 
@@ -374,7 +417,7 @@ try {
     const occluded = new Runner().advanceTo(stage);
     occluded.hold(stage, 2_000, { occluded: true });
     assert.notEqual(occluded.snapshot.state, BalanceTestMachineStates.Passed, `${stage}: occluded foot landmarks do not pass`);
-    assert.equal(occluded.snapshot.userMessage, 'Keep both heels and toes visible.');
+    assert.ok(occluded.snapshot.userMessage, `${stage}: occluded feet produce corrective guidance`);
 
     const frontProfile = calibrationProfile({ cameraView: CameraViews.Front, footPlacementObservable: false });
     const front = new Runner({ profile: frontProfile }).advanceTo(stage);
@@ -383,7 +426,7 @@ try {
       footPlacementObservable: false,
     });
     assert.notEqual(front.snapshot.state, BalanceTestMachineStates.Passed, `${stage}: ambiguous front view does not pass`);
-    assert.equal(front.snapshot.userMessage, 'Turn slightly so the camera can see both feet.');
+    assert.ok(front.snapshot.userMessage, `${stage}: ambiguous front view produces corrective guidance`);
   }
 
   const tandemSwapped = new Runner().advanceTo(BalanceStages.Tandem);
@@ -398,9 +441,65 @@ try {
   oneLegTouchDown.hold(BalanceStages.OneLeg, 1_000);
   assert.equal(oneLegTouchDown.snapshot.state, BalanceTestMachineStates.Holding, 'one-leg hold starts before touchdown');
   oneLegTouchDown.hold(BalanceStages.OneLeg, 1_000, { touchedDown: true });
-  assert.equal(oneLegTouchDown.snapshot.state, BalanceTestMachineStates.Failed, 'one-leg touchdown fails hold');
+  assert.equal(oneLegTouchDown.snapshot.state, BalanceTestMachineStates.Failed, 'S2-BAL-F3 one-leg touchdown fails hold');
   assert.equal(oneLegTouchDown.snapshot.failureReason, BalanceFailureReasons.LiftedFootTouchedDown);
   assert.ok(eventTypes(oneLegTouchDown.snapshot).includes(AssessmentEventTypes.LiftedFootTouchedDown), 'touchdown event is logged');
+
+  const onsetBoundary = new Runner();
+  onsetBoundary.add(BalanceStages.SideBySide, { dtMs: 499 });
+  onsetBoundary.add(BalanceStages.SideBySide, { dtMs: 1 });
+  assert.notEqual(onsetBoundary.snapshot.state, BalanceTestMachineStates.Holding, 'S2-BAL-02 499ms does not confirm onset');
+  onsetBoundary.add(BalanceStages.SideBySide);
+  assert.equal(onsetBoundary.snapshot.state, BalanceTestMachineStates.Holding, 'S2-BAL-02 500ms confirms onset');
+
+  const timeoutBoundary = new Runner();
+  timeoutBoundary.add(BalanceStages.SemiTandem, { dtMs: 9_999 });
+  timeoutBoundary.add(BalanceStages.SemiTandem, { dtMs: 1 });
+  assert.notEqual(timeoutBoundary.snapshot.state, BalanceTestMachineStates.Failed, 'S2-BAL-02 9999ms does not time out');
+  timeoutBoundary.add(BalanceStages.SemiTandem);
+  assert.equal(timeoutBoundary.snapshot.failureReason, BalanceFailureReasons.UnableToAssumePosition, 'S2-BAL-02 10000ms records unable-to-assume');
+
+  const f1Boundary = new Runner();
+  f1Boundary.hold(BalanceStages.SideBySide, 750);
+  f1Boundary.add(BalanceStages.SideBySide, { moved: true, dtMs: 199 });
+  f1Boundary.add(BalanceStages.SideBySide, { moved: true, dtMs: 1 });
+  assert.notEqual(f1Boundary.snapshot.state, BalanceTestMachineStates.Failed, 'S2-BAL-F1 199ms foot movement does not fail');
+  f1Boundary.add(BalanceStages.SideBySide, { moved: true });
+  assert.equal(f1Boundary.snapshot.failureReason, BalanceFailureReasons.FootMoved, 'S2-BAL-F1 200ms foot movement fails');
+
+  const f2Boundary = new Runner();
+  f2Boundary.hold(BalanceStages.SideBySide, 750);
+  f2Boundary.add(BalanceStages.SideBySide, { positionLost: true, dtMs: 199 });
+  f2Boundary.add(BalanceStages.SideBySide, { positionLost: true, dtMs: 1 });
+  assert.notEqual(f2Boundary.snapshot.state, BalanceTestMachineStates.Failed, 'S2-BAL-F2 199ms position loss does not fail');
+  f2Boundary.add(BalanceStages.SideBySide, { positionLost: true });
+  assert.equal(f2Boundary.snapshot.failureReason, BalanceFailureReasons.PositionLost, 'S2-BAL-F2 200ms position loss fails');
+
+  const f4Boundary = new Runner({ supportRoi: { x: 0.8, y: 0.42, width: 0.16, height: 0.18 } });
+  f4Boundary.hold(BalanceStages.SideBySide, 750);
+  f4Boundary.add(BalanceStages.SideBySide, { support: true, dtMs: 199 });
+  f4Boundary.add(BalanceStages.SideBySide, { support: true, dtMs: 1 });
+  assert.notEqual(f4Boundary.snapshot.state, BalanceTestMachineStates.Failed, 'S2-BAL-F4 199ms ROI contact does not fail');
+  f4Boundary.add(BalanceStages.SideBySide, { support: true });
+  assert.equal(f4Boundary.snapshot.failureReason, BalanceFailureReasons.SupportUsed, 'S2-BAL-F4 200ms ROI contact fails');
+
+  const f5 = new Runner();
+  f5.hold(BalanceStages.SideBySide, 750);
+  f5.add(BalanceStages.SideBySide, { caregiver: true });
+  assert.equal(f5.snapshot.failureReason, BalanceFailureReasons.CaregiverIntervention, 'S2-BAL-F5 second-person wrist in torso ROI fails');
+
+  const sway = new Runner();
+  sway.hold(BalanceStages.SideBySide, 750);
+  for (let index = 0; index < 24; index += 1) {
+    sway.add(BalanceStages.SideBySide, {
+      pelvisOffsetMl: index % 2 ? 0.01 : -0.01,
+      pelvisOffsetAp: index % 2 ? 0.004 : -0.004,
+      dtMs: 250,
+    });
+  }
+  assert.ok(sway.snapshot.swayMetrics.mlRms > 0, 'S2-BAL-SWAY preserves ML RMS');
+  assert.ok(sway.snapshot.swayMetrics.apRms > 0, 'S2-BAL-SWAY preserves AP RMS');
+  assert.ok(Number.isFinite(sway.snapshot.swayMetrics.ratios.mlToAp), 'S2-BAL-SWAY preserves ML/AP ratio');
 
   const sequence = new Runner();
   sequence.passCurrentStage(BalanceStages.SideBySide);

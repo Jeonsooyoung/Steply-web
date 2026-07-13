@@ -21,14 +21,11 @@ try {
   const calibration = await server.ssrLoadModule('/client/src/pipeline/calibration/calibrationProfile.js');
   const functionalFindings = await server.ssrLoadModule('/client/src/pipeline/findings/functionalFindings.js');
   const otagoEngine = await server.ssrLoadModule('/client/src/pipeline/recommendation/otagoExerciseEngine.js');
-  const progress = await server.ssrLoadModule('/client/src/pipeline/progress/progressRepository.js');
-  const pipelineConfig = await server.ssrLoadModule('/client/src/pipeline/shared/config/pipeline.config.js');
 
   const {
     ArmUseStates,
     AssessmentEventTypes,
     AssessmentResultStatuses,
-    AssessmentResultTypes,
     AssessmentTypes,
     BalanceStageStatuses,
     BalanceStages,
@@ -45,7 +42,6 @@ try {
     SupervisionRequirements,
     SupportRequirements,
     CameraVerificationModes,
-    PipelineModes,
   } = types;
 
   function validPoseFrame(overrides = {}) {
@@ -267,18 +263,27 @@ try {
     profile: { age: 70, gender: 'female' },
   });
   assertOk(findings.validation, 'functional findings mapper');
-  const plan = otagoEngine.createDeterministicOtagoExercisePlan({
+  const vulnerabilityAssessment = {
+    ruleVersion: 'stage3_vulnerability.v1',
+    activeIds: ['V3'],
+    evidence: [{
+      vulnerabilityId: 'V3',
+      sourceResultId: lowRepChairAssessment.resultId,
+      measurements: { completedRepetitions: 7, cdcCutoff: 12 },
+    }],
+  };
+  const plan = otagoEngine.createFuzzyTopsisOtagoExercisePlan({
     userId: 'user-1',
     steadiScore: steadi.value,
-    findings: findings.value,
+    vulnerabilityAssessment,
     sourceAssessments: [lowRepChairAssessment, validBalanceAssessment()],
   });
   assertOk(plan.validation, 'valid ExercisePlan');
   assertFail(validation.validateExercisePlan({ ...plan.value, selectedExercises: [{ ...plan.value.selectedExercises[0], reasonFindingIds: [] }] }), 'EXERCISE_MISSING_SOURCE_FINDING', 'exercise without source finding rejected');
-  const blockedDemoPlan = otagoEngine.createDeterministicOtagoExercisePlan({
+  const blockedDemoPlan = otagoEngine.createFuzzyTopsisOtagoExercisePlan({
     userId: 'user-1',
     steadiScore: steadi.value,
-    findings: findings.value,
+    vulnerabilityAssessment,
     sourceAssessments: [validChairAssessment({ metadata: { ...validChairAssessment().metadata, source: ResultSources.Demo, isPersistable: false, isClinicallyScorable: false } })],
   });
   assertFail(blockedDemoPlan.validation, 'NON_LIVE_ASSESSMENT_EXERCISE_PLAN', 'demo assessment plan generation rejected');
@@ -286,27 +291,10 @@ try {
   assertFail(validation.validateExercisePlan({ ...plan.value, selectedExercises: [plan.value.selectedExercises[0], plan.value.selectedExercises[0]] }), 'DUPLICATE_EXERCISE', 'duplicate exercise rejected');
   assertFail(validation.validateExercisePlan({ ...plan.value, selectedExercises: [{ ...plan.value.selectedExercises[0], supportRequirement: 'CHAIR' }] }), 'INVALID_ENUM', 'bad support requirement rejected');
 
-  assert.equal(progress.canPersistStructuredAssessmentResult({ ...validChairAssessment(), resultType: AssessmentResultTypes.Frame }).ok, false);
-  assert.equal(progress.canPersistStructuredAssessmentResult(validChairAssessment()).ok, true);
   assertFail(validation.validateFinalAssessmentResponse({ sessionId: 'old-session', result: validChairAssessment({ sessionId: 'old-session' }), isFinal: true }, { activeSessionId: 'new-session' }), 'STALE_FINAL_RESPONSE', 'stale final rejected');
   assertFail(validation.validateWorkerResponse({ type: 'FINAL_RESULT', result: validChairAssessment(), isFinal: true }), 'MISSING_REQUIRED_STRING', 'sessionless response rejected');
   assertFail(validation.validateFinalAssessmentResponse({ sessionId: 'session-1', result: validChairAssessment(), isFinal: true }, { expectedAssessmentType: AssessmentTypes.FourStageBalance }), 'FINAL_RESPONSE_ASSESSMENT_TYPE_MISMATCH', 'wrong assessmentType final rejected');
   assertFail(validation.validateFinalAssessmentResponse({ sessionId: 'session-1', result: validChairAssessment(), isFinal: true }, { cancelledSessionIds: ['session-1'] }), 'CANCELLED_SESSION_FINAL_RESPONSE', 'cancelled session final rejected');
-
-  assert.equal(pipelineConfig.resolveAssessmentPipelineMode(), PipelineModes.StructuredV2);
-  assert.equal(pipelineConfig.resolveAssessmentPipelineMode({ requestedMode: PipelineModes.StructuredV2, isDevelopment: false }), PipelineModes.StructuredV2);
-  assert.equal(pipelineConfig.resolveAssessmentPipelineMode({ requestedMode: PipelineModes.StructuredV2, isDevelopment: true }), PipelineModes.StructuredV2);
-  for (const mode of [PipelineModes.StructuredV2]) {
-    assert.equal(progress.canPersistStructuredAssessmentResult(validChairAssessment(), { pipelineMode: mode }).ok, true);
-    assert.equal(progress.canPersistStructuredAssessmentResult(validChairAssessment({ metadata: { ...validChairAssessment().metadata, source: ResultSources.Demo, isPersistable: false, isClinicallyScorable: false } }), { pipelineMode: mode }).ok, false);
-  }
-  const fallback = validChairAssessment({
-    status: AssessmentResultStatuses.Incomplete,
-    metadata: { ...validChairAssessment().metadata, source: ResultSources.Fallback, isPersistable: false, isClinicallyScorable: false },
-    primaryMeasurements: { ...validChairAssessment().primaryMeasurements, completedRepetitions: 0 },
-    events: [],
-  });
-  assert.equal(progress.canPersistStructuredAssessmentResult(fallback).ok, false);
 
   console.log('Structured pipeline type checks passed.');
 } finally {

@@ -1,0 +1,121 @@
+/* Desktop reference screens use the same 16:9 canvas as the supplied UI comps. */
+@media (min-width: 1100px) {
+  html:has(.ref-app--fit),
+  body:has(.ref-app--fit),
+  #root:has(.ref-app--fit) {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body:has(.ref-app--fit) {
+    background: #f4f6f5;
+  }
+
+  .ref-app--fit {
+    position: fixed;
+    left: var(--ref-fit-left);
+    top: var(--ref-fit-top);
+    width: 1680px;
+    height: 945px;
+    min-height: 945px;
+    grid-template-columns: 242px minmax(0, 1fr);
+    overflow: hidden;
+    transform: scale(var(--ref-fit-scale));
+    transform-origin: top left;
+  }
+
+  .ref-app--fit .ref-sidebar {
+    height: 945px;
+    padding: 30px 16px 16px;
+  }
+
+  .ref-app--fit .ref-sidebar nav button {
+    padding-inline: 18px !important;
+  }
+
+  .ref-app--fit .ref-workspace {
+    height: 945px;
+    overflow: hidden;
+  }
+
+  .ref-app--fit .ref-page {
+    padding-inline: 48px;
+  }
+
+  .ref-app--fit .ref-home {
+    padding-top: 32px;
+    padding-bottom: 12px;
+  }
+
+  .ref-app--fit .ref-home .ref-page-heading {
+    margin-bottom: 16px;
+  }
+
+  .ref-app--fit .ref-home-hero,
+  .ref-app--fit .ref-home-metrics {
+    margin-bottom: 14px;
+  }
+
+  .ref-app--fit .ref-settings {
+    padding-bottom: 16px;
+  }
+
+  .ref-app--fit .ref-connection-status {
+    margin-top: 8px;
+  }
+
+  .ref-app--fit .ref-session-actions {
+    padding-block: 16px;
+  }
+
+  .ref-app--fit .ref-metrics-row {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .ref-app--fit .ref-report-grid {
+    grid-template-columns: 1.6fr .92fr .83fr;
+    grid-template-rows: 300px 240px;
+  }
+
+  .ref-app--fit .ref-quick-panel {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .ref-app--fit .ref-snapshot-panel {
+    grid-column: auto;
+  }
+
+  .ref-app--fit .ref-exercise-live-grid {
+    grid-template-columns: 270px minmax(420px, 1fr) 315px;
+  }
+
+  .ref-app--fit .ref-connect-grid {
+    grid-template-columns: 305px 295px minmax(290px, 1fr) 270px;
+  }
+
+  .ref-app--fit .ref-reminders {
+    grid-column: auto;
+    width: auto;
+    height: 528px;
+    display: block;
+  }
+
+  .ref-app--fit .ref-reminders h2 {
+    grid-column: auto;
+  }
+
+  .ref-app--fit .ref-reminders > div {
+    grid-template-columns: 60px 1fr;
+  }
+
+  .ref-app--fit .ref-reminders > div > span {
+    width: 58px;
+    height: 58px;
+  }
+
+  .ref-app--fit .ref-balance-grid {
+    grid-template-columns: minmax(480px, 1.7fr) .75fr .72fr;
+  }
+}

@@ -3,7 +3,8 @@ const { sendStatic } = require('../utils/staticFile');
 const networkController = require('../controllers/networkController');
 const sessionController = require('../controllers/sessionController');
 const analysisController = require('../controllers/analysisController');
-const historyController = require('../controllers/historyController');
+const assessmentSessionController = require('../controllers/assessmentSessionController');
+const careAgentProjectionController = require('../controllers/careAgentProjectionController');
 
 async function requestHandler(req, res) {
   if (req.method === 'OPTIONS') return sendJson(res, 204, {});
@@ -22,6 +23,25 @@ async function requestHandler(req, res) {
 
     if (req.method === 'POST' && pathname === '/api/session/create') {
       return await sessionController.createSession(req, res);
+    }
+
+    if (req.method === 'POST' && pathname === '/api/assessment-sessions') {
+      return await assessmentSessionController.createAssessmentSession(req, res);
+    }
+
+    const canonicalAssessmentMatch = pathname.match(/^\/api\/assessment-sessions\/([^/]+)$/);
+    if (req.method === 'GET' && canonicalAssessmentMatch) {
+      return assessmentSessionController.getAssessmentSession(req, res, canonicalAssessmentMatch[1]);
+    }
+
+    const assessmentSnapshotMatch = pathname.match(/^\/api\/assessment-sessions\/([^/]+)\/snapshot$/);
+    if (req.method === 'PUT' && assessmentSnapshotMatch) {
+      return await assessmentSessionController.putSnapshot(req, res, assessmentSnapshotMatch[1]);
+    }
+
+    const assessmentEventMatch = pathname.match(/^\/api\/assessment-sessions\/([^/]+)\/events$/);
+    if (req.method === 'POST' && assessmentEventMatch) {
+      return await assessmentSessionController.postEvent(req, res, assessmentEventMatch[1]);
     }
 
     const connectMatch = pathname.match(/^\/api\/session\/([^/]+)\/connect$/);
@@ -44,6 +64,22 @@ async function requestHandler(req, res) {
       return await sessionController.selectTest(req, res, selectMatch[1]);
     }
 
+    const assessmentSessionMatch = pathname.match(/^\/api\/session\/([^/]+)\/assessment-session$/);
+    if (req.method === 'GET' && assessmentSessionMatch) {
+      return sessionController.getAssessmentSession(req, res, assessmentSessionMatch[1]);
+    }
+    if ((req.method === 'PUT' || req.method === 'PATCH') && assessmentSessionMatch) {
+      return await sessionController.updateAssessmentSession(req, res, assessmentSessionMatch[1]);
+    }
+
+    const careAgentProjectionMatch = pathname.match(/^\/api\/session\/([^/]+)\/care-agent-projection$/);
+    if (req.method === 'GET' && careAgentProjectionMatch) {
+      return careAgentProjectionController.getProjection(req, res, careAgentProjectionMatch[1]);
+    }
+    if (req.method === 'PUT' && careAgentProjectionMatch) {
+      return await careAgentProjectionController.putProjection(req, res, careAgentProjectionMatch[1]);
+    }
+
     if (req.method === 'POST' && pathname === '/api/analysis/realtime') {
       return await analysisController.realtimeAnalysis(req, res);
     }
@@ -52,15 +88,9 @@ async function requestHandler(req, res) {
       return await analysisController.finalAnalysis(req, res);
     }
 
-    if (req.method === 'GET' && pathname === '/api/history') {
-      return historyController.getAllHistory(req, res);
+    if (pathname.startsWith('/api/')) {
+      return sendJson(res, 404, { error: 'API endpoint not found' });
     }
-
-    const historyMatch = pathname.match(/^\/api\/history\/([^/]+)$/);
-    if (req.method === 'GET' && historyMatch) {
-      return historyController.getHistoryByUser(req, res, decodeURIComponent(historyMatch[1]));
-    }
-
     return sendStatic(req, res);
   } catch (err) {
     console.error(err);

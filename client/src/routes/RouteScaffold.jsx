@@ -37,11 +37,8 @@ import {
   CameraPermissionScreen,
   CameraPreviewScreen,
   CameraStreamingScreen,
-  DisplayConnectScreen,
-  DisplayHomeScreen,
   DisplayOnboardingScreen,
   DisplayProfileScreen,
-  DisplaySessionPlanScreen,
 } from './StepTwoScreens';
 import {
   DisplayCalibrationScreen,
@@ -51,7 +48,6 @@ import {
 } from './StepThreeScreens';
 import {
   DisplayBalanceInstructionScreen,
-  DisplayBalanceLiveScreen,
   DisplayBalanceStageResultScreen,
 } from './StepFourScreens';
 import {
@@ -62,23 +58,30 @@ import {
 import {
   DisplayAnalyzingScreen,
   DisplayResultsDetailsScreen,
-  DisplayResultsSummaryScreen,
 } from './StepSixScreens';
 import {
   DisplayExerciseCompleteScreen,
-  DisplayExerciseLiveScreen,
-  DisplayExercisePlanScreen,
-  DisplayExercisePreviewScreen,
   DisplaySessionCompleteScreen,
 } from './StepSevenScreens';
-import {
-  DisplayProgressScreen,
-  DisplayReportsScreen,
-  DisplaySettingsScreen,
-} from './StepEightScreens';
+// Keep the legacy module in the validation graph; no active route renders this export.
+import { DisplayProgressScreen as LegacyProgressCompatibilityScreen } from './StepEightScreens';
 import { DisplayErrorStateScreen } from './StepNineScreens';
+import {
+  ReferenceBalanceTestScreen,
+  ReferenceConnectScreen,
+  ReferenceAssessmentScreen,
+  ReferenceExerciseLiveScreen,
+  ReferenceExercisePlanScreen,
+  ReferenceHomeScreen,
+  ReferencePostureResultsScreen,
+  ReferenceReportScreen,
+  ReferenceSettingsScreen,
+} from '../features/reference-ui';
 import { displayNavigationItems } from './steplyRoutes';
 import { HomeLogo } from '../components/HomeLogo';
+import { navigateSpa } from './spaNavigation';
+
+void LegacyProgressCompatibilityScreen;
 
 const routeOrder = [
   '/display/connect',
@@ -135,15 +138,15 @@ function previousPathFor(route) {
 }
 
 function goTo(path) {
-  if (typeof window !== 'undefined') window.location.assign(path);
+  navigateSpa(path);
 }
 
 function connectionState(dashboard) {
-  if (dashboard?.remoteCameraFrame?.src) {
+  if (dashboard?.isCameraReady) {
     return {
       status: 'connected',
-      label: 'Phone camera connected',
-      detail: dashboard.remoteCameraStatus || 'Receiving live camera view',
+      label: dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'Laptop camera connected' : 'Phone camera connected',
+      detail: dashboard.activeCameraStatus || 'Receiving live camera view',
     };
   }
   if (dashboard?.session?.profile) {
@@ -155,8 +158,8 @@ function connectionState(dashboard) {
   }
   return {
     status: 'waiting',
-    label: 'Phone camera waiting',
-    detail: 'Connect the phone before a live assessment',
+    label: 'Camera waiting',
+    detail: 'Connect a phone or laptop camera before a live assessment',
   };
 }
 
@@ -166,7 +169,7 @@ function routeProgress(route) {
 }
 
 function qualityItems(route, dashboard) {
-  const hasCamera = Boolean(dashboard?.remoteCameraFrame?.src);
+  const hasCamera = Boolean(dashboard?.isCameraReady);
   return [
     { label: hasCamera ? 'Camera connected' : 'Camera waiting', status: hasCamera ? 'good' : 'waiting' },
     { label: route.camera ? 'Full body view needed' : 'Camera not required', status: route.camera ? 'waiting' : 'good' },
@@ -373,7 +376,7 @@ function SessionRouteScreen({ route, dashboard }) {
 
         {route.camera || route.active ? (
           <aside className="foundation-session-main__camera">
-            <CameraPreview frameSrc={dashboard?.remoteCameraFrame?.src} guide="Keep your full body inside the frame" />
+            <CameraPreview frameSrc={dashboard?.activeCameraFrame?.src} mediaStream={dashboard?.activeCameraStream} guide="Keep your full body inside the frame" onFrameLoaded={dashboard?.handleCameraFrameLoaded} onFrameError={dashboard?.handleCameraFrameError} />
             <CameraQualityPanel items={qualityItems(route, dashboard)} />
           </aside>
         ) : null}
@@ -437,7 +440,7 @@ function CameraRouteScreen({ route, dashboard }) {
       <main className="foundation-camera-main">
         <ConnectionIndicator {...connection} label={route.status} />
         {route.camera ? (
-          <CameraPreview frameSrc={dashboard?.remoteCameraFrame?.src} label="Phone camera preview" guide="Keep the person centered" />
+          <CameraPreview frameSrc={dashboard?.activeCameraFrame?.src} mediaStream={dashboard?.activeCameraStream} label={dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'Laptop camera preview' : 'Phone camera preview'} guide="Keep the person centered" onFrameLoaded={dashboard?.handleCameraFrameLoaded} onFrameError={dashboard?.handleCameraFrameError} />
         ) : null}
         <InstructionPanel title={route.instruction} instruction={route.description} icon={route.icon} />
       </main>
@@ -466,7 +469,7 @@ export function FoundationRouteApp({ route, dashboard }) {
   }
 
   if (route.id === 'display_connect') {
-    return <DisplayConnectScreen dashboard={dashboard} />;
+    return <ReferenceConnectScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_profile') {
@@ -474,19 +477,19 @@ export function FoundationRouteApp({ route, dashboard }) {
   }
 
   if (route.id === 'display_onboarding') {
-    return <DisplayOnboardingScreen />;
+    return <DisplayOnboardingScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_home') {
-    return <DisplayHomeScreen dashboard={dashboard} />;
+    return <ReferenceHomeScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_session_plan') {
-    return <DisplaySessionPlanScreen dashboard={dashboard} />;
+    return <ReferenceAssessmentScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_session_screening') {
-    return <DisplayScreeningScreen />;
+    return <DisplayScreeningScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_session_safety') {
@@ -506,7 +509,7 @@ export function FoundationRouteApp({ route, dashboard }) {
   }
 
   if (route.id === 'display_balance_live') {
-    return <DisplayBalanceLiveScreen dashboard={dashboard} />;
+    return <ReferenceBalanceTestScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_balance_stage_result') {
@@ -530,7 +533,7 @@ export function FoundationRouteApp({ route, dashboard }) {
   }
 
   if (route.id === 'display_results_summary') {
-    return <DisplayResultsSummaryScreen dashboard={dashboard} />;
+    return <ReferencePostureResultsScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_results_details') {
@@ -538,15 +541,15 @@ export function FoundationRouteApp({ route, dashboard }) {
   }
 
   if (route.id === 'display_exercises_plan') {
-    return <DisplayExercisePlanScreen dashboard={dashboard} />;
+    return <ReferenceExercisePlanScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_exercise_preview') {
-    return <DisplayExercisePreviewScreen dashboard={dashboard} />;
+    return <ReferenceExerciseLiveScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_exercise_live') {
-    return <DisplayExerciseLiveScreen dashboard={dashboard} />;
+    return <ReferenceExerciseLiveScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_exercise_complete') {
@@ -558,15 +561,15 @@ export function FoundationRouteApp({ route, dashboard }) {
   }
 
   if (route.id === 'display_progress') {
-    return <DisplayProgressScreen dashboard={dashboard} />;
+    return <ReferenceReportScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_reports') {
-    return <DisplayReportsScreen dashboard={dashboard} />;
+    return <ReferenceReportScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'display_settings') {
-    return <DisplaySettingsScreen dashboard={dashboard} />;
+    return <ReferenceSettingsScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'camera_connect') {
@@ -574,7 +577,7 @@ export function FoundationRouteApp({ route, dashboard }) {
   }
 
   if (route.id === 'camera_permission') {
-    return <CameraPermissionScreen />;
+    return <CameraPermissionScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'camera_preview') {
@@ -582,7 +585,7 @@ export function FoundationRouteApp({ route, dashboard }) {
   }
 
   if (route.id === 'camera_streaming') {
-    return <CameraStreamingScreen />;
+    return <CameraStreamingScreen dashboard={dashboard} />;
   }
 
   if (route.id === 'camera_disconnected') {

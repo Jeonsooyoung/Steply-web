@@ -1,3 +1,5 @@
+import { assertSupportedAssessmentTestType } from '../pipeline/shared/assessmentTestTypes.js';
+
 async function requestJson(path, options = {}) {
   const response = await fetch(path, {
     headers: {
@@ -26,19 +28,34 @@ export function createSession() {
   return requestJson('/api/session/create', { method: 'POST', body: '{}' });
 }
 
-export function connectProfile(sessionId, profile, pairingToken = '') {
-  return requestJson(`/api/session/${sessionId}/connect`, {
-    method: 'POST',
-    headers: pairingToken ? { 'X-Steply-Pairing-Token': pairingToken } : {},
-    body: JSON.stringify({ sessionId, pairingToken, profile }),
-  });
-}
-
 export function getSessionStatus(sessionId) {
   return requestJson(`/api/session/${sessionId}/status`);
 }
 
+export function getAssessmentSession(sessionId) {
+  return requestJson(`/api/session/${sessionId}/assessment-session`);
+}
+
+export function updateAssessmentSession(sessionId, update) {
+  return requestJson(`/api/session/${sessionId}/assessment-session`, {
+    method: 'PATCH',
+    body: JSON.stringify(update),
+  });
+}
+
+export function getCareAgentProjection(sessionId) {
+  return requestJson(`/api/session/${sessionId}/care-agent-projection`);
+}
+
+export function putCareAgentProjection(sessionId, update) {
+  return requestJson(`/api/session/${sessionId}/care-agent-projection`, {
+    method: 'PUT',
+    body: JSON.stringify(update),
+  });
+}
+
 export function selectTest(sessionId, selectedTest) {
+  assertSupportedAssessmentTestType(selectedTest);
   return requestJson(`/api/session/${sessionId}/select-test`, {
     method: 'POST',
     body: JSON.stringify({ selectedTest }),
@@ -57,10 +74,4 @@ export function postFinalAnalysis(payload) {
     method: 'POST',
     body: JSON.stringify(payload),
   });
-}
-
-// Development display adapter only. Per the 4.6/6.0 data boundary, the phone app
-// is the permanent owner of personal history; the web client only renders injected items.
-export function getAllHistory() {
-  return requestJson('/api/history');
 }

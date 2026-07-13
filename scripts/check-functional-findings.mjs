@@ -160,7 +160,7 @@ try {
     };
   }
 
-  const profile = { ageYears: 70, gender: 'female' };
+  const profile = { ageYears: 70, sex: 'FEMALE' };
 
   function run({ chair = chairAssessment(), balance = balanceAssessment(), customProfile = profile } = {}) {
     return createFunctionalFindings({

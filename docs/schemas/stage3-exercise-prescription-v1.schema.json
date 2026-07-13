@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/stage3-exercise-prescription-v1.schema.json",
+  "title": "Steply safety-constrained Fuzzy-TOPSIS Otago prescription v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "catalogVersion", "planId", "userId", "riskLevel", "status", "vulnerabilityIds", "warmups", "selectedExercises", "walkingPlan", "professionalApproval", "supervisionRequirement", "caregiverRecommendedDays", "requiresProfessionalReview", "safetyNotices", "progressionProposals", "generatedByRuleVersion", "sourceAssessmentIds", "sourceResultIds", "decisionTrace"],
+  "properties": {
+    "schemaVersion": { "const": "otago_prescription.v1" },
+    "catalogVersion": { "const": "otago_catalog.v1" },
+    "planId": { "$ref": "#/$defs/id" },
+    "userId": { "$ref": "#/$defs/id" },
+    "riskLevel": { "enum": ["LOW", "MODERATE", "HIGH"] },
+    "status": { "enum": ["BLOCKED", "ACTIVE", "PENDING_PROFESSIONAL_REVIEW"] },
+    "vulnerabilityIds": { "type": "array", "uniqueItems": true, "items": { "enum": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"] } },
+    "warmups": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "prefixItems": [
+        { "allOf": [{ "$ref": "#/$defs/prescribedExercise" }, { "type": "object", "properties": { "exerciseId": { "const": "W1" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/prescribedExercise" }, { "type": "object", "properties": { "exerciseId": { "const": "W2" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/prescribedExercise" }, { "type": "object", "properties": { "exerciseId": { "const": "W3" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/prescribedExercise" }, { "type": "object", "properties": { "exerciseId": { "const": "W4" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/prescribedExercise" }, { "type": "object", "properties": { "exerciseId": { "const": "W5" } } }] }
+      ]
+    },
+    "selectedExercises": { "type": "array", "items": { "$ref": "#/$defs/prescribedExercise" } },
+    "walkingPlan": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/walkingPlan" }] },
+    "professionalApproval": { "$ref": "#/$defs/professionalApproval" },
+    "supervisionRequirement": { "enum": ["NONE", "CAREGIVER_RECOMMENDED", "PROFESSIONAL_REVIEW_REQUIRED"] },
+    "caregiverRecommendedDays": { "type": "integer", "minimum": 0 },
+    "requiresProfessionalReview": { "type": "boolean" },
+    "safetyNotices": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "progressionProposals": { "type": "array", "items": { "$ref": "stage3-progression-v1.schema.json" } },
+    "generatedByRuleVersion": { "$ref": "#/$defs/id" },
+    "sourceAssessmentIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "sourceResultIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "decisionTrace": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }
+  },
+  "allOf": [
+    {
+      "if": { "type": "object", "properties": { "riskLevel": { "const": "HIGH" } }, "required": ["riskLevel"] },
+      "then": {
+        "type": "object",
+        "properties": {
+          "walkingPlan": { "type": "null" },
+          "supervisionRequirement": { "const": "PROFESSIONAL_REVIEW_REQUIRED" },
+          "progressionProposals": { "type": "array", "maxItems": 0 },
+          "selectedExercises": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "allOf": [
+                {
+                  "if": { "type": "object", "properties": { "category": { "const": "BALANCE" } }, "required": ["category"] },
+                  "then": { "type": "object", "properties": { "level": { "const": "A" } } }
+                },
+                {
+                  "if": { "type": "object", "properties": { "exerciseId": { "enum": ["S1", "S2", "S3"] } }, "required": ["exerciseId"] },
+                  "then": { "type": "object", "properties": { "level": { "const": "A" }, "weightMode": { "const": "NONE" }, "weightMinKg": { "type": "null" }, "weightMaxKg": { "type": "null" } } }
+                },
+                {
+                  "if": { "type": "object", "properties": { "exerciseId": { "enum": ["S4", "S5"] } }, "required": ["exerciseId"] },
+                  "then": { "type": "object", "properties": { "level": { "const": "C" }, "supportRequirement": { "const": "STABLE_SUPPORT" }, "weightMode": { "const": "NONE" }, "weightMinKg": { "type": "null" }, "weightMaxKg": { "type": "null" } } }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "type": "object", "properties": { "riskLevel": { "const": "HIGH" }, "professionalApproval": { "type": "object", "properties": { "status": { "const": "APPROVED" } } } }, "required": ["riskLevel", "professionalApproval"] },
+      "then": {
+        "type": "object",
+        "properties": {
+          "status": { "const": "ACTIVE" },
+          "requiresProfessionalReview": { "const": false }
+        }
+      },
+      "else": {
+        "if": { "type": "object", "properties": { "riskLevel": { "const": "HIGH" } }, "required": ["riskLevel"] },
+        "then": {
+          "type": "object",
+          "properties": {
+            "status": { "const": "PENDING_PROFESSIONAL_REVIEW" },
+            "requiresProfessionalReview": { "const": true }
+          }
+        }
+      }
+    },
+    {
+      "if": { "type": "object", "properties": { "status": { "const": "BLOCKED" } }, "required": ["status"] },
+      "then": {
+        "type": "object",
+        "properties": {
+          "selectedExercises": { "type": "array", "maxItems": 0 },
+          "walkingPlan": { "type": "null" },
+          "progressionProposals": { "type": "array", "maxItems": 0 }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "nullableNumber": { "type": ["number", "null"], "minimum": 0 },
+    "nullableInteger": { "type": ["integer", "null"], "minimum": 0 },
+    "professionalApproval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approvalId", "approvedByRole", "approvedAt"],
+      "properties": {
+        "status": { "enum": ["NOT_REQUIRED", "PENDING", "APPROVED"] },
+        "approvalId": { "type": ["string", "null"], "minLength": 1 },
+        "approvedByRole": { "enum": ["USER", "CAREGIVER", "PROFESSIONAL", null] },
+        "approvedAt": { "type": ["integer", "null"], "minimum": 0 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "APPROVED" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "approvalId": { "type": "string", "minLength": 1 },
+              "approvedByRole": { "const": "PROFESSIONAL" },
+              "approvedAt": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["NOT_REQUIRED", "PENDING"] } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "approvalId": { "type": "null" },
+              "approvedByRole": { "type": "null" },
+              "approvedAt": { "type": "null" }
+            }
+          }
+        }
+      ]
+    },
+    "prescribedExercise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exerciseId", "displayName", "category", "level", "variantId", "repetitions", "sets", "repetitionsPerSide", "steps", "holdSeconds", "supportRequirement", "weightMode", "weightMinKg", "weightMaxKg", "tempoUpMinSeconds", "tempoUpMaxSeconds", "tempoDownMinSeconds", "tempoDownMaxSeconds", "breathingRule", "restMinSeconds", "restMaxSeconds", "cameraVerification", "reasonVulnerabilityIds", "weakSideExtraSets"],
+      "properties": {
+        "exerciseId": { "$ref": "stage3-progression-v1.schema.json#/$defs/exerciseId" },
+        "displayName": { "$ref": "#/$defs/id" },
+        "category": { "enum": ["WARMUP", "STRENGTH", "BALANCE", "WALKING"] },
+        "level": { "$ref": "stage3-progression-v1.schema.json#/$defs/level" },
+        "variantId": { "type": "string", "minLength": 1 },
+        "repetitions": { "$ref": "#/$defs/nullableInteger" },
+        "sets": { "type": "integer", "minimum": 1 },
+        "repetitionsPerSide": { "$ref": "#/$defs/nullableInteger" },
+        "steps": { "$ref": "#/$defs/nullableInteger" },
+        "holdSeconds": { "$ref": "#/$defs/nullableNumber" },
+        "supportRequirement": { "enum": ["NONE", "STABLE_SUPPORT", "ONE_HAND", "TWO_HAND", "WALKING_AID"] },
+        "weightMode": { "enum": ["NONE", "ANKLE_CUFF", "FATIGUE_TARGET"] },
+        "weightMinKg": { "$ref": "#/$defs/nullableNumber" },
+        "weightMaxKg": { "$ref": "#/$defs/nullableNumber" },
+        "tempoUpMinSeconds": { "$ref": "#/$defs/nullableNumber" },
+        "tempoUpMaxSeconds": { "$ref": "#/$defs/nullableNumber" },
+        "tempoDownMinSeconds": { "$ref": "#/$defs/nullableNumber" },
+        "tempoDownMaxSeconds": { "$ref": "#/$defs/nullableNumber" },
+        "breathingRule": { "$ref": "#/$defs/id" },
+        "restMinSeconds": { "$ref": "#/$defs/nullableNumber" },
+        "restMaxSeconds": { "$ref": "#/$defs/nullableNumber" },
+        "cameraVerification": { "enum": ["FULL", "PARTIAL", "MANUAL_ONLY"] },
+        "reasonVulnerabilityIds": { "type": "array", "uniqueItems": true, "items": { "enum": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"] } },
+        "weakSideExtraSets": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "walkingPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exerciseId", "category", "targetMinutes", "splitMinutes", "weeklyFrequency", "pace", "requiresStrengthAndBalance", "cameraVerification"],
+      "properties": {
+        "exerciseId": { "const": "WALK" },
+        "category": { "const": "WALKING" },
+        "targetMinutes": { "const": 30 },
+        "splitMinutes": { "type": "array", "minItems": 3, "maxItems": 3, "prefixItems": [{ "const": 10 }, { "const": 10 }, { "const": 10 }] },
+        "weeklyFrequency": { "type": "integer", "minimum": 2 },
+        "pace": { "const": "USUAL" },
+        "requiresStrengthAndBalance": { "const": true },
+        "cameraVerification": { "const": "MANUAL_ONLY" }
+      }
+    }
+  }
+}

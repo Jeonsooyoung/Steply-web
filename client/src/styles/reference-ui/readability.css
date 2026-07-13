@@ -1,0 +1,99 @@
+/* The desktop UI is rendered on a scaled 1680×945 canvas. These source sizes
+   keep body copy legible after scaling while preserving the supplied layout. */
+@media (min-width: 1100px) {
+  .ref-sidebar nav button { font-size: 17px; }
+  .ref-profile-card p,
+  .ref-profile-card button { font-size: 14px; }
+  .ref-user { font-size: 17px; }
+
+  .ref-page-heading p,
+  .ref-session-card__header p { font-size: 16px; }
+  .ref-section-title h2,
+  .ref-panel h2 { font-size: 17px; }
+  .ref-check-list li { font-size: 15px; }
+  .ref-date-button { font-size: 16px; }
+  .ref-camera__empty p,
+  .ref-outline-btn { font-size: 14px; }
+  .ref-camera__live,
+  .ref-camera__pose-status { font-size: 13px; }
+
+  .ref-metric > div > span { font-size: 14px; }
+  .ref-metric small {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .ref-home-kicker,
+  .ref-assessment-banner span,
+  .ref-assessment-step > div > span { font-size: 12px; }
+  .ref-home-hero__copy > p,
+  .ref-assessment-banner > div > p { font-size: 15px; }
+  .ref-home-hero__actions button,
+  .ref-assessment-banner > button { font-size: 14px; }
+  .ref-home-plan__list p { font-size: 12.5px; }
+  .ref-home-plan__list p b { font-size: 14px; }
+  .ref-home-aside p { font-size: 13.5px; }
+  .ref-assessment-step p { font-size: 13.5px; }
+  .ref-assessment-step > button { font-size: 13px; }
+  .ref-assessment-status > p { font-size: 13.5px; }
+
+  .ref-report .ref-quick-panel > button b { font-size: 14px; }
+  .ref-report .ref-quick-panel > button small { font-size: 13px; }
+  .ref-report .ref-note { font-size: 13px; }
+  .ref-report .ref-trend-chart__legend { font-size: 13px; }
+  .ref-report .ref-trend-chart__column small { font-size: 13px; }
+  .ref-report .ref-trend-chart__dots b { font-size: 12.5px; }
+  .ref-report .ref-adherence-content li { font-size: 13px; }
+  .ref-report .ref-improved-panel p { font-size: 13px; }
+  .ref-report .ref-improved-panel p b { font-size: 13px; }
+  .ref-report .ref-improved-panel > div > strong { font-size: 12.5px; }
+  .ref-report .ref-safety-empty p { font-size: 13px; }
+  .ref-report .ref-snapshot-panel dl > div {
+    padding-block: 5.5px;
+    font-size: 13px;
+  }
+
+  .ref-app--fit .ref-report-page .ref-page { padding-top: 70px; }
+  .ref-app--fit .ref-report-grid { grid-template-rows: 325px 250px; }
+  .ref-app--fit .ref-trend-chart { height: 208px; }
+  .ref-app--fit .ref-trend-chart__plot { height: 162px; }
+
+  .ref-exercise-list p { font-size: 15px; }
+  .ref-exercise-meta { font-size: 14px; }
+  .ref-tags i { font-size: 12px; }
+  .ref-solid-action small,
+  .ref-library-action small { font-size: 13px; }
+  .ref-tip-card p { font-size: 14px; }
+  .ref-how-card li p { font-size: 14.5px; }
+  .ref-move-note { font-size: 13.5px; }
+  .ref-set-progress > span,
+  .ref-ring span { font-size: 13px; }
+  .ref-session-actions button,
+  .ref-balance-actions button { font-size: 17px; }
+
+  .ref-posture-metrics .ref-metric > div > span { font-size: 15px; }
+  .ref-posture-metrics .ref-metric small { font-size: 13px; }
+  .ref-alignment dl > div { font-size: 14.5px; }
+  .ref-alignment-note span { font-size: 13.5px; }
+  .ref-posture-aside .ref-check-list li { font-size: 13.5px; }
+  .ref-posture-aside > .ref-panel > button b { font-size: 13.5px; }
+  .ref-posture-aside > .ref-panel > button small { font-size: 11.5px; }
+  .ref-posture-actions__secondary button { font-size: 14px; }
+  .ref-posture-recommendation small { font-size: 13px; }
+
+  .ref-qr-panel p { font-size: 13px; }
+  .ref-how-connect li p { font-size: 12.5px; }
+  .ref-how-connect li b { font-size: 13.5px; }
+  .ref-reminders p { font-size: 13px; }
+  .ref-reminders b { font-size: 14px; }
+  .ref-connection-status small { font-size: 12.5px; }
+  .ref-connection-status p { font-size: 13.5px; }
+  .ref-back-link { font-size: 14px; }
+
+  .ref-stage-track small { font-size: 13.5px; }
+  .ref-balance-guidance .ref-check-list li { font-size: 15px; }
+  .ref-stage-status > p { font-size: 17px; }
+  .ref-stage-status > b { font-size: 13px; }
+  .ref-stage-status li strong { font-size: 15px; }
+  .ref-stage-status li small { font-size: 12.5px; }
+}

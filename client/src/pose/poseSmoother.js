@@ -1,44 +1,23 @@
 import { normalizePoseLandmarks } from './poseTimeSeries';
+import { stage2Operational } from '../pipeline/shared/config/stage2Analysis.config.js';
 
 export const PoseSmoothingModes = {
   Balance: 'BALANCE',
   Chair: 'CHAIR',
-  Tug: 'TUG',
-  Game: 'GAME',
 };
 
 const MODE_CONFIG = {
   [PoseSmoothingModes.Balance]: {
-    alpha: 0.3,
-    visibilityAlpha: 0.38,
-    minVisibility: 0.38,
-    outlierDistance: 0.12,
-    maxInterpolationFrames: 3,
-    interpolationVisibilityDecay: 0.72,
+    minVisibility: stage2Operational.signal.missingVisibilityThreshold,
+    outlierDistance: stage2Operational.signal.smoothing.BALANCE.outlierDistance,
+    maxInterpolationFrames: stage2Operational.signal.maxInterpolationFrames,
+    interpolationVisibilityDecay: stage2Operational.signal.smoothing.BALANCE.interpolationVisibilityDecay,
   },
   [PoseSmoothingModes.Chair]: {
-    alpha: 0.42,
-    visibilityAlpha: 0.48,
-    minVisibility: 0.38,
-    outlierDistance: 0.16,
-    maxInterpolationFrames: 2,
-    interpolationVisibilityDecay: 0.68,
-  },
-  [PoseSmoothingModes.Tug]: {
-    alpha: 0.5,
-    visibilityAlpha: 0.55,
-    minVisibility: 0.36,
-    outlierDistance: 0.21,
-    maxInterpolationFrames: 2,
-    interpolationVisibilityDecay: 0.62,
-  },
-  [PoseSmoothingModes.Game]: {
-    alpha: 0.68,
-    visibilityAlpha: 0.7,
-    minVisibility: 0.32,
-    outlierDistance: 0.26,
-    maxInterpolationFrames: 1,
-    interpolationVisibilityDecay: 0.55,
+    minVisibility: stage2Operational.signal.missingVisibilityThreshold,
+    outlierDistance: stage2Operational.signal.smoothing.CHAIR.outlierDistance,
+    maxInterpolationFrames: stage2Operational.signal.maxInterpolationFrames,
+    interpolationVisibilityDecay: stage2Operational.signal.smoothing.CHAIR.interpolationVisibilityDecay,
   },
 };
 
@@ -50,10 +29,29 @@ function clamp(value, min = 0, max = 1) {
   return Math.max(min, Math.min(max, value));
 }
 
-function lerp(previous, next, alpha) {
-  if (!finite(previous)) return finite(next) ? next : null;
-  if (!finite(next)) return previous;
-  return previous + (next - previous) * alpha;
+function smoothingFactor(deltaSeconds, cutoffHz) {
+  const tau = 1 / (2 * Math.PI * cutoffHz);
+  return 1 / (1 + tau / Math.max(deltaSeconds, 0.000001));
+}
+
+function lowPass(previous, value, alpha) {
+  return finite(previous) ? previous + alpha * (value - previous) : value;
+}
+
+function oneEuro(previousState, value, timestampMs) {
+  const params = stage2Operational.signal.oneEuro;
+  if (!previousState || !finite(previousState.filtered) || !finite(previousState.timestampMs)) {
+    return { filtered: value, derivative: 0, timestampMs };
+  }
+  const dt = Math.max((timestampMs - previousState.timestampMs) / 1000, 1 / stage2Operational.signal.targetFps);
+  const rawDerivative = (value - previousState.filtered) / dt;
+  const derivative = lowPass(previousState.derivative, rawDerivative, smoothingFactor(dt, params.derivativeCutoffHz));
+  const cutoff = params.minCutoffHz + params.beta * Math.abs(derivative);
+  return {
+    filtered: lowPass(previousState.filtered, value, smoothingFactor(dt, cutoff)),
+    derivative,
+    timestampMs,
+  };
 }
 
 function landmarkDistance(first, second) {
@@ -62,17 +60,6 @@ function landmarkDistance(first, second) {
   }
   const dz = finite(first.z) && finite(second.z) ? first.z - second.z : 0;
   return Math.hypot(first.x - second.x, first.y - second.y, dz);
-}
-
-function smoothPoint(previous, raw, config) {
-  if (!previous) return { ...raw, visibility: clamp(raw.visibility ?? 0) };
-  return {
-    ...raw,
-    x: lerp(previous.x, raw.x, config.alpha),
-    y: lerp(previous.y, raw.y, config.alpha),
-    z: lerp(previous.z, raw.z, config.alpha),
-    visibility: clamp(lerp(previous.visibility ?? 0, raw.visibility ?? 0, config.visibilityAlpha)),
-  };
 }
 
 function interpolatedPoint(previous, config) {
@@ -88,8 +75,6 @@ export function smoothingModeForTest(testType = '') {
   if (testType === 'four_stage_balance' || testType === 'balance_hold' || testType === 'standing_posture') {
     return PoseSmoothingModes.Balance;
   }
-  if (testType === 'timed_up_and_go') return PoseSmoothingModes.Tug;
-  if (String(testType).includes('game') || String(testType).includes('ar')) return PoseSmoothingModes.Game;
   return PoseSmoothingModes.Chair;
 }
 
@@ -111,6 +96,7 @@ export class PoseSmoother {
   reset() {
     this.previousByName = new Map();
     this.sequence = 0;
+    this.filterStateByName = new Map();
   }
 
   smooth(rawLandmarks = [], { timestampMs = Date.now() } = {}) {
@@ -142,14 +128,34 @@ export class PoseSmoother {
           rejectedOutlierCount += 1;
           point = {
             ...previous,
-            visibility: clamp(Math.min(previous.visibility ?? 0, rawVisibility) * 0.76),
+            visibility: clamp(Math.min(previous.visibility ?? 0, rawVisibility) * stage2Operational.signal.outlierVisibilityRetention),
             outlierRejected: true,
           };
         } else {
-          point = smoothPoint(previous, raw, this.config);
+          const previousFilters = this.filterStateByName.get(raw.name) || {};
+          const xFilter = oneEuro(previousFilters.x, raw.x, timestampMs);
+          const yFilter = oneEuro(previousFilters.y, raw.y, timestampMs);
+          const zFilter = finite(raw.z) ? oneEuro(previousFilters.z, raw.z, timestampMs) : null;
+          this.filterStateByName.set(raw.name, { x: xFilter, y: yFilter, z: zFilter });
+          point = {
+            ...raw,
+            x: xFilter.filtered,
+            y: yFilter.filtered,
+            z: zFilter?.filtered ?? raw.z,
+            visibility: clamp(raw.visibility ?? 0),
+            filter: 'ONE_EURO',
+          };
         }
       } else if (previousState && previousState.missingFrames < this.config.maxInterpolationFrames) {
-        point = interpolatedPoint(previous, this.config);
+        const filters = this.filterStateByName.get(raw.name);
+        const dt = 1 / stage2Operational.signal.targetFps;
+        point = {
+          ...interpolatedPoint(previous, this.config),
+          x: previous.x + (filters?.x?.derivative || 0) * dt,
+          y: previous.y + (filters?.y?.derivative || 0) * dt,
+          z: finite(previous.z) ? previous.z + (filters?.z?.derivative || 0) * dt : previous.z,
+          interpolation: 'LINEAR_MAX_3_FRAMES',
+        };
         interpolatedCount += 1;
       } else {
         point = { ...raw, visibility: 0 };

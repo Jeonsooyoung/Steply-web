@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+const assessmentSessionService = require('./assessmentSessionService');
 
 const ResultSources = {
   LivePose: 'LIVE_POSE',
@@ -22,10 +22,11 @@ const AssessmentResultTypes = {
 };
 
 function sourceFrom(result = {}) {
-  return result.metadata?.source || result.source || null;
+  return result.stage2Result?.source || result.metadata?.source || result.source || null;
 }
 
 function statusFrom(result = {}) {
+  if (result.stage2Result?.status) return result.stage2Result.status;
   if (result.status) return result.status;
   if (result.invalid) return AssessmentStatuses.Invalid;
   return AssessmentStatuses.Valid;
@@ -47,16 +48,18 @@ function canPersistAssessmentResult(result = {}, { session = null } = {}) {
   const source = sourceFrom(result);
   const status = statusFrom(result);
   const sessionId = result.sessionId || result.metadata?.sessionId;
-  const assessmentType = result.assessmentType || result.metadata?.assessmentType;
-  const analysisSessionId = result.analysisSessionId || result.metadata?.analysisSessionId;
+  const assessmentType = result.stage2Result?.assessmentType || result.assessmentType || result.metadata?.assessmentType;
+  const analysisSessionId = result.stage2Result?.analysisSessionId || result.analysisSessionId || result.metadata?.analysisSessionId;
   const sessionAnalysisId = session?.activeAnalysisSessionId || session?.analysisSessionId || null;
   const startedAt = Number(result.startedAt ?? result.metadata?.startedAt);
-  const completedAt = Number(result.completedAt ?? result.endedAt ?? result.metadata?.completedAt);
+  const completedAt = Number(result.stage2Result?.completedAt ?? result.completedAt ?? result.endedAt ?? result.metadata?.completedAt);
+  const stage2Invalid = [AssessmentStatuses.Invalid, AssessmentStatuses.TrackingFailed].includes(status)
+    && Boolean(result.stage2Result);
 
   if (result.resultType === AssessmentResultTypes.Frame) return { ok: false, reason: 'FRAME_RESULT' };
   if (source !== ResultSources.LivePose) return { ok: false, reason: 'NON_LIVE_RESULT' };
-  if (result.isPersistable !== true) return { ok: false, reason: 'NOT_PERSISTABLE' };
-  if (status !== AssessmentStatuses.Valid) return { ok: false, reason: 'NON_VALID_RESULT' };
+  if (result.isPersistable !== true && !stage2Invalid) return { ok: false, reason: 'NOT_PERSISTABLE' };
+  if (status !== AssessmentStatuses.Valid && !stage2Invalid) return { ok: false, reason: 'NON_VALID_RESULT' };
   if (!sessionId) return { ok: false, reason: 'MISSING_SESSION_ID' };
   if (session && session.id !== sessionId) return { ok: false, reason: 'SESSION_ID_MISMATCH' };
   if (!assessmentType) return { ok: false, reason: 'MISSING_ASSESSMENT_TYPE' };
@@ -67,7 +70,7 @@ function canPersistAssessmentResult(result = {}, { session = null } = {}) {
   if (!Number.isFinite(startedAt) || !Number.isFinite(completedAt) || completedAt < startedAt) {
     return { ok: false, reason: 'INVALID_TIMESTAMPS' };
   }
-  if (!result.trackingQualitySummary) return { ok: false, reason: 'MISSING_QUALITY_SUMMARY' };
+  if (!result.trackingQualitySummary && !result.stage2Result?.quality) return { ok: false, reason: 'MISSING_QUALITY_SUMMARY' };
   return { ok: true, reason: 'OK' };
 }
 
@@ -87,18 +90,40 @@ function saveAssessmentResult(payload, {
     };
   }
 
+  const accepted = assessmentSessionService.acceptFinalResult(session, payload);
+  if (accepted.error) {
+    logSaveRejected(accepted.reason, payload);
+    return accepted;
+  }
+  if (accepted.duplicate) {
+    return {
+      result: accepted.existingResult || payload,
+      assessmentSession: accepted.assessmentSession,
+      duplicate: true,
+      resultKey: accepted.resultKey,
+      invalidAttempt: accepted.existingResult?.status !== AssessmentStatuses.Valid,
+      excludeFromTrends: accepted.existingResult?.quality?.excludeFromTrends === true,
+    };
+  }
+
   const finalResult = {
     ...payload,
-    id: crypto.randomBytes(6).toString('hex'),
+    id: accepted.resultKey,
+    resultKey: accepted.resultKey,
+    assessmentSessionId: accepted.assessmentSession.assessmentSessionId,
+    stage2Result: accepted.normalizedResult || payload.stage2Result || null,
+    excludeFromTrends: Boolean(accepted.excludeFromTrends),
     receivedAt: Date.now(),
     profile: session.profile || null,
     selectedTest: session.selectedTest || payload.testType || null,
   };
 
-  session.finalResult = finalResult;
+  const aggregateComplete = !accepted.invalidAttempt && accepted.assessmentSession?.steadi?.status === 'SCORED';
+  session.latestResult = finalResult;
+  if (aggregateComplete) session.finalResult = finalResult;
   if (typeof addHistoryItem === 'function') addHistoryItem(finalResult);
 
-  if (typeof broadcast === 'function' && typeof publicSession === 'function') {
+  if (aggregateComplete && typeof broadcast === 'function' && typeof publicSession === 'function') {
     broadcast(payload.sessionId, {
       type: 'final',
       result: finalResult,
@@ -106,7 +131,15 @@ function saveAssessmentResult(payload, {
     });
   }
 
-  return { result: finalResult };
+  return {
+    result: finalResult,
+    assessmentSession: accepted.assessmentSession,
+    aggregateComplete,
+    duplicate: false,
+    invalidAttempt: Boolean(accepted.invalidAttempt),
+    excludeFromTrends: Boolean(accepted.excludeFromTrends),
+    resultKey: accepted.resultKey,
+  };
 }
 
 module.exports = {
@@ -116,4 +149,3 @@ module.exports = {
   canPersistAssessmentResult,
   saveAssessmentResult,
 };
-

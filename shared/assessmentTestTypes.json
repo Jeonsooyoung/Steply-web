@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "assessment_test_types.v1",
+  "allowedTestTypes": [
+    "chair_stand",
+    "four_stage_balance"
+  ]
+}

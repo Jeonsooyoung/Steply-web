@@ -17,8 +17,11 @@ flowchart TD
   H --> I["STEADI scoring"]
   H --> J["Functional findings"]
   J --> K["Deterministic Otago recommendation"]
-  K --> L["Care Orchestration Agent"]
-  L --> M["Session flow UI"]
+  K --> L["Ephemeral Web result/projection UI"]
+  K --> N["Canonical result synced to Mobile Room"]
+  N --> O["Mobile Care Agent"]
+  O --> P["Room decision log + Android tools"]
+  P --> L
 ```
 
 ## Key Files
@@ -35,10 +38,30 @@ flowchart TD
 - Balance Test state machine: `client/src/pipeline/assessment/balanceTest/balanceTestStateMachine.js`
 - Functional findings: `client/src/pipeline/findings/functionalFindings.js`
 - Otago recommendation engine: `client/src/pipeline/recommendation/otagoExerciseEngine.js`
-- Care agent: `client/src/pipeline/agent/careAgent.js`
+- Mobile Care Agent: `Steply-mobile/app/src/main/java/com/steply/app/care`
+- Web projection contract: `shared/stage4CareAgentContract.cjs`
 - UI flow adapter: `client/src/pipeline/ui/sessionFlow.js`
-- Result view model: `client/src/pipeline/ui/resultViewModel.js`
-- Persistence guardrails: `client/src/pipeline/shared/config/persistence.config.js`
+
+## Web Presentation Layer
+
+The reference desktop UI is organized by product feature under
+`client/src/features/reference-ui`:
+
+- Shared application shell and navigation: `shared/ReferenceShell.jsx`
+- Shared live camera adapter: `shared/LiveCamera.jsx`
+- Shared presentation primitives: `shared/components.jsx`
+- Home, assessment landing, and settings: `overview/`
+- Weekly report: `reports/`
+- Exercise plan and guided exercise: `exercises/`
+- Posture results and balance assessment: `assessment/`
+- Phone connection: `connection/`
+
+Each feature keeps screen data in a colocated `*Data.js` module. The public
+screen exports are collected by `client/src/features/reference-ui/index.js`,
+and `client/src/routes/RouteScaffold.jsx` is responsible only for routing to
+those screens. Styles follow the same feature boundaries under
+`client/src/styles/reference-ui/`, with `reference-ui.css` acting as the import
+entry point.
 
 ## Configuration
 
@@ -50,22 +73,7 @@ All threshold versions are centralized under `client/src/pipeline/shared/config`
 - `chairStand.config.js`
 - `balance.config.js`
 - `functionalFindings.config.js`
-- `persistence.config.js`
-- `pipeline.config.js`
-
-The current activation gate is `client/src/pipeline/shared/config/pipeline.config.js`.
-
-Production default:
-
-```js
-DEFAULT_ASSESSMENT_PIPELINE_MODE = PipelineModes.StructuredV2
-```
-
-Production allowed mode:
-
-```js
-PipelineModes.StructuredV2
-```
+- `stage2Analysis.config.js`
 
 ## Validation Tools
 
@@ -73,7 +81,7 @@ PipelineModes.StructuredV2
 - CLI wrapper: `scripts/run-landmark-replay.mjs`
 - CI check wrapper: `scripts/check-internal-validation.mjs`
 - Summary output: `artifacts/validation/internal-validation-summary.json`
-- Report: `docs/VALIDATION_REPORT.md`
+- Requirement coverage: `docs/STAGE2_POSE_PIPELINE_TRACEABILITY.md`
 
 Commands:
 

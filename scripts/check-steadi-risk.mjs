@@ -44,7 +44,7 @@ try {
 
   assert.equal(chairStandBelowAverageThreshold(70, 'female'), 10);
 
-  const profile = { ageYears: 70, gender: 'female' };
+  const profile = { ageYears: 70, sex: 'FEMALE' };
   const cases = [
     {
       name: '0 risk signals',

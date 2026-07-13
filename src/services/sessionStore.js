@@ -43,10 +43,27 @@ function clearSessionPersonalData(sessionId, reason = 'session-cleanup') {
   if (!session) return null;
 
   session.profile = null;
+  session.dataContract = null;
   session.connectedAt = null;
   session.selectedTest = null;
   session.latestResult = null;
   session.finalResult = null;
+  session.assessmentSession = null;
+  session.assessmentSessionMessageIds = new Set();
+  session.assessmentResultKeys = new Map();
+  session.careAgentProjection = null;
+  session.careAgentProjectionMessageIds = new Set();
+  session.pendingLandmarkSeriesById = new Map();
+  session.landmarkSeriesMessageIds = new Map();
+  session.landmarkSeriesAttemptIds = new Map();
+  session.landmarkSeriesAckReceipts = new Map();
+  const sockets = socketsBySession.get(sessionId);
+  if (sockets) {
+    for (const socket of sockets) {
+      socket.pendingMobileFrameMeta = null;
+      socket.frameSequence = 0;
+    }
+  }
   session.cleanedAt = Date.now();
   session.cleanupReason = reason;
   return session;

@@ -8,32 +8,16 @@ import {
   SessionProgress,
 } from '../components/foundation/SteplyDesignSystem';
 import { PoseOverlay } from '../components/pose/PoseOverlay';
+import { useStableAssessmentCountdown } from '../hooks/useStableAssessmentCountdown.js';
+import {
+  ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS,
+  isStableAssessmentStartReady,
+} from '../pipeline/ui/assessmentAutoStart.js';
 import { UserScreenIds } from '../pipeline/ui/sessionFlow';
-
-function queryParams() {
-  if (typeof window === 'undefined') return new URLSearchParams();
-  return new URLSearchParams(window.location.search);
-}
-
-function queryValue(name, fallback = '') {
-  return queryParams().get(name) || fallback;
-}
+import { navigateSpa } from './spaNavigation';
 
 function goTo(path) {
-  if (typeof window !== 'undefined') window.location.assign(path);
-}
-
-function routeWithParams(path, updates = {}) {
-  const params = queryParams();
-  Object.entries(updates).forEach(([key, value]) => {
-    if (value === null || value === undefined || value === '') {
-      params.delete(key);
-    } else {
-      params.set(key, value);
-    }
-  });
-  const query = params.toString();
-  return query ? `${path}?${query}` : path;
+  navigateSpa(path);
 }
 
 function useTimedBackGuard(active = true) {
@@ -170,12 +154,6 @@ function stageFromOrder(order) {
 }
 
 function activeStageForDashboard(dashboard) {
-  const requestedId = queryValue('stageId', '');
-  if (stageById.has(requestedId)) return stageById.get(requestedId);
-
-  const requestedStage = queryValue('stage', '');
-  if (requestedStage) return stageFromOrder(requestedStage);
-
   const protocol = balanceProtocolFromDashboard(dashboard);
   if (stageById.has(protocol?.currentStageId)) return stageById.get(protocol.currentStageId);
   if (protocol?.currentStageOrder) return stageFromOrder(protocol.currentStageOrder);
@@ -195,138 +173,24 @@ function formatSeconds(value, digits = 1) {
   return numeric.toFixed(digits);
 }
 
-function cameraCorrectionMessage(quality) {
-  if (quality === 'feet') return 'Both feet need to remain visible.';
-  if (quality === 'area') return 'Step back into the guide area.';
-  if (quality === 'face' || quality === 'angle') return 'Adjust the phone to match the guide.';
-  if (quality === 'dark' || quality === 'lighting') return 'Move to a brighter area.';
-  if (quality === 'person') return 'Only one person should remain in the assessment area.';
-  if (quality === 'body') return 'Step back until your full body is visible.';
-  return 'Both feet need to remain visible.';
-}
-
 function liveStateForDashboard(dashboard, stage) {
   const protocol = balanceProtocolFromDashboard(dashboard);
   const protocolStage = currentProtocolStage(protocol, stage);
-  const requestedState = queryValue('state', '');
-  const requestedQuality = queryValue('quality', '');
-  const connectionLost = queryValue('connection', '') === 'lost' || requestedState === 'lost';
+  const connectionLost = String(dashboard?.activeCameraStatus || '').toLowerCase().includes('closed');
 
   if (connectionLost) {
     return {
       key: 'lost',
       timerMode: 'paused',
-      timerValue: formatSeconds(queryValue('time', protocolStage?.holdSeconds || 0)),
+      timerValue: formatSeconds(protocolStage?.holdSeconds || 0),
       timerUnit: 'seconds held',
-      instruction: 'The phone connection was lost. The timer is paused.',
+      instruction: 'The camera connection was lost. The timer is paused.',
       detection: 'Connection paused',
       banner: 'Phone Connection Lost. The assessment has been paused.',
       bannerTone: 'danger',
       voice: 'Phone Connection Lost. The assessment has been paused.',
       isPaused: true,
     };
-  }
-
-  if (requestedState) {
-    const holdTime = queryValue('time', protocolStage?.holdSeconds || (requestedState === 'success' ? 10 : 6.4));
-    if (requestedState === 'detected') {
-      return {
-        key: 'detected',
-        timerMode: 'countdown',
-        timerValue: '10',
-        timerUnit: 'seconds left',
-        instruction: 'Good. Hold this position.',
-        detection: 'Position detected',
-        banner: 'Good. Hold this position.',
-        bannerTone: 'success',
-        voice: 'Good. Hold this position. The timer is starting.',
-      };
-    }
-    if (requestedState === 'holding') {
-      const remaining = queryValue('remaining', queryValue('time', protocolStage?.remainingSeconds || 7));
-      const voice = Number(remaining) <= 3
-        ? 'Three seconds left.'
-        : 'Keep looking forward.';
-      return {
-        key: 'holding',
-        timerMode: 'countdown',
-        timerValue: formatSeconds(remaining, Number(remaining) % 1 === 0 ? 0 : 1),
-        timerUnit: 'seconds left',
-        instruction: 'Hold steady and look forward.',
-        detection: 'Holding',
-        banner: Number(remaining) <= 3 ? 'Three seconds left.' : 'Keep looking forward.',
-        bannerTone: 'info',
-        voice,
-      };
-    }
-    if (requestedState === 'camera') {
-      const message = cameraCorrectionMessage(requestedQuality);
-      return {
-        key: 'camera',
-        timerMode: 'paused',
-        timerValue: formatSeconds(queryValue('time', protocolStage?.holdSeconds || 4.8)),
-        timerUnit: 'seconds held',
-        instruction: message,
-        detection: 'Camera check paused',
-        banner: message,
-        bannerTone: 'warning',
-        voice: `${message} The timer is paused.`,
-        isPaused: true,
-      };
-    }
-    if (requestedState === 'feet') {
-      return {
-        key: 'feet',
-        timerMode: 'stopped',
-        timerValue: formatSeconds(holdTime),
-        timerUnit: 'seconds held',
-        instruction: `The position ended at ${formatSeconds(holdTime)} seconds.`,
-        detection: 'Position ended',
-        banner: `The position ended at ${formatSeconds(holdTime)} seconds.`,
-        bannerTone: 'warning',
-        voice: `The position ended at ${formatSeconds(holdTime)} seconds. We saved your hold time.`,
-      };
-    }
-    if (requestedState === 'support') {
-      return {
-        key: 'support',
-        timerMode: 'stopped',
-        timerValue: formatSeconds(holdTime),
-        timerUnit: 'seconds held',
-        instruction: 'Support was used, so the timer has stopped.',
-        detection: 'Timer stopped',
-        banner: 'Support was used, so the timer has stopped.',
-        bannerTone: 'warning',
-        voice: 'Support was used, so the timer has stopped. We saved your hold time.',
-      };
-    }
-    if (requestedState === 'success') {
-      return {
-        key: 'success',
-        timerMode: 'complete',
-        timerValue: '10',
-        timerUnit: 'seconds held',
-        instruction: 'You held the position for 10 seconds.',
-        detection: 'Stage complete',
-        banner: 'You held the position for 10 seconds.',
-        bannerTone: 'success',
-        voice: 'You held the position for 10 seconds. This stage is complete.',
-      };
-    }
-    if (requestedState === 'paused') {
-      return {
-        key: 'paused',
-        timerMode: 'paused',
-        timerValue: formatSeconds(queryValue('time', protocolStage?.holdSeconds || 3.2)),
-        timerUnit: 'seconds held',
-        instruction: 'The Balance Test is paused.',
-        detection: 'Paused',
-        banner: 'The Balance Test is paused.',
-        bannerTone: 'info',
-        voice: 'The Balance Test is paused. Resume when you are ready.',
-        isPaused: true,
-      };
-    }
   }
 
   if (protocol?.status === 'completed') {
@@ -415,32 +279,33 @@ function liveStateForDashboard(dashboard, stage) {
 }
 
 function liveQualityRows(liveState, dashboard) {
-  const connected = Boolean(dashboard?.remoteCameraFrame?.src || dashboard?.session?.profile);
-  const urlState = queryValue('state', '');
-  const quality = queryValue('quality', '');
+  const connected = Boolean(dashboard?.isCameraLinked);
+  const sourceLabel = dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'Laptop Camera' : 'Phone Connected';
+  const reasons = dashboard?.poseAnalysis?.qualityStatus?.reasons || [];
+  const hasReason = (code) => reasons.some((reason) => reason?.code === code);
 
   if (liveState.key === 'lost') {
     return [
-      { label: 'Phone Connected', status: 'lost', detail: 'Reconnect before continuing.' },
+      { label: sourceLabel, status: 'lost', detail: 'Reconnect before continuing.' },
       { label: 'Full Body Visible', status: 'checking' },
       { label: 'Feet Visible', status: 'checking' },
       { label: 'Lighting', status: 'checking' },
     ];
   }
 
-  if (urlState === 'camera') {
+  if (liveState.key === 'camera') {
     return [
-      { label: 'Phone Connected', status: 'ready' },
-      { label: 'Full Body Visible', status: quality === 'body' || quality === 'area' ? 'adjust' : 'ready' },
-      { label: 'Feet Visible', status: quality === 'feet' ? 'adjust' : 'ready' },
-      { label: 'Camera Angle', status: quality === 'face' || quality === 'angle' ? 'adjust' : 'ready' },
-      { label: 'Lighting', status: quality === 'dark' || quality === 'lighting' ? 'adjust' : 'ready' },
+      { label: sourceLabel, status: 'ready' },
+      { label: 'Full Body Visible', status: hasReason('BODY_OUT_OF_FRAME') ? 'adjust' : 'ready' },
+      { label: 'Feet Visible', status: hasReason('FEET_NOT_VISIBLE') ? 'adjust' : 'ready' },
+      { label: 'Camera Angle', status: hasReason('WRONG_CAMERA_ANGLE') ? 'adjust' : 'ready' },
+      { label: 'Lighting', status: hasReason('LOW_LIGHT') ? 'adjust' : 'ready' },
     ];
   }
 
-  if (queryValue('quality', '') === 'checking') {
+  if (dashboard?.poseAnalysis?.qualityStatus?.state === 'NOT_READY') {
     return [
-      { label: 'Phone Connected', status: connected ? 'ready' : 'checking' },
+      { label: sourceLabel, status: connected ? 'ready' : 'checking' },
       { label: 'Full Body Visible', status: 'checking' },
       { label: 'Feet Visible', status: 'checking' },
       { label: 'Lighting', status: 'checking' },
@@ -448,7 +313,7 @@ function liveQualityRows(liveState, dashboard) {
   }
 
   return [
-    { label: 'Phone Connected', status: connected ? 'ready' : 'checking' },
+    { label: sourceLabel, status: connected ? 'ready' : 'checking' },
     { label: 'Full Body Visible', status: 'ready' },
     { label: 'Feet Visible', status: 'ready' },
     { label: 'Lighting', status: 'ready' },
@@ -505,26 +370,24 @@ function PositionCard({ stage, active }) {
 export function DisplayBalanceInstructionScreen({ dashboard }) {
   const [lastReplay, setLastReplay] = useState('');
   const activeStage = activeStageForDashboard(dashboard);
-  const fullBodyVisible = Boolean(
-    dashboard?.poseAnalysis?.cameraReadiness?.fullBodyVisible
-    || dashboard?.poseAnalysis?.cameraReadiness?.checks?.fullBodyVisible
-  );
+  const startReady = isStableAssessmentStartReady({
+    cameraReady: dashboard?.isCameraReady,
+    cameraReadiness: dashboard?.poseAnalysis?.cameraReadiness,
+    landmarkCount: dashboard?.poseAnalysis?.landmarks?.length || 0,
+  });
+  const autoStartSeconds = useStableAssessmentCountdown({
+    ready: startReady,
+    completionReady: startReady && dashboard?.poseAnalysis?.calibrationStatus?.canStartAssessment === true,
+    onComplete: () => goTo('/display/assessment/balance/live'),
+  });
   const voiceScript = `${activeStage.voiceSetup} Confirm when you are in position, then Steply will measure your stability for 10 seconds.`;
-
-  useEffect(() => {
-    if (!dashboard?.remoteCameraFrame?.src || !fullBodyVisible) return undefined;
-    const timer = window.setTimeout(() => {
-      goTo(`/display/assessment/balance/live?stage=${activeStage.order}&state=positioning`);
-    }, 500);
-    return () => window.clearTimeout(timer);
-  }, [activeStage.order, dashboard?.remoteCameraFrame?.src, fullBodyVisible]);
 
   return (
     <SessionShell
       eyebrow="CDC STEADI"
       title="4-Stage Balance Test"
       description="You will try four standing positions. Hold each position for up to 10 seconds."
-      connection={<ConnectionIndicator status="connected" label="Balance Test ready" detail={`Next position: ${activeStage.name}`} />}
+      connection={<ConnectionIndicator status={startReady ? 'connected' : 'waiting'} label={startReady ? 'Balance Test ready' : 'Hold your standing position'} detail={startReady ? `Starting in ${autoStartSeconds ?? ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS} seconds — ${activeStage.name}` : 'Keep one person, the full body, and both feet clearly visible.'} />}
       progress={<SessionProgress current={6} total={9} label="Session progress" />}
       className="step-four-instruction-shell"
     >
@@ -560,8 +423,9 @@ export function DisplayBalanceInstructionScreen({ dashboard }) {
             onReplay={() => setLastReplay(voiceScript)}
           />
           <PrimaryActionBar
-            primaryLabel="Start Balance Test"
-            onPrimary={() => goTo(`/display/assessment/balance/live?stage=${activeStage.order}&state=positioning`)}
+            primaryLabel={startReady ? `Starting in ${autoStartSeconds ?? ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS}...` : 'Waiting for stable standing'}
+            primaryDisabled
+            onPrimary={() => goTo('/display/assessment/balance/live')}
           />
         </div>
         {lastReplay ? <span className="step-four-sr-status" role="status">{lastReplay}</span> : null}
@@ -573,13 +437,13 @@ export function DisplayBalanceInstructionScreen({ dashboard }) {
 function LivePreview({ dashboard, stage, liveState, qualityRows }) {
   return (
     <section className="step-four-live-preview">
-      <CameraPreview frameSrc={dashboard?.remoteCameraFrame?.src} label="Balance Test preview" guide="Stay inside the guide">
+      <CameraPreview frameSrc={dashboard?.activeCameraFrame?.src} mediaStream={dashboard?.activeCameraStream} label="Balance Test preview" guide="Stay inside the guide" onFrameLoaded={dashboard?.handleCameraFrameLoaded} onFrameError={dashboard?.handleCameraFrameError}>
         <PoseOverlay
           landmarks={dashboard?.poseAnalysis?.analysisLandmarks?.length
             ? dashboard.poseAnalysis.analysisLandmarks
             : dashboard?.poseAnalysis?.landmarks || []}
           frameSize={dashboard?.poseAnalysis?.frameSize}
-          fit="cover"
+          fit={dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'contain' : 'cover'}
         />
         <div className="step-four-balance-overlay" aria-hidden="true">
           <span className="step-four-balance-overlay__body">Position guide</span>
@@ -618,43 +482,11 @@ function LiveTimer({ liveState }) {
 
 export function DisplayBalanceLiveScreen({ dashboard }) {
   const [lastReplay, setLastReplay] = useState('');
-  const [flowRemaining, setFlowRemaining] = useState(10);
   const showBackWarning = useTimedBackGuard(true);
   const stage = activeStageForDashboard(dashboard);
-  const measuredLiveState = useMemo(() => liveStateForDashboard(dashboard, stage), [dashboard, stage]);
-  const liveState = useMemo(() => ({
-    ...measuredLiveState,
-    timerValue: flowRemaining,
-    timerUnit: 'seconds',
-    key: 'holding',
-    isPaused: false,
-    bannerTone: 'info',
-    banner: `Hold the shown position for ${flowRemaining} more second${flowRemaining === 1 ? '' : 's'}.`,
-    instruction: stage.setup,
-  }), [flowRemaining, measuredLiveState, stage.setup]);
+  const liveState = useMemo(() => liveStateForDashboard(dashboard, stage), [dashboard, stage]);
   const qualityRows = useMemo(() => liveQualityRows(liveState, dashboard), [dashboard, liveState]);
   const connectionStatus = liveState.key === 'lost' ? 'lost' : 'connected';
-  const pausePath = liveState.isPaused
-    ? routeWithParams('/display/assessment/balance/live', { stage: stage.order, state: 'holding', remaining: queryValue('remaining', '7') })
-    : routeWithParams('/display/assessment/balance/live', { stage: stage.order, state: 'paused' });
-
-  useEffect(() => {
-    const startedAt = Date.now();
-    setFlowRemaining(10);
-    const intervalId = window.setInterval(() => {
-      const remaining = Math.max(0, 10 - Math.floor((Date.now() - startedAt) / 1000));
-      setFlowRemaining(remaining);
-      if (remaining > 0) return;
-      window.clearInterval(intervalId);
-      if (stage.order < balanceStages.length) {
-        goTo(`/display/assessment/balance/live?stage=${stage.order + 1}&state=positioning`);
-      } else {
-        dashboard?.poseAnalysis?.finishAnalysis?.();
-        goTo('/display/assessment/balance/stage-result?stage=4&complete=1&time=10');
-      }
-    }, 100);
-    return () => window.clearInterval(intervalId);
-  }, [stage.order]);
 
   useEffect(() => {
     dashboard?.setActiveStep?.(UserScreenIds.Assessment);
@@ -663,14 +495,13 @@ export function DisplayBalanceLiveScreen({ dashboard }) {
       return;
     }
     const analysis = dashboard?.poseAnalysis;
-    const fullBodyVisible = Boolean(
-      analysis?.cameraReadiness?.fullBodyVisible
-      || analysis?.cameraReadiness?.checks?.fullBodyVisible
-    );
+    const startReady = isStableAssessmentStartReady({
+      cameraReady: dashboard?.isCameraReady,
+      cameraReadiness: analysis?.cameraReadiness,
+      landmarkCount: analysis?.analysisLandmarks?.length || analysis?.landmarks?.length || 0,
+    });
     if (
-      dashboard?.remoteCameraFrame?.src
-      && fullBodyVisible
-      && ((analysis?.analysisLandmarks?.length || analysis?.landmarks?.length || 0) > 0)
+      startReady
       && !analysis?.isRunning
       && ['IDLE', 'CANCELLED'].includes(analysis?.analysisSessionState)
     ) {
@@ -678,8 +509,9 @@ export function DisplayBalanceLiveScreen({ dashboard }) {
     }
   }, [
     dashboard?.selectedTest,
-    dashboard?.remoteCameraFrame?.src,
+    dashboard?.isCameraReady,
     dashboard?.poseAnalysis?.analysisSessionState,
+    dashboard?.poseAnalysis?.cameraReadiness?.isReady,
     dashboard?.poseAnalysis?.cameraReadiness?.fullBodyVisible,
     dashboard?.poseAnalysis?.cameraReadiness?.checks?.fullBodyVisible,
     dashboard?.poseAnalysis?.landmarks?.length,
@@ -696,7 +528,7 @@ export function DisplayBalanceLiveScreen({ dashboard }) {
       || result?.testType !== 'four_stage_balance'
       || result?.analysisSessionId !== analysis?.analysisSessionId
     ) return;
-    goTo('/display/assessment/balance/stage-result?complete=1');
+    goTo('/display/assessment/balance/stage-result');
   }, [dashboard?.poseAnalysis?.analysisResult, dashboard?.poseAnalysis?.analysisSessionState]);
 
   return (
@@ -704,7 +536,7 @@ export function DisplayBalanceLiveScreen({ dashboard }) {
       eyebrow="4-Stage Balance Test"
       title={`Stage ${stage.order} of 4`}
       description={stage.name}
-      connection={<ConnectionIndicator status={connectionStatus} label={liveState.key === 'lost' ? 'Phone connection lost' : 'Phone Connected'} detail={liveState.detection} />}
+      connection={<ConnectionIndicator status={connectionStatus} label={liveState.key === 'lost' ? 'Camera connection lost' : dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'Laptop Camera' : 'Phone Connected'} detail={liveState.detection} />}
       progress={<SessionProgress current={7} total={9} label="Session progress" />}
       className="step-four-live-shell"
     >
@@ -719,10 +551,8 @@ export function DisplayBalanceLiveScreen({ dashboard }) {
           <LiveTimer liveState={liveState} />
           <div className="step-four-live-actions">
             <PrimaryActionBar
-              primaryLabel={liveState.isPaused ? 'Resume' : 'Pause'}
-              secondaryLabel="Hear Again"
-              onPrimary={() => goTo(pausePath)}
-              onSecondary={() => {
+              primaryLabel="Hear Again"
+              onPrimary={() => {
                 setLastReplay(liveState.voice);
               }}
             />
@@ -760,15 +590,9 @@ export function DisplayBalanceLiveScreen({ dashboard }) {
 function resultStateForDashboard(dashboard, stage) {
   const protocol = balanceProtocolFromDashboard(dashboard);
   const protocolStage = currentProtocolStage(protocol, stage);
-  const result = queryValue('result', '');
-  const requestedStop = queryValue('stop', '') === '1' || queryValue('complete', '') === '1';
-  const holdTime = Number(queryValue('time', protocolStage?.holdSeconds || (result === 'success' ? 10 : 6.4)));
-  const completed = result === 'success' || protocolStage?.status === 'completed' || holdTime >= 10;
-  const shouldFinish = requestedStop
-    || stage.order >= 4
-    || result === 'ended'
-    || result === 'support'
-    || protocol?.status === 'completed'
+  const holdTime = Number(protocolStage?.holdSeconds || 0);
+  const completed = protocolStage?.status === 'completed' || holdTime >= 10;
+  const shouldFinish = protocol?.status === 'completed'
     || protocol?.status === 'stopped'
     || protocol?.shouldFinishSession;
 
@@ -840,7 +664,7 @@ export function DisplayBalanceStageResultScreen({ dashboard }) {
               if (resultState.shouldFinish) {
                 goTo('/display/assessment/chair/instruction');
               } else {
-                goTo(`/display/assessment/balance/live?stage=${resultState.nextStage.order}&state=positioning`);
+                goTo('/display/assessment/balance/live');
               }
             }}
           />

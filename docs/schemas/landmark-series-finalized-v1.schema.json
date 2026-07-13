@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/landmark-series-finalized-v1.schema.json",
+  "title": "Steply landmark series finalized envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "schemaVersion", "messageId", "profileId", "assessmentSessionId", "attemptId", "resultId", "series"],
+  "properties": {
+    "type": { "const": "landmark-series.finalized" },
+    "schemaVersion": { "const": "landmark_series.v1" },
+    "messageId": { "type": "string", "minLength": 1 },
+    "profileId": { "type": "string", "minLength": 1 },
+    "assessmentSessionId": { "type": "string", "minLength": 1 },
+    "attemptId": { "type": "string", "minLength": 1 },
+    "resultId": { "type": "string", "minLength": 1 },
+    "series": { "$ref": "landmark-series-v1.schema.json" }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/care-agent-update-v1.schema.json",
+  "title": "Steply Care Agent Web Projection Update v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "schemaVersion", "messageId", "profileId", "baseStateVersion", "stateVersion", "projection"],
+  "properties": {
+    "type": { "const": "care-agent.updated" },
+    "schemaVersion": { "const": "care_agent_state.v1" },
+    "messageId": { "type": "string", "minLength": 1 },
+    "profileId": { "type": "string", "minLength": 1 },
+    "baseStateVersion": { "type": "integer", "minimum": 0 },
+    "stateVersion": { "type": "integer", "minimum": 1 },
+    "projection": { "$ref": "care-agent-projection-v1.schema.json" }
+  }
+}

@@ -1,6 +1,5 @@
 const { getSession, broadcast } = require('./sessionStore');
 const { publicSession } = require('./sessionPresenter');
-const { addHistoryItem } = require('../repositories/historyRepository');
 const {
   AssessmentResultTypes,
   saveAssessmentResult,
@@ -32,7 +31,6 @@ function saveFinalResult(payload) {
 
   return saveAssessmentResult(payload, {
     session,
-    addHistoryItem,
     broadcast,
     publicSession,
   });

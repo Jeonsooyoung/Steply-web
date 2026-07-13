@@ -1,4 +1,5 @@
 import { initials, statusLabel } from '../utils/format';
+import { SteplyIcon } from '../features/reference-ui/shared/icons';
 
 export function SteplyCard({ className = '', tone = 'surface', children, ...props }) {
   return (
@@ -38,7 +39,7 @@ export function MetricCard({ value, label, detail, status, accent = false }) {
 export function SafetyNoticeCard({ children }) {
   return (
     <SteplyCard tone="notice" className="safety-notice">
-      <div className="safety-notice__icon">✓</div>
+      <div className="safety-notice__icon"><SteplyIcon name="shieldCheck" /></div>
       <div>
         <strong>Safety first</strong>
         <p>{children}</p>
@@ -50,7 +51,7 @@ export function SafetyNoticeCard({ children }) {
 export function EmptyStateCard({ title, message, action }) {
   return (
     <SteplyCard className="empty-state-card">
-      <div className="empty-state-card__symbol">○</div>
+      <div className="empty-state-card__symbol"><SteplyIcon name="fileText" size={26} /></div>
       <h3>{title}</h3>
       <p>{message}</p>
       {action}

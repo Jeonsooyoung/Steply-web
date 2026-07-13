@@ -3,13 +3,16 @@ import {
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 import { EmptyStateCard, MetricCard, SteplyCard } from './SteplyPrimitives';
+import { SteplyIcon } from '../features/reference-ui/shared/icons';
 import {
+  BalancePostureSeries,
   HistoryChallengeTypes,
   buildChallengeTrendSeries,
   latestMetric,
@@ -113,19 +116,25 @@ function ChairStandTrend({ points }) {
 }
 
 function BalanceTrend({ points }) {
-  const latestHold = latestMetric(points, 'holdSeconds');
-  const holdDelta = trendDelta(points, 'holdSeconds');
-  const swayDelta = trendDelta(points, 'swayIndex', { lowerIsBetter: true });
+  const latestValues = Object.fromEntries(BalancePostureSeries.map((posture) => [
+    posture.metricKey,
+    latestMetric(points, posture.metricKey),
+  ]));
+  const tandemDelta = trendDelta(points, 'tandemSeconds');
+  const lineColors = ['#64748b', 'var(--tertiary)', 'var(--primary)', '#0f766e'];
   return (
     <TrendCard
       title="4-Stage Balance Test"
-      description="Tandem hold time and side-to-side sway from repeated balance checks."
+      description="Exact hold seconds for all four postures. The dashed line marks the 10-second target; Tandem is emphasized."
       points={points}
       summary={(
         <div className="history-trend-summary">
-          <strong>{latestHold !== null ? `${formatNumber(latestHold, 1)}s` : '-'}</strong>
-          <ImprovementBadge value={holdDelta} suffix="s" />
-          <ImprovementBadge value={swayDelta} lowerIsBetter suffix=" sway" />
+          {BalancePostureSeries.map((posture) => (
+            <span key={posture.metricKey}>
+              {posture.shortLabel}: {latestValues[posture.metricKey] !== null ? `${formatNumber(latestValues[posture.metricKey], 1)}s` : '-'}
+            </span>
+          ))}
+          <ImprovementBadge value={tandemDelta} suffix="s Tandem" />
         </div>
       )}
     >
@@ -133,32 +142,23 @@ function BalanceTrend({ points }) {
         <LineChart data={points} margin={{ top: 18, right: 4, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="sessionLabel" tickLine={false} axisLine={false} tick={{ fontSize: 18, fontWeight: 800 }} />
-          <YAxis yAxisId="hold" width={48} tickLine={false} axisLine={false} tick={{ fontSize: 18, fontWeight: 800 }} />
-          <YAxis yAxisId="sway" orientation="right" width={54} tickLine={false} axisLine={false} tick={{ fontSize: 18, fontWeight: 800 }} />
+          <YAxis width={48} domain={[0, 10]} ticks={[0, 2, 4, 6, 8, 10]} tickLine={false} axisLine={false} tick={{ fontSize: 18, fontWeight: 800 }} unit="s" />
           <Tooltip content={<ChartTooltip />} labelFormatter={(_, payload) => payload?.[0]?.payload?.dateLabel || ''} />
           <Legend verticalAlign="top" height={28} />
-          <Line
-            yAxisId="hold"
-            type="monotone"
-            dataKey="holdSeconds"
-            name="Hold seconds"
-            stroke="var(--primary)"
-            strokeWidth={4}
-            dot={{ r: 5 }}
-            activeDot={{ r: 7 }}
-            connectNulls
-          />
-          <Line
-            yAxisId="sway"
-            type="monotone"
-            dataKey="swayIndex"
-            name="Sway"
-            stroke="var(--tertiary)"
-            strokeWidth={3}
-            dot={{ r: 4 }}
-            activeDot={{ r: 6 }}
-            connectNulls
-          />
+          <ReferenceLine y={10} stroke="#475569" strokeDasharray="7 5" label={{ value: '10s target', position: 'insideTopRight' }} />
+          {BalancePostureSeries.map((posture, index) => (
+            <Line
+              key={posture.metricKey}
+              type="monotone"
+              dataKey={posture.metricKey}
+              name={`${posture.label} seconds`}
+              stroke={lineColors[index]}
+              strokeWidth={posture.emphasized ? 5 : 2.5}
+              dot={{ r: posture.emphasized ? 6 : 4 }}
+              activeDot={{ r: posture.emphasized ? 8 : 6 }}
+              connectNulls
+            />
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </TrendCard>
@@ -170,7 +170,7 @@ export function HistoryPanel({ historyItems, historySource }) {
   const chairStandPoints = buildChallengeTrendSeries(items, HistoryChallengeTypes.ChairStand);
   const balancePoints = buildChallengeTrendSeries(items, HistoryChallengeTypes.FourStageBalance);
   const latestChairReps = latestMetric(chairStandPoints, 'repetitions');
-  const latestBalanceHold = latestMetric(balancePoints, 'holdSeconds');
+  const latestBalanceHold = latestMetric(balancePoints, 'tandemSeconds');
   const totalPlotted = chairStandPoints.length + balancePoints.length;
 
   return (
@@ -187,7 +187,7 @@ export function HistoryPanel({ historyItems, historySource }) {
         <p>
           {items.length
             ? 'Steply shows movement history supplied by the phone profile so changes are easier to notice over time.'
-            : 'When the phone app sends movement history, this screen will show recent trends for balance and exercise completion.'}
+            : 'When the phone app sends assessment history, this screen will show recent balance and chair-strength trends.'}
         </p>
         {historySource ? (
           <p className="history-source-note">
@@ -198,7 +198,7 @@ export function HistoryPanel({ historyItems, historySource }) {
       </SteplyCard>
 
       {items.length === 0 ? (
-        <EmptyStateCard title="No movement history yet" message="Complete a mission on the phone profile to begin tracking your last five sessions." />
+        <EmptyStateCard title="No movement history yet" message="Complete an assessment in the phone app to begin tracking your last five sessions." />
       ) : (
         <>
           <div className="history-chart-grid">
@@ -206,7 +206,7 @@ export function HistoryPanel({ historyItems, historySource }) {
             <ChairStandTrend points={chairStandPoints} />
           </div>
           <SteplyCard className="history-achievement-card">
-            <div className="history-achievement-card__icon">✓</div>
+            <div className="history-achievement-card__icon"><SteplyIcon name="award" /></div>
             <div>
               <div className="eyebrow">Achievement</div>
               <h3>Safe Steps Badge</h3>

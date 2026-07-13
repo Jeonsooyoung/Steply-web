@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AppHeader,
   CameraPreview,
@@ -8,32 +8,16 @@ import {
   SessionProgress,
 } from '../components/foundation/SteplyDesignSystem';
 import { PoseOverlay } from '../components/pose/PoseOverlay';
+import { useStableAssessmentCountdown } from '../hooks/useStableAssessmentCountdown.js';
+import {
+  ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS,
+  isStableAssessmentStartReady,
+} from '../pipeline/ui/assessmentAutoStart.js';
 import { UserScreenIds } from '../pipeline/ui/sessionFlow';
-
-function queryParams() {
-  if (typeof window === 'undefined') return new URLSearchParams();
-  return new URLSearchParams(window.location.search);
-}
-
-function queryValue(name, fallback = '') {
-  return queryParams().get(name) || fallback;
-}
+import { navigateSpa } from './spaNavigation';
 
 function goTo(path) {
-  if (typeof window !== 'undefined') window.location.assign(path);
-}
-
-function routeWithParams(path, updates = {}) {
-  const params = queryParams();
-  Object.entries(updates).forEach(([key, value]) => {
-    if (value === null || value === undefined || value === '') {
-      params.delete(key);
-    } else {
-      params.set(key, value);
-    }
-  });
-  const query = params.toString();
-  return query ? `${path}?${query}` : path;
+  navigateSpa(path);
 }
 
 function useTimedBackGuard(active = true) {
@@ -189,25 +173,18 @@ function chairStateFromDashboard(dashboard) {
   };
 }
 
-function hasPhoneConnection(dashboard) {
-  return Boolean(
-    dashboard?.remoteCameraFrame?.src
-    || dashboard?.session?.profile
-    || queryValue('connected', '') === '1'
-    || queryValue('ready', '') === '1',
-  );
+function hasCameraConnection(dashboard) {
+  return Boolean(dashboard?.isCameraLinked);
 }
 
 function instructionReadiness(dashboard) {
-  const { analysisState } = chairStateFromDashboard(dashboard);
-  const requestedReady = queryValue('ready', '');
-  const requestedCalibrated = queryValue('calibrated', '');
-  const cameraReady = requestedReady === '1' || Boolean(
-    dashboard?.poseAnalysis?.cameraReadiness?.fullBodyVisible
-    || dashboard?.poseAnalysis?.cameraReadiness?.checks?.fullBodyVisible
-    || analysisState?.isFullBodyVisible
-  );
-  const seatedCalibrationReady = true;
+  const seatedCalibrationReady = dashboard?.poseAnalysis?.calibrationStatus?.canStartAssessment === true;
+  const cameraReady = isStableAssessmentStartReady({
+    cameraReady: dashboard?.isCameraReady,
+    cameraReadiness: dashboard?.poseAnalysis?.cameraReadiness,
+    landmarkCount: dashboard?.poseAnalysis?.landmarks?.length
+      || dashboard?.poseAnalysis?.analysisLandmarks?.length,
+  });
 
   return {
     ready: cameraReady && seatedCalibrationReady,
@@ -229,13 +206,6 @@ function cameraPauseMessage(quality) {
   if (quality === 'area') return 'Please return to the marked area.';
   if (quality === 'connection') return 'The camera connection was interrupted.';
   return 'Move back so your full body and chair are visible.';
-}
-
-function safetySymptomMessage(symptom) {
-  if (symptom === 'chest') return 'Chest pain was reported.';
-  if (symptom === 'breath') return 'Severe shortness of breath was reported.';
-  if (symptom === 'pain') return 'Severe pain was reported.';
-  return 'Dizziness was reported.';
 }
 
 function baseMovementScenario(key, reps, remaining) {
@@ -296,24 +266,22 @@ function baseMovementScenario(key, reps, remaining) {
 
 function chairLiveScenario(dashboard) {
   const { analysisState, chairStandResult } = chairStateFromDashboard(dashboard);
-  const requestedState = queryValue('state', '');
-  const requestedQuality = queryValue('quality', '');
   const durationSeconds = wholeNumber(
-    queryValue('duration', analysisState?.durationSeconds ?? chairStandResult?.durationSeconds ?? 30),
+    analysisState?.durationSeconds ?? chairStandResult?.durationSeconds ?? 30,
     30,
     1,
     60,
   );
   const reps = wholeNumber(
-    queryValue('reps', analysisState?.repetitionCount ?? analysisState?.primaryValue ?? chairStandResult?.repetitionCount ?? 0),
+    analysisState?.repetitionCount ?? analysisState?.primaryValue ?? chairStandResult?.repetitionCount ?? 0,
     0,
     0,
     99,
   );
-  const elapsed = wholeNumber(queryValue('elapsed', analysisState?.elapsedSeconds ?? 0), 0, 0, durationSeconds);
-  const remaining = wholeNumber(queryValue('remaining', Math.max(0, durationSeconds - elapsed)), durationSeconds, 0, durationSeconds);
+  const elapsed = wholeNumber(analysisState?.elapsedSeconds ?? 0, 0, 0, durationSeconds);
+  const remaining = wholeNumber(Math.max(0, durationSeconds - elapsed), durationSeconds, 0, durationSeconds);
 
-  if (requestedState === 'calibration_failed' || queryValue('calibrated', '') === '0') {
+  if (dashboard?.poseAnalysis?.calibrationStatus?.state === 'INVALID') {
     return {
       key: 'calibration_failed',
       reps,
@@ -330,24 +298,7 @@ function chairLiveScenario(dashboard) {
     };
   }
 
-  if (requestedState === 'safety' || queryValue('symptom', '')) {
-    const symptom = safetySymptomMessage(queryValue('symptom', 'dizziness'));
-    return {
-      key: 'safety',
-      reps,
-      remaining,
-      instruction: 'Please sit down safely.',
-      cue: `${symptom} Do not continue this session.`,
-      movementLabel: 'Session stopped',
-      banner: 'Please sit down safely.',
-      bannerTone: 'danger',
-      timerPaused: true,
-      safetyStop: true,
-      voice: 'Please sit down safely. Do not continue this session. Contact a healthcare professional if symptoms continue.',
-    };
-  }
-
-  if (requestedState === 'arm_first' || (analysisState?.isArmUseSuspected && !analysisState?.armUseDisqualified)) {
+  if (analysisState?.isArmUseSuspected && !analysisState?.armUseDisqualified) {
     return {
       key: 'arm_first',
       reps,
@@ -363,7 +314,7 @@ function chairLiveScenario(dashboard) {
     };
   }
 
-  if (requestedState === 'arm_second' || analysisState?.armUseDisqualified || chairStandResult?.armUseDisqualified) {
+  if (analysisState?.armUseDisqualified || chairStandResult?.armUseDisqualified) {
     return {
       key: 'arm_second',
       reps,
@@ -379,7 +330,7 @@ function chairLiveScenario(dashboard) {
     };
   }
 
-  if (requestedState === 'lost' || requestedQuality === 'connection') {
+  if (String(dashboard?.activeCameraStatus || '').toLowerCase().includes('closed')) {
     return {
       key: 'lost',
       reps,
@@ -394,8 +345,8 @@ function chairLiveScenario(dashboard) {
     };
   }
 
-  if (requestedState === 'camera' || (!requestedState && analysisState?.isFullBodyVisible === false)) {
-    const message = cameraPauseMessage(requestedQuality);
+  if (analysisState?.isFullBodyVisible === false) {
+    const message = cameraPauseMessage('body');
     return {
       key: 'camera',
       reps,
@@ -410,22 +361,7 @@ function chairLiveScenario(dashboard) {
     };
   }
 
-  if (requestedState === 'paused') {
-    return {
-      key: 'paused',
-      reps,
-      remaining,
-      instruction: 'The test is paused.',
-      cue: 'Resume when you are ready.',
-      movementLabel: 'Paused',
-      banner: 'The test is paused.',
-      bannerTone: 'info',
-      timerPaused: true,
-      voice: 'The test is paused. Resume when you are ready.',
-    };
-  }
-
-  if (requestedState === 'incomplete_stand' || chairStandResult?.incompleteStandAttemptDetected) {
+  if (chairStandResult?.incompleteStandAttemptDetected) {
     return {
       key: 'incomplete_stand',
       reps,
@@ -439,21 +375,7 @@ function chairLiveScenario(dashboard) {
     };
   }
 
-  if (requestedState === 'incomplete_sit') {
-    return {
-      key: 'incomplete_sit',
-      reps,
-      remaining,
-      instruction: 'Sit all the way down',
-      cue: 'This movement is not counted yet.',
-      movementLabel: 'Sit down slowly',
-      banner: 'Sit all the way down before standing again.',
-      bannerTone: 'warning',
-      voice: 'Sit all the way down before standing again.',
-    };
-  }
-
-  if (requestedState === 'half_rep' || Number(chairStandResult?.halfStandCredit) > 0) {
+  if (Number(chairStandResult?.halfStandCredit) > 0) {
     return {
       key: 'half_rep',
       reps,
@@ -467,7 +389,7 @@ function chairLiveScenario(dashboard) {
     };
   }
 
-  if (requestedState === 'complete' || remaining <= 0) {
+  if (analysisState?.phase === 'completed' || chairStandResult?.status === 'completed') {
     return {
       key: 'complete',
       reps,
@@ -482,16 +404,17 @@ function chairLiveScenario(dashboard) {
     };
   }
 
-  const movementKey = requestedState || naturalMotionFromPhase(analysisState?.phase);
+  const movementKey = naturalMotionFromPhase(analysisState?.phase);
   return baseMovementScenario(movementKey, reps, remaining);
 }
 
 function liveQualityRows(scenario, dashboard) {
-  const connected = hasPhoneConnection(dashboard);
+  const connected = hasCameraConnection(dashboard);
+  const sourceLabel = dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'Laptop Camera' : 'Phone Connected';
 
   if (scenario.key === 'lost') {
     return [
-      { label: 'Phone Connected', status: 'lost', detail: 'Reconnect before continuing.' },
+      { label: sourceLabel, status: 'lost', detail: 'Reconnect before continuing.' },
       { label: 'Full Body and Chair Visible', status: 'checking' },
       { label: 'Feet Visible', status: 'checking' },
       { label: 'Arms Crossed', status: 'checking' },
@@ -500,19 +423,20 @@ function liveQualityRows(scenario, dashboard) {
   }
 
   if (scenario.key === 'camera') {
-    const quality = queryValue('quality', '');
+    const reasons = dashboard?.poseAnalysis?.qualityStatus?.reasons || [];
+    const hasReason = (code) => reasons.some((reason) => reason?.code === code);
     return [
-      { label: 'Phone Connected', status: connected ? 'ready' : 'checking' },
-      { label: 'Full Body and Chair Visible', status: quality === 'body' || !quality ? 'adjust' : 'ready' },
-      { label: 'Feet Visible', status: quality === 'feet' ? 'adjust' : 'ready' },
-      { label: 'Marked Area', status: quality === 'area' ? 'adjust' : 'ready' },
+      { label: sourceLabel, status: connected ? 'ready' : 'checking' },
+      { label: 'Full Body and Chair Visible', status: hasReason('BODY_OUT_OF_FRAME') ? 'adjust' : 'ready' },
+      { label: 'Feet Visible', status: hasReason('FEET_NOT_VISIBLE') ? 'adjust' : 'ready' },
+      { label: 'Marked Area', status: hasReason('BODY_OUT_OF_FRAME') ? 'adjust' : 'ready' },
       { label: 'Ready to Continue', status: 'adjust' },
     ];
   }
 
   if (scenario.key === 'arm_first' || scenario.key === 'arm_second') {
     return [
-      { label: 'Phone Connected', status: connected ? 'ready' : 'checking' },
+      { label: sourceLabel, status: connected ? 'ready' : 'checking' },
       { label: 'Full Body and Chair Visible', status: 'ready' },
       { label: 'Feet Visible', status: 'ready' },
       { label: 'Arms Crossed', status: 'adjust' },
@@ -522,7 +446,7 @@ function liveQualityRows(scenario, dashboard) {
 
   if (scenario.key === 'calibration_failed') {
     return [
-      { label: 'Phone Connected', status: connected ? 'ready' : 'checking' },
+      { label: sourceLabel, status: connected ? 'ready' : 'checking' },
       { label: 'Full Body and Chair Visible', status: 'checking' },
       { label: 'Seated Calibration', status: 'adjust' },
       { label: 'Chair Against Wall', status: 'checking' },
@@ -531,7 +455,7 @@ function liveQualityRows(scenario, dashboard) {
   }
 
   return [
-    { label: 'Phone Connected', status: connected ? 'ready' : 'checking' },
+    { label: sourceLabel, status: connected ? 'ready' : 'checking' },
     { label: 'Full Body and Chair Visible', status: 'ready' },
     { label: 'Feet Visible', status: 'ready' },
     { label: 'Arms Crossed', status: 'ready' },
@@ -554,13 +478,13 @@ function ChairDemonstration({ compact = false }) {
 function ChairPreview({ dashboard, scenario }) {
   return (
     <section className="step-five-preview">
-      <CameraPreview frameSrc={dashboard?.remoteCameraFrame?.src} label="Chair Stand Test preview" guide="Keep your chair and full body inside the guide">
+      <CameraPreview frameSrc={dashboard?.activeCameraFrame?.src} mediaStream={dashboard?.activeCameraStream} label="Chair Stand Test preview" guide="Keep your chair and full body inside the guide" onFrameLoaded={dashboard?.handleCameraFrameLoaded} onFrameError={dashboard?.handleCameraFrameError}>
         <PoseOverlay
           landmarks={dashboard?.poseAnalysis?.analysisLandmarks?.length
             ? dashboard.poseAnalysis.analysisLandmarks
             : dashboard?.poseAnalysis?.landmarks || []}
           frameSize={dashboard?.poseAnalysis?.frameSize}
-          fit="cover"
+          fit={dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'contain' : 'cover'}
         />
         <div className="step-five-chair-overlay" aria-hidden="true">
           <span className="step-five-chair-overlay__body">Body guide</span>
@@ -588,7 +512,7 @@ function ScenarioBanner({ scenario }) {
   );
 }
 
-function ChairStandAlert({ scenario, dominant = false }) {
+function ChairStandAlert({ scenario, dashboard, dominant = false }) {
   const dominantClass = dominant ? ' step-five-alert--dominant' : '';
 
   if (scenario.safetyStop) {
@@ -617,10 +541,17 @@ function ChairStandAlert({ scenario, dominant = false }) {
         <h2>Keep your arms crossed over your chest.</h2>
         <p>You may restart the test once.</p>
         <div className="step-five-alert__actions">
-          <button type="button" className="ds-button ds-button--primary" onClick={() => goTo('/display/assessment/chair/live?state=ready&ready=1&restart=1')}>
+          <button
+            type="button"
+            className="ds-button ds-button--primary"
+            onClick={() => {
+              dashboard?.poseAnalysis?.resetAnalysis?.('arm_use_retry');
+              goTo('/display/assessment/chair/instruction');
+            }}
+          >
             Restart Test
           </button>
-          <button type="button" className="ds-button ds-button--secondary" onClick={() => goTo('/display/assessment/chair/result?result=ended')}>
+          <button type="button" className="ds-button ds-button--secondary" onClick={() => goTo('/display/session/complete')}>
             End Test
           </button>
         </div>
@@ -636,7 +567,7 @@ function ChairStandAlert({ scenario, dominant = false }) {
         <p>For safety, this test has ended.</p>
         <PrimaryActionBar
           primaryLabel="Continue to Results"
-          onPrimary={() => goTo(routeWithParams('/display/assessment/chair/result', { result: 'arm', reps: scenario.reps }))}
+          onPrimary={() => goTo('/display/assessment/chair/result')}
         />
       </section>
     );
@@ -647,16 +578,15 @@ function ChairStandAlert({ scenario, dominant = false }) {
 
 function ChairResultState(dashboard) {
   const { chairStandResult } = chairStateFromDashboard(dashboard);
-  const resultType = queryValue('result', '');
   const reps = wholeNumber(
-    queryValue('reps', chairStandResult?.repetitionCount ?? chairStandResult?.countedRepetitionCount ?? 0),
+    chairStandResult?.repetitionCount ?? chairStandResult?.countedRepetitionCount ?? 0,
     0,
     0,
     99,
   );
-  const halfCredit = Number(queryValue('half', chairStandResult?.halfStandCredit ?? 0)) > 0;
-  const endedByHands = resultType === 'arm' || Boolean(chairStandResult?.armUseDisqualified);
-  const endedEarly = resultType === 'ended';
+  const halfCredit = Number(chairStandResult?.halfStandCredit ?? 0) > 0;
+  const endedByHands = Boolean(chairStandResult?.armUseDisqualified);
+  const endedEarly = Boolean(chairStandResult?.endedEarly);
 
   if (endedByHands) {
     return {
@@ -692,38 +622,19 @@ function ChairResultState(dashboard) {
 
 export function DisplayChairInstructionScreen({ dashboard }) {
   const [lastReplay, setLastReplay] = useState('');
-  const [autoStartSeconds, setAutoStartSeconds] = useState(null);
   const readiness = instructionReadiness(dashboard);
   const voiceScript = 'Sit in the middle of the chair with both feet flat on the floor. Cross your arms over your chest. Stand all the way up, then sit all the way down.';
-
-  useEffect(() => {
-    if (!readiness.cameraReady || !dashboard?.remoteCameraFrame?.src) {
-      setAutoStartSeconds(null);
-      return undefined;
-    }
-
-    const startedAt = Date.now();
-    setAutoStartSeconds(5);
-    const intervalId = window.setInterval(() => {
-      const remaining = Math.max(0, 5 - Math.floor((Date.now() - startedAt) / 1000));
-      setAutoStartSeconds(remaining);
-    }, 100);
-    const timeoutId = window.setTimeout(() => {
-      goTo('/display/assessment/chair/live?state=ready&ready=1');
-    }, 5000);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.clearTimeout(timeoutId);
-    };
-  }, [dashboard?.remoteCameraFrame?.src, readiness.cameraReady]);
+  const autoStartSeconds = useStableAssessmentCountdown({
+    ready: readiness.ready,
+    onComplete: () => goTo('/display/assessment/chair/live'),
+  });
 
   return (
     <SessionShell
       eyebrow="CDC STEADI"
       title="30-Second Chair Stand Test"
       description="Stand up and sit down with control for 30 seconds."
-      connection={<ConnectionIndicator status={readiness.cameraReady ? 'connected' : 'waiting'} label={readiness.cameraReady ? 'Camera ready' : 'Camera setup needed'} detail={readiness.cameraReady ? `Test starts automatically in ${autoStartSeconds ?? 5} seconds.` : 'Keep your full body visible before starting.'} />}
+      connection={<ConnectionIndicator status={readiness.ready ? 'connected' : 'waiting'} label={readiness.ready ? 'Starting position ready' : 'Starting position needed'} detail={readiness.ready ? `Test starts automatically in ${autoStartSeconds ?? ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS} seconds.` : 'Sit centered with both feet visible and hold still.'} />}
       progress={<SessionProgress current={8} total={9} label="Session progress" />}
       className="step-five-instruction-shell"
     >
@@ -755,8 +666,8 @@ export function DisplayChairInstructionScreen({ dashboard }) {
         </section>
 
         <section className="step-five-readiness-panel" aria-label="Starting position readiness">
-          <StatusRow label="Camera position" status={readiness.cameraReady ? 'ready' : 'checking'} detail="Phone about 2 meters away at hip height." />
-          <StatusRow label="Starting position" status="ready" detail="Sit centered with both feet flat, then press Start." />
+          <StatusRow label="Camera position" status={readiness.cameraReady ? 'ready' : 'checking'} detail="Selected camera about 2 meters away at hip height." />
+          <StatusRow label="Starting position" status={readiness.seatedCalibrationReady ? 'ready' : 'checking'} detail="Sit centered with both feet flat and hold still." />
           <StatusRow label="Chair placement" status="ready" detail="Chair placed firmly against a wall." />
         </section>
 
@@ -767,13 +678,13 @@ export function DisplayChairInstructionScreen({ dashboard }) {
             onReplay={() => setLastReplay(voiceScript)}
           />
           <PrimaryActionBar
-            primaryLabel={readiness.cameraReady ? `Starting in ${autoStartSeconds ?? 5}...` : 'Waiting for full body'}
+            primaryLabel={readiness.ready ? `Starting in ${autoStartSeconds ?? ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS}...` : 'Waiting for starting position'}
             primaryDisabled
             onPrimary={() => {}}
           />
         </div>
-        {!readiness.cameraReady ? (
-          <p className="step-five-disabled-note" role="status">Keep your full body visible before starting.</p>
+        {!readiness.ready ? (
+          <p className="step-five-disabled-note" role="status">Sit centered, keep both feet visible, and hold still before starting.</p>
         ) : null}
         {lastReplay ? <span className="step-five-sr-status" role="status">{lastReplay}</span> : null}
       </main>
@@ -783,27 +694,12 @@ export function DisplayChairInstructionScreen({ dashboard }) {
 
 export function DisplayChairLiveScreen({ dashboard }) {
   const [lastReplay, setLastReplay] = useState('');
-  const [flowRemaining, setFlowRemaining] = useState(30);
   const showBackWarning = useTimedBackGuard(true);
-  const measuredScenario = useMemo(() => chairLiveScenario(dashboard), [dashboard]);
-  const scenario = useMemo(() => ({
-    ...measuredScenario,
-    remaining: flowRemaining,
-    timerPaused: false,
-    armFirst: false,
-    armSecond: false,
-    calibrationFailed: false,
-    testComplete: flowRemaining <= 0,
-  }), [flowRemaining, measuredScenario]);
-  const latestRepsRef = useRef(scenario.reps);
-  latestRepsRef.current = scenario.reps;
+  const scenario = useMemo(() => chairLiveScenario(dashboard), [dashboard]);
   const qualityRows = useMemo(() => liveQualityRows(scenario, dashboard), [scenario, dashboard]);
-  const connectionStatus = scenario.key === 'lost' ? 'lost' : hasPhoneConnection(dashboard) ? 'connected' : 'waiting';
-  const pausePath = scenario.timerPaused
-    ? routeWithParams('/display/assessment/chair/live', { state: 'stand_up', ready: '1' })
-    : routeWithParams('/display/assessment/chair/live', { state: 'paused', ready: '1', reps: scenario.reps, remaining: scenario.remaining });
+  const connectionStatus = scenario.key === 'lost' ? 'lost' : hasCameraConnection(dashboard) ? 'connected' : 'waiting';
   const hasDominantAlert = Boolean(scenario.armFirst || scenario.armSecond || scenario.safetyStop);
-  const alert = <ChairStandAlert scenario={scenario} dominant={hasDominantAlert} />;
+  const alert = <ChairStandAlert scenario={scenario} dashboard={dashboard} dominant={hasDominantAlert} />;
   const showLiveActions = !(
     scenario.armFirst
     || scenario.armSecond
@@ -812,20 +708,6 @@ export function DisplayChairLiveScreen({ dashboard }) {
     || scenario.key === 'half_rep'
     || scenario.key === 'calibration_failed'
   );
-  const resumeAllowed = scenario.key === 'paused';
-
-  useEffect(() => {
-    const startedAt = Date.now();
-    const intervalId = window.setInterval(() => {
-      const remaining = Math.max(0, 30 - Math.floor((Date.now() - startedAt) / 1000));
-      setFlowRemaining(remaining);
-      if (remaining > 0) return;
-      window.clearInterval(intervalId);
-      dashboard?.poseAnalysis?.finishAnalysis?.();
-      goTo(`/display/assessment/chair/result?reps=${latestRepsRef.current}`);
-    }, 100);
-    return () => window.clearInterval(intervalId);
-  }, []);
 
   useEffect(() => {
     dashboard?.setActiveStep?.(UserScreenIds.Assessment);
@@ -834,9 +716,14 @@ export function DisplayChairLiveScreen({ dashboard }) {
       return;
     }
     const analysis = dashboard?.poseAnalysis;
+    const startReady = isStableAssessmentStartReady({
+      cameraReady: dashboard?.isCameraReady,
+      cameraReadiness: analysis?.cameraReadiness,
+      landmarkCount: analysis?.analysisLandmarks?.length || analysis?.landmarks?.length || 0,
+      calibrationReady: analysis?.calibrationStatus?.canStartAssessment === true,
+    });
     if (
-      dashboard?.remoteCameraFrame?.src
-      && ((analysis?.analysisLandmarks?.length || analysis?.landmarks?.length || 0) > 0)
+      startReady
       && !analysis?.isRunning
       && ['IDLE', 'CANCELLED'].includes(analysis?.analysisSessionState)
     ) {
@@ -844,8 +731,10 @@ export function DisplayChairLiveScreen({ dashboard }) {
     }
   }, [
     dashboard?.selectedTest,
-    dashboard?.remoteCameraFrame?.src,
+    dashboard?.isCameraReady,
     dashboard?.poseAnalysis?.analysisSessionState,
+    dashboard?.poseAnalysis?.calibrationStatus?.canStartAssessment,
+    dashboard?.poseAnalysis?.cameraReadiness?.isReady,
     dashboard?.poseAnalysis?.cameraReadiness?.fullBodyVisible,
     dashboard?.poseAnalysis?.cameraReadiness?.checks?.fullBodyVisible,
     dashboard?.poseAnalysis?.landmarks?.length,
@@ -870,7 +759,7 @@ export function DisplayChairLiveScreen({ dashboard }) {
       eyebrow="30-Second Chair Stand Test"
       title="30-Second Chair Stand Test"
       description="Stand fully, sit fully, and keep your arms crossed."
-      connection={<ConnectionIndicator status={connectionStatus} label={scenario.key === 'lost' ? 'Phone connection lost' : 'Phone connection'} detail={scenario.movementLabel} />}
+      connection={<ConnectionIndicator status={connectionStatus} label={scenario.key === 'lost' ? 'Camera connection lost' : dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'Laptop Camera' : 'Phone connection'} detail={scenario.movementLabel} />}
       progress={<SessionProgress current={8} total={9} label="Session progress" />}
       className="step-five-live-shell"
     >
@@ -896,7 +785,7 @@ export function DisplayChairLiveScreen({ dashboard }) {
           {scenario.testComplete ? (
             <PrimaryActionBar
               primaryLabel="Continue to Analysis"
-              onPrimary={() => goTo(routeWithParams('/display/session/analyzing', { reps: scenario.reps }))}
+              onPrimary={() => goTo('/display/session/analyzing')}
             />
           ) : null}
           {scenario.key === 'calibration_failed' ? (
@@ -908,11 +797,8 @@ export function DisplayChairLiveScreen({ dashboard }) {
           {showLiveActions ? (
             <div className="step-five-live-actions">
               <PrimaryActionBar
-                primaryLabel={scenario.timerPaused ? 'Resume' : 'Pause'}
-                secondaryLabel="Hear Again"
-                primaryDisabled={scenario.timerPaused && !resumeAllowed}
-                onPrimary={() => goTo(pausePath)}
-                onSecondary={() => {
+                primaryLabel="Hear Again"
+                onPrimary={() => {
                   setLastReplay(scenario.voice);
                 }}
               />

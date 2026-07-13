@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/care-agent-decision-v1.schema.json",
+  "title": "Steply Care Agent Decision v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "decisionId", "eventId", "profileId", "observedState", "candidates", "guardrailEvaluations", "candidateDecisions", "selectedBranch", "selectedActions", "executions", "completedStages", "status", "createdAt", "completedAt"],
+  "properties": {
+    "schemaVersion": { "const": "care_agent_decision.v1" },
+    "decisionId": { "$ref": "#/$defs/id" },
+    "eventId": { "$ref": "#/$defs/id" },
+    "profileId": { "$ref": "#/$defs/id" },
+    "observedState": { "$ref": "care-agent-state-v1.schema.json#/$defs/input" },
+    "candidates": { "type": "array", "items": { "$ref": "care-agent-action-v1.schema.json" } },
+    "guardrailEvaluations": { "type": "array", "items": { "$ref": "#/$defs/guardrailEvaluation" } },
+    "candidateDecisions": { "type": "array", "items": { "$ref": "#/$defs/candidateDecision" } },
+    "selectedBranch": { "$ref": "#/$defs/branch" },
+    "selectedActions": { "type": "array", "items": { "$ref": "care-agent-action-v1.schema.json" } },
+    "executions": { "type": "array", "items": { "$ref": "care-agent-tool-result-v1.schema.json" } },
+    "completedStages": { "type": "array", "maxItems": 8, "items": { "enum": ["PERCEIVE", "EVALUATE", "GENERATE_ACTIONS", "GUARDRAIL", "PRIORITIZE", "ACT", "OBSERVE", "PERSIST"] }, "uniqueItems": true },
+    "status": { "enum": ["PLANNED", "EXECUTING", "COMPLETED", "PARTIAL_FAILURE", "FAILED"] },
+    "createdAt": { "$ref": "#/$defs/epoch" },
+    "completedAt": { "oneOf": [{ "$ref": "#/$defs/epoch" }, { "type": "null" }] }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "epoch": { "type": "integer", "minimum": 0 },
+    "branch": { "enum": ["safety_event", "fall_reported", "high_or_v6_v7", "declining_trend", "reassessment_due", "low_adherence", "progression_available", "maintenance"] },
+    "guardrailCheck": {
+      "type": "object", "additionalProperties": false,
+      "required": ["guardrailId", "passed", "reasonCode"],
+      "properties": { "guardrailId": { "enum": ["GR1", "GR2", "GR3", "GR4", "GR5", "GR6", "GR7", "GR8"] }, "passed": { "type": "boolean" }, "reasonCode": { "$ref": "#/$defs/id" } }
+    },
+    "guardrailEvaluation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["actionId", "allowed", "checks"],
+      "properties": { "actionId": { "$ref": "#/$defs/id" }, "allowed": { "type": "boolean" }, "checks": { "type": "array", "items": { "$ref": "#/$defs/guardrailCheck" } } }
+    },
+    "candidateDecision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["actionId", "disposition", "reasonCode"],
+      "properties": { "actionId": { "$ref": "#/$defs/id" }, "disposition": { "enum": ["SELECTED", "REJECTED_BY_GUARDRAIL", "NOT_SELECTED_LOWER_PRIORITY"] }, "reasonCode": { "$ref": "#/$defs/id" } }
+    }
+  }
+}

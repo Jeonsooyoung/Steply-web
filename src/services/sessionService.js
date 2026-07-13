@@ -1,11 +1,15 @@
 const crypto = require('crypto');
 const QRCode = require('qrcode');
-const { saveSession, getSession, broadcast, clearSessionPersonalData } = require('./sessionStore');
+const { saveSession, getSession, listSessions, broadcast, clearSessionPersonalData } = require('./sessionStore');
 const { publicSession } = require('./sessionPresenter');
-const { removeHistoryBySessionId } = require('../repositories/historyRepository');
+const assessmentSessionService = require('./assessmentSessionService');
+const { ASSESSMENT_SESSION_SCHEMA_VERSION } = require('../../shared/stage1Assessment.cjs');
+const { normalizeSteplyDataContract } = require('../../shared/steplyDataContract.cjs');
+const assessmentTestTypes = require('../../shared/assessmentTestTypes.json');
 
 const DEFAULT_PAIRING_TTL_MS = 10 * 60 * 1000;
 const PAIRING_TOKEN_BYTES = 16;
+const SUPPORTED_ASSESSMENT_TEST_TYPES = new Set(assessmentTestTypes.allowedTestTypes);
 
 function sha256Hex(value) {
   return crypto.createHash('sha256').update(String(value)).digest('hex');
@@ -46,7 +50,6 @@ function cleanupSessionPersonalData(sessionId, reason = 'session-cleanup') {
   const session = getSession(sessionId);
   if (!session) return { error: 'Session not found', status: 404 };
 
-  removeHistoryBySessionId(sessionId);
   const cleanedSession = clearSessionPersonalData(sessionId, reason);
   const view = publicSession(cleanedSession);
   broadcast(sessionId, {
@@ -73,31 +76,17 @@ function cleanupSession(sessionId, pairingToken, reason = 'mobile-cleanup-reques
   return cleanupSessionPersonalData(sessionId, reason);
 }
 
-function normalizeProfile(profile) {
-  const nowYear = new Date().getFullYear();
-  const rawBirthYear = Number(profile.birthYear);
-  const rawAge = Number(profile.age);
-  const birthYear = Number.isFinite(rawBirthYear) && rawBirthYear >= 1900 && rawBirthYear <= nowYear
-    ? Math.trunc(rawBirthYear)
-    : Number.isFinite(rawAge) && rawAge > 0 && rawAge < 130
-      ? nowYear - Math.trunc(rawAge)
-      : null;
+function cleanupAllSessionPersonalData(reason = 'pc-process-terminating') {
+  return listSessions().map((session) => cleanupSessionPersonalData(session.id, reason));
+}
 
-  const age = birthYear ? Math.max(0, nowYear - birthYear) : null;
-
+function assessmentProfileFromDataContract(profile, referenceTimestampMs) {
+  const referenceYearUtc = new Date(referenceTimestampMs).getUTCFullYear();
   return {
-    id: String(profile.id),
-    displayName: profile.displayName || profile.name || 'Steply User',
-    name: profile.name || profile.displayName || 'Steply User',
-    birthYear,
-    age,
-    gender: profile.gender || null,
-    heightCm: profile.heightCm || null,
-    movementNotes: profile.movementNotes || null,
-    safetyNote: profile.safetyNote || null,
-    steadiStep1: profile.steadiStep1 || profile.steadiAssessment || profile.fallScreen || null,
-    createdAt: profile.createdAt || null,
-    updatedAt: profile.updatedAt || Date.now(),
+    id: profile.id,
+    birthYear: profile.birthYear,
+    ageYears: Math.max(0, referenceYearUtc - profile.birthYear),
+    sex: profile.sex,
   };
 }
 
@@ -111,8 +100,10 @@ async function createSession(serverUrl, candidateServerUrls = [serverUrl], optio
   const tlsCertSha256 = options.tlsCertSha256 || process.env.STEPLY_TLS_CERT_SHA256 || null;
   const qrPayload = JSON.stringify({
     type: 'steply-web-session',
-    version: 2,
+    version: 3,
+    connectionSessionId: sessionId,
     sessionId,
+    assessmentSessionSchemaVersion: ASSESSMENT_SESSION_SCHEMA_VERSION,
     serverUrl,
     serverUrls: normalizedCandidates,
     expiresAt,
@@ -139,10 +130,18 @@ async function createSession(serverUrl, candidateServerUrls = [serverUrl], optio
     pairingTokenConsumedAt: null,
     tlsCertSha256,
     profile: null,
+    dataContract: null,
     connectedAt: null,
     selectedTest: null,
     latestResult: null,
     finalResult: null,
+    assessmentSession: null,
+    assessmentSessionMessageIds: new Set(),
+    assessmentResultKeys: new Map(),
+    pendingLandmarkSeriesById: new Map(),
+    landmarkSeriesMessageIds: new Map(),
+    landmarkSeriesAttemptIds: new Map(),
+    landmarkSeriesAckReceipts: new Map(),
   });
 
   return {
@@ -158,15 +157,26 @@ async function createSession(serverUrl, candidateServerUrls = [serverUrl], optio
   };
 }
 
-function connectProfile(sessionId, profile, pairingToken) {
+function connectProfile(sessionId, dataContractValue, pairingToken, assessmentSessionSnapshot = null) {
   const session = getSession(sessionId);
   if (!session) return { error: 'Session not found', status: 404 };
-  if (!profile || !profile.id) return { error: 'profile.id is required', status: 400 };
+  let dataContract;
+  try {
+    dataContract = normalizeSteplyDataContract(dataContractValue);
+  } catch (error) {
+    return { error: error.message, status: 422, reason: error.code || 'INVALID_STEPLY_DATA_CONTRACT' };
+  }
   const tokenError = consumePairingToken(session, pairingToken);
   if (tokenError) return tokenError;
 
-  session.profile = normalizeProfile(profile);
+  session.dataContract = dataContract;
+  session.profile = dataContract.profile;
   session.connectedAt = Date.now();
+  assessmentSessionService.connectSnapshot(
+    session,
+    assessmentProfileFromDataContract(session.profile, session.createdAt),
+    assessmentSessionSnapshot || null,
+  );
 
   const view = publicSession(session);
   broadcast(sessionId, { type: 'session', session: view });
@@ -177,6 +187,13 @@ function selectTest(sessionId, selectedTest) {
   const session = getSession(sessionId);
   if (!session) return { error: 'Session not found', status: 404 };
   if (!selectedTest) return { error: 'selectedTest is required', status: 400 };
+  if (!SUPPORTED_ASSESSMENT_TEST_TYPES.has(selectedTest)) {
+    return {
+      error: `Unsupported assessment test type: ${String(selectedTest)}`,
+      reason: 'UNSUPPORTED_ASSESSMENT_TEST_TYPE',
+      status: 422,
+    };
+  }
 
   session.selectedTest = selectedTest;
 
@@ -191,11 +208,19 @@ function getSessionStatus(sessionId) {
   return publicSession(session);
 }
 
+function updateAssessmentSession(sessionId, update) {
+  return assessmentSessionService.updateAssessmentSession(sessionId, update);
+}
+
 module.exports = {
   createSession,
   connectProfile,
   selectTest,
   getSessionStatus,
+  updateAssessmentSession,
   cleanupSession,
   cleanupSessionPersonalData,
+  cleanupAllSessionPersonalData,
+  assessmentProfileFromDataContract,
+  SUPPORTED_ASSESSMENT_TEST_TYPES,
 };

@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { HomeLogo } from '../components/HomeLogo';
+import { navigateSpa } from './spaNavigation';
 import {
-  AdherenceChart,
   AppHeader,
   CameraPreview,
   ConnectionIndicator,
   EmergencyStopButton,
   MetricCard,
   PrimaryActionBar,
-  TrendSummaryCard,
 } from '../components/foundation/SteplyDesignSystem';
 
 function formatDate(value, style = 'long') {
@@ -18,84 +17,71 @@ function formatDate(value, style = 'long') {
   return new Intl.DateTimeFormat('en-US', options).format(value);
 }
 
-function addDays(days) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date;
-}
-
-function queryValue(name, fallback = '') {
-  if (typeof window === 'undefined') return fallback;
-  return new URLSearchParams(window.location.search).get(name) || fallback;
-}
-
 function goTo(path) {
-  if (typeof window !== 'undefined') window.location.assign(path);
+  navigateSpa(path);
+}
+
+export function startLaptopCameraAndContinue(startCamera, navigate = goTo) {
+  if (typeof startCamera !== 'function') return false;
+  const startResult = startCamera();
+  navigate('/display/home');
+  return startResult;
 }
 
 function connectionScenario(dashboard) {
-  const state = queryValue('state', '');
-  if (state === 'connected') {
+  const laptopSelected = dashboard?.cameraInputMode === 'LOCAL_WEBCAM';
+  if (laptopSelected) {
+    const ready = dashboard?.isCameraReady === true;
+    const requesting = dashboard?.localCameraState === 'REQUESTING';
+    return {
+      status: ready ? 'connected' : 'waiting',
+      label: ready ? 'Laptop camera ready' : requesting ? 'Starting laptop camera' : 'Laptop camera unavailable',
+      detail: ready
+        ? dashboard?.session?.profile
+          ? 'Your laptop camera will be used for this session'
+          : 'Camera ready. Scan the QR code to load your Mobile profile and recent history.'
+        : dashboard?.localCameraError || 'Allow camera access to continue.',
+      deviceLabel: 'Camera source',
+      phoneName: 'This laptop camera',
+      batteryLevel: 'Powered by laptop',
+      networkQuality: 'Local — no video upload',
+      cameraStatus: ready ? 'Streaming' : requesting ? 'Requesting permission' : 'Unavailable',
+      success: ready ? 'Laptop camera selected. Video stays in this browser and is not saved.' : null,
+    };
+  }
+  if (dashboard?.hasReceivedPhoneFrame || dashboard?.remoteCameraFrame?.decoded === true) {
     return {
       status: 'connected',
-      label: 'Phone connected',
-      detail: "Maria's iPhone is ready",
-      phoneName: "Maria's iPhone",
-      batteryLevel: '82%',
-      networkQuality: 'Strong',
-      cameraStatus: 'Ready',
-      success: 'Your phone is connected. Steply is ready to continue.',
+      label: 'Phone camera streaming',
+      detail: dashboard.session?.profile?.displayName ? `${dashboard.session.profile.displayName}'s phone camera is live` : 'Phone camera video is live',
+      deviceLabel: 'Phone name',
+      phoneName: 'Paired Steply phone',
+      batteryLevel: 'Unavailable on this PC',
+      networkQuality: dashboard.remoteCameraStatus || 'Connected',
+      cameraStatus: 'Streaming',
+      success: 'Your phone camera is streaming. Steply is ready to continue.',
     };
   }
-  if (state === 'timeout') {
-    return {
-      status: 'lost',
-      label: 'Connection timed out',
-      detail: 'Refresh the code and try again',
-      phoneName: 'Not connected',
-      batteryLevel: '-',
-      networkQuality: 'No connection',
-      cameraStatus: 'Waiting',
-    };
-  }
-  if (state === 'lost') {
-    return {
-      status: 'lost',
-      label: 'Connection lost',
-      detail: 'Reconnect the phone before starting',
-      phoneName: "Maria's iPhone",
-      batteryLevel: '78%',
-      networkQuality: 'Disconnected',
-      cameraStatus: 'Paused',
-    };
-  }
-  if (state === 'unstable') {
+  if (dashboard?.session?.profile) {
+    const disconnected = dashboard?.phoneCameraState === 'DISCONNECTED';
     return {
       status: 'waiting',
-      label: 'Network connection is unstable',
-      detail: 'Move closer to Wi-Fi if possible',
-      phoneName: "Maria's iPhone",
-      batteryLevel: '78%',
-      networkQuality: 'Weak',
-      cameraStatus: 'Waiting',
-    };
-  }
-  if (dashboard?.remoteCameraFrame?.src || dashboard?.session?.profile) {
-    return {
-      status: 'connected',
-      label: 'Phone connected',
-      detail: dashboard.session?.profile?.name ? `${dashboard.session.profile.name}'s phone is linked` : 'Phone camera is linked',
-      phoneName: dashboard.session?.profile?.deviceName || 'Linked phone',
-      batteryLevel: dashboard.session?.profile?.batteryLevel || 'Ready',
-      networkQuality: 'Connected',
-      cameraStatus: dashboard.remoteCameraFrame?.src ? 'Streaming' : 'Ready',
-      success: 'Your phone is connected. Steply is ready to continue.',
+      label: disconnected ? 'Phone camera disconnected' : 'Phone profile linked',
+      detail: dashboard.session.profile.displayName
+        ? `${dashboard.session.profile.displayName}'s profile is linked. Waiting for the live phone camera frame.`
+        : 'Phone profile is linked. Waiting for the live phone camera frame.',
+      deviceLabel: 'Phone name',
+      phoneName: 'Paired Steply phone',
+      batteryLevel: 'Unavailable on this PC',
+      networkQuality: dashboard.remoteCameraStatus || 'Waiting for video',
+      cameraStatus: disconnected ? 'Disconnected' : 'Waiting for video',
     };
   }
   return {
     status: 'waiting',
     label: 'Waiting for your phone',
     detail: 'Scan the QR code or enter the connection code',
+    deviceLabel: 'Phone name',
     phoneName: 'Not connected',
     batteryLevel: '-',
     networkQuality: 'Waiting',
@@ -104,12 +90,13 @@ function connectionScenario(dashboard) {
 }
 
 function connectionCode(dashboard) {
-  const value = dashboard?.session?.id || dashboard?.sessionBundle?.qrPayload || 'STEPLY';
+  const value = dashboard?.session?.id || dashboard?.sessionBundle?.qrPayload;
+  if (!value) return '------';
   let hash = 0;
   for (let index = 0; index < value.length; index += 1) {
     hash = (hash * 31 + value.charCodeAt(index)) % 1000000;
   }
-  return String(hash || 428193).padStart(6, '0');
+  return String(hash).padStart(6, '0');
 }
 
 function StepIcon({ children = 'i', tone = 'info' }) {
@@ -139,17 +126,12 @@ export function DisplayConnectScreen({ dashboard }) {
   const state = connectionScenario(dashboard);
   const code = connectionCode(dashboard);
   const hasQrCode = Boolean(dashboard?.sessionBundle?.qrDataUrl);
-  const requestedNext = queryValue('next', '');
-  const challengeTarget = requestedNext === '/display/session/camera-setup?test=balance' ? requestedNext : '';
-  const profileTarget = dashboard?.session?.profile
-    ? challengeTarget || '/display/home'
-    : challengeTarget
-      ? `/display/profile?next=${encodeURIComponent(challengeTarget)}`
-      : '/display/profile';
-  const isConnected = state.status === 'connected';
+  const profileTarget = dashboard?.session?.profile ? '/display/home' : '/display/profile';
+  const isConnected = Boolean(dashboard?.session?.profile);
+  const laptopSelected = dashboard?.cameraInputMode === 'LOCAL_WEBCAM';
 
   useEffect(() => {
-    if (!isConnected || queryValue('state', '')) return undefined;
+    if (!isConnected) return undefined;
     const timer = window.setTimeout(() => goTo(profileTarget), 1600);
     return () => window.clearTimeout(timer);
   }, [isConnected, profileTarget]);
@@ -159,13 +141,13 @@ export function DisplayConnectScreen({ dashboard }) {
       <main className="step-two-connect__layout">
         <section className="step-two-connect__intro">
           <div className="foundation-brand-mark" aria-hidden="true">S</div>
-          <div className="foundation-eyebrow">Phone connection</div>
-          <h1>Connect Your Phone</h1>
-          <p>Your phone will record your movement while this screen gives you clear instructions.</p>
+          <div className="foundation-eyebrow">Camera connection</div>
+          <h1>Connect a Camera</h1>
+          <p>Use your phone camera or this laptop camera while Steply gives you clear instructions.</p>
           <ol className="step-two-steps">
-            <li><StepIcon>1</StepIcon><span>Open Steply on your phone.</span></li>
-            <li><StepIcon>2</StepIcon><span>Scan the QR code or enter the connection code.</span></li>
-            <li><StepIcon>3</StepIcon><span>Place your phone where your full body is visible.</span></li>
+            <li><StepIcon>1</StepIcon><span>Choose the phone camera or select the laptop camera below.</span></li>
+            <li><StepIcon>2</StepIcon><span>For Mobile profile and history, scan the QR code.</span></li>
+            <li><StepIcon>3</StepIcon><span>Place the selected camera where your full body is visible.</span></li>
           </ol>
           <div className="step-two-privacy">
             <StepIcon>i</StepIcon>
@@ -193,7 +175,7 @@ export function DisplayConnectScreen({ dashboard }) {
           </div>
           <ConnectionIndicator status={state.status} label={state.label} detail={state.detail} />
           <div className="step-two-device-grid">
-            <InfoRow label="Phone name" value={state.phoneName} tone={state.status === 'connected' ? 'success' : 'info'} />
+            <InfoRow label={state.deviceLabel} value={state.phoneName} tone={state.status === 'connected' ? 'success' : 'info'} />
             <InfoRow label="Battery level" value={state.batteryLevel} />
             <InfoRow label="Network quality" value={state.networkQuality} tone={state.networkQuality === 'Weak' ? 'danger' : 'info'} />
           </div>
@@ -208,6 +190,10 @@ export function DisplayConnectScreen({ dashboard }) {
             secondaryLabel={isConnected ? 'Refresh Code' : 'Connection Help'}
             onPrimary={isConnected ? () => goTo(profileTarget) : dashboard?.handleCreateSession}
             onSecondary={isConnected ? dashboard?.handleCreateSession : () => goTo('/camera/connect')}
+            tertiaryLabel={laptopSelected ? 'Use Phone Camera' : 'Use This Laptop Camera'}
+            onTertiary={laptopSelected
+              ? dashboard?.handleUsePhoneCamera
+              : () => startLaptopCameraAndContinue(dashboard?.handleStartLocalCamera)}
           />
         </section>
       </main>
@@ -215,51 +201,23 @@ export function DisplayConnectScreen({ dashboard }) {
   );
 }
 
-const demoProfiles = [
-  {
-    id: 'maria',
-    name: 'Maria',
-    lastSessionDate: 'July 7, 2026',
-    nextReassessmentDate: 'August 8, 2026',
-    supportLevel: 'Moderate support needs',
-  },
-  {
-    id: 'james',
-    name: 'James',
-    lastSessionDate: 'July 4, 2026',
-    nextReassessmentDate: 'August 1, 2026',
-    supportLevel: 'Low support needs',
-  },
-];
-
 export function DisplayProfileScreen({ dashboard }) {
-  const requestedNext = queryValue('next', '');
-  const continueTarget = requestedNext === '/display/session/camera-setup?test=balance'
-    ? requestedNext
-    : '/display/home';
-  const profileMode = queryValue('profiles', dashboard?.session?.profile ? 'one' : 'multiple');
-  const profiles = profileMode === 'one'
-    ? [dashboard?.session?.profile || demoProfiles[0]]
-    : demoProfiles;
+  const continueTarget = '/display/home';
+  const profile = dashboard?.session?.profile || null;
 
-  if (profiles.length <= 1) {
+  if (!profile) {
     return (
       <div className="foundation-shell step-two-shell">
         <AppHeader
-          title="Profile ready"
+          title="No Mobile profile linked"
           eyebrow="Profile"
-          description="Steply found one profile, so this selection step is skipped."
-          connection={<ConnectionIndicator status="connected" label="Profile ready" detail={profiles[0]?.name || 'Ready to continue'} />}
+          description="Connect Steply Mobile and choose a stored profile before continuing."
+          connection={<ConnectionIndicator status="waiting" label="Profile not ready" detail="Mobile profile required" />}
         />
         <main className="step-two-single-profile">
-          <SectionCard title={`Continue as ${profiles[0]?.name || 'Steply User'}`}>
-            <p>The home screen is ready for today's session.</p>
-            <PrimaryActionBar
-              primaryLabel="Go to Home"
-              secondaryLabel="Add New Profile"
-              onPrimary={() => goTo(continueTarget)}
-              onSecondary={() => goTo('/display/onboarding')}
-            />
+          <SectionCard title="Profile data is not available">
+            <p>Steply does not create a temporary profile on the display.</p>
+            <PrimaryActionBar primaryLabel="Connect Mobile" onPrimary={() => goTo('/display/connect')} />
           </SectionCard>
         </main>
       </div>
@@ -269,30 +227,16 @@ export function DisplayProfileScreen({ dashboard }) {
   return (
     <div className="foundation-shell step-two-shell">
       <AppHeader
-        title="Who is using Steply today?"
+        title="Profile ready"
         eyebrow="Profile"
-        description="Choose the profile for this session."
-        connection={<ConnectionIndicator status="connected" label="Phone connected" detail="Profiles are ready" />}
+        description="The paired phone supplied this profile for the current connection."
+        connection={<ConnectionIndicator status="connected" label="Profile ready" detail={profile.displayName || 'Ready to continue'} />}
       />
-      <main className="step-two-profile-grid">
-        {profiles.map((profile) => (
-          <section className="step-two-profile-card" key={profile.id}>
-            <div className="step-two-avatar" aria-hidden="true">{profile.name.charAt(0)}</div>
-            <div>
-              <h2>{profile.name}</h2>
-              <p>{profile.supportLevel}</p>
-            </div>
-            <InfoRow label="Last session" value={profile.lastSessionDate} />
-            <InfoRow label="Next reassessment" value={profile.nextReassessmentDate} />
-            <button type="button" className="ds-button ds-button--primary" onClick={() => goTo(continueTarget)}>
-              Continue as {profile.name}
-            </button>
-          </section>
-        ))}
-        <button type="button" className="step-two-add-profile" onClick={() => goTo('/display/onboarding')}>
-          <StepIcon>+</StepIcon>
-          <span>Add New Profile</span>
-        </button>
+      <main className="step-two-single-profile">
+        <SectionCard title={`Continue as ${profile.displayName || 'Steply User'}`}>
+          <p>The home screen is ready for today&apos;s assessment.</p>
+          <PrimaryActionBar primaryLabel="Go to Home" onPrimary={() => goTo(continueTarget)} />
+        </SectionCard>
       </main>
     </div>
   );
@@ -308,190 +252,144 @@ function Field({ label, children }) {
 }
 
 export function DisplayOnboardingScreen() {
-  const step = Number(queryValue('step', '1'));
-  const safeStep = Math.min(3, Math.max(1, Number.isFinite(step) ? step : 1));
-
   return (
     <div className="foundation-shell step-two-shell">
       <AppHeader
-        title="Set Up Steply"
-        eyebrow={`Step ${safeStep} of 3`}
-        description="Steply uses a few details to make today's session easier to follow."
-        connection={<ConnectionIndicator status="waiting" label="Setup in progress" detail="You can set up sharing later" />}
+        title="Set up your profile on your phone"
+        eyebrow="Profile setup"
+        description="Profiles, safety acknowledgements, caregiver details, and sharing consent are stored and managed by the Steply phone app."
+        connection={<ConnectionIndicator status="waiting" label="Phone setup required" detail="Unavailable on this PC" />}
       />
       <main className="step-two-onboarding">
-        {safeStep === 1 ? (
-          <SectionCard title="Basic information">
-            <div className="step-two-form-grid">
-              <Field label="Preferred name">
-                <input type="text" defaultValue="Maria" aria-label="Preferred name" />
-              </Field>
-              <Field label="Age">
-                <input type="number" defaultValue="74" min="18" aria-label="Age" />
-              </Field>
-              <Field label="Sex used for the CDC reference range">
-                <select defaultValue="female" aria-label="Sex used for the CDC reference range">
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
-                  <option value="not_shared">Prefer not to say</option>
-                </select>
-              </Field>
-            </div>
-            <p className="step-two-note">Age and sex are used only to compare your Chair Stand result with the CDC reference range.</p>
-            <PrimaryActionBar
-              primaryLabel="Continue"
-              secondaryLabel="Back"
-              onPrimary={() => goTo('/display/onboarding?step=2')}
-              onSecondary={() => goTo('/display/profile')}
-            />
-          </SectionCard>
-        ) : null}
-
-        {safeStep === 2 ? (
-          <SectionCard title="Health and safety notice">
-            <div className="step-two-safety-grid">
-              {[
-                'Steply does not provide a medical diagnosis.',
-                'Stop immediately if you feel dizzy, have chest pain, or cannot catch your breath.',
-                'Talk with a healthcare professional if you recently fell or have severe pain.',
-                'A professional assessment is required before starting advanced exercises when a high level of concern is identified.',
-              ].map((item) => (
-                <div className="step-two-safety-card" key={item}>
-                  <StepIcon>i</StepIcon>
-                  <p>{item}</p>
-                </div>
-              ))}
-            </div>
-            <label className="step-two-checkbox">
-              <input type="checkbox" />
-              <span>I have read and understood this safety information.</span>
-            </label>
-            <PrimaryActionBar
-              primaryLabel="Continue"
-              secondaryLabel="Back"
-              onPrimary={() => goTo('/display/onboarding?step=3')}
-              onSecondary={() => goTo('/display/onboarding?step=1')}
-            />
-          </SectionCard>
-        ) : null}
-
-        {safeStep === 3 ? (
-          <SectionCard title="Family or caregiver sharing">
-            <div className="step-two-form-grid">
-              <Field label="Caregiver name">
-                <input type="text" placeholder="Optional" aria-label="Caregiver name" />
-              </Field>
-              <Field label="Contact information">
-                <input type="text" placeholder="Phone or email" aria-label="Contact information" />
-              </Field>
-              <Field label="Weekly report sharing">
-                <select defaultValue="ask" aria-label="Weekly report sharing">
-                  <option value="ask">Ask me first</option>
-                  <option value="on">Share weekly report</option>
-                  <option value="off">Do not share</option>
-                </select>
-              </Field>
-              <Field label="Safety notification preference">
-                <select defaultValue="important" aria-label="Safety notification preference">
-                  <option value="important">Important safety updates only</option>
-                  <option value="all">All safety updates</option>
-                  <option value="none">No safety notifications</option>
-                </select>
-              </Field>
-            </div>
-            <PrimaryActionBar
-              primaryLabel="Save and Continue"
-              secondaryLabel="Set Up Later"
-              onPrimary={() => goTo('/display/home')}
-              onSecondary={() => goTo('/display/home')}
-            />
-          </SectionCard>
-        ) : null}
+        <SectionCard title="Continue in the paired Steply phone app">
+          <p>This PC cannot create a profile or record consent. Complete setup on your phone, then reconnect this display.</p>
+          <PrimaryActionBar
+            primaryLabel="Reconnect Phone"
+            secondaryLabel="Back to Profile"
+            onPrimary={() => goTo('/display/connect')}
+            onSecondary={() => goTo('/display/profile')}
+          />
+        </SectionCard>
       </main>
     </div>
   );
 }
 
 function supportLevelFromResult(dashboard) {
-  const risk = dashboard?.finalResult?.fallRiskLevel || queryValue('support', 'moderate');
-  if (String(risk).includes('high') || risk === 'needs_review') return 'Professional assessment recommended';
-  if (String(risk).includes('low')) return 'Low support needs';
+  const risk = dashboard?.assessmentSession?.steadi?.riskLevel
+    || dashboard?.session?.assessmentSession?.steadi?.riskLevel
+    || dashboard?.finalResult?.structuredPipeline?.steadiRiskLevel
+    || dashboard?.finalResult?.fallRiskLevel;
+  const normalizedRisk = String(risk || '').toLowerCase();
+  if (!normalizedRisk || normalizedRisk.includes('not_scorable')) return 'Assessment not ready';
+  if (normalizedRisk.includes('high') || normalizedRisk === 'needs_review') return 'Professional assessment recommended';
+  if (normalizedRisk.includes('low')) return 'Low support needs';
   return 'Moderate support needs';
 }
 
 export function DisplayHomeScreen({ dashboard }) {
-  const name = dashboard?.session?.profile?.name || queryValue('name', 'Maria');
+  const profile = dashboard?.session?.profile || {};
+  const name = profile.displayName || null;
   const today = useMemo(() => formatDate(new Date()), []);
-  const nextDate = useMemo(() => formatDate(addDays(28), 'short'), []);
   const supportLevel = supportLevelFromResult(dashboard);
-  const hasPhoneConnection = Boolean(dashboard?.remoteCameraFrame?.src || dashboard?.session?.profile);
+  const hasCameraConnection = Boolean(dashboard?.isCameraLinked);
+  const phoneProfileLinked = dashboard?.cameraInputMode !== 'LOCAL_WEBCAM'
+    && Boolean(dashboard?.isPhoneProfileLinked ?? dashboard?.session?.profile);
+  const waitingForPhoneFrame = phoneProfileLinked && !hasCameraConnection;
+  const cameraName = dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'Laptop camera' : 'Phone camera';
+  const cameraConnectionLabel = hasCameraConnection
+    ? `${cameraName} ready`
+    : phoneProfileLinked
+      ? dashboard?.phoneCameraState === 'DISCONNECTED'
+        ? 'Phone camera disconnected'
+        : 'Phone profile linked'
+      : 'Connect a camera';
+  const cameraConnectionDetail = hasCameraConnection
+    ? 'Live video received and ready for today'
+    : phoneProfileLinked
+      ? dashboard?.activeCameraStatus || 'Waiting for live phone camera video'
+      : 'Connect a phone or laptop camera before starting';
+  const assessment = dashboard?.assessmentSession || dashboard?.session?.assessmentSession || null;
+  const chair = assessment?.functionalTests?.CHAIR_STAND_30S?.acceptedResult;
+  const balance = assessment?.functionalTests?.FOUR_STAGE_BALANCE?.acceptedResult;
+  const tandem = balance?.balance?.stages?.find((stage) => stage.stage === 'TANDEM')?.holdSeconds
+    ?? balance?.tandemHoldSeconds;
 
   return (
     <div className="foundation-shell step-two-shell">
       <AppHeader
-        title={`Good morning, ${name}`}
+        title={name ? `Good morning, ${name}` : 'Welcome to Steply'}
         eyebrow={today}
-        description="Today includes a balance reassessment and your recommended exercises."
+        description="Connect your phone and complete a balance or chair stand assessment."
         connection={(
           <ConnectionIndicator
-            status={hasPhoneConnection ? 'connected' : 'waiting'}
-            label={hasPhoneConnection ? 'Phone camera connected' : 'Connect phone camera'}
-            detail={hasPhoneConnection ? 'Ready for today' : 'Scan the QR code before starting the camera assessment'}
+            status={hasCameraConnection ? 'connected' : 'waiting'}
+            label={cameraConnectionLabel}
+            detail={cameraConnectionDetail}
           />
         )}
       />
       <main className="step-two-home">
+        <section className="step-two-home-camera" aria-label="Selected camera live view">
+          <CameraPreview
+            frameSrc={dashboard?.activeCameraFrame?.src}
+            mediaStream={dashboard?.activeCameraStream}
+            label={`${cameraName} live preview`}
+            guide="Keep your full body inside the frame"
+            onFrameLoaded={dashboard?.handleCameraFrameLoaded}
+            onFrameError={dashboard?.handleCameraFrameError}
+          />
+          <ConnectionIndicator
+            status={hasCameraConnection ? 'connected' : 'waiting'}
+            label={cameraConnectionLabel}
+            detail={cameraConnectionDetail}
+          />
+        </section>
         <section className="step-two-session-card">
           <div>
             <div className="foundation-eyebrow">Today's Session</div>
             <h2>Today's Session</h2>
-            <p>Today includes a balance reassessment and your recommended exercises.</p>
-            <p>Your Tandem Stand time has decreased across recent sessions, so Steply moved your reassessment forward.</p>
+            <p>Use the selected {cameraName.toLowerCase()} for today&apos;s balance and chair stand checks.</p>
           </div>
           <div className="step-two-session-details">
-            <InfoRow label="Session type" value="Reassessment and exercise" />
-            <InfoRow label="Estimated duration" value="18 minutes" />
-            <InfoRow label="Included today" value="Balance test, chair stand, exercises" />
+            <InfoRow label={cameraName} value={hasCameraConnection ? 'Ready' : 'Connection required'} />
+            <InfoRow label="Assessment history" value={dashboard?.historyItems?.length ? `${dashboard.historyItems.length} recent results` : 'Waiting for Mobile data'} />
           </div>
           <button
             type="button"
             className="ds-button ds-button--primary home-challenge-button"
-            onClick={() => goTo(hasPhoneConnection
-              ? '/display/session/camera-setup?test=balance'
-              : `/display/connect?next=${encodeURIComponent('/display/session/camera-setup?test=balance')}`)}
+            disabled={waitingForPhoneFrame}
+            onClick={() => goTo(hasCameraConnection
+              ? '/display/session/camera-setup'
+              : '/display/connect')}
           >
-            <span>{hasPhoneConnection ? 'Start Challenge' : 'Start Challenge'}</span>
-            <small>{hasPhoneConnection ? 'Begin today’s balance and chair stand checks' : 'Connect your phone camera first'}</small>
+            <span>Start Challenge</span>
+            <small>{hasCameraConnection
+              ? 'Begin today’s balance and chair stand checks'
+              : waitingForPhoneFrame
+                ? 'Waiting for live phone camera'
+                : 'Connect a camera first'}</small>
           </button>
           <PrimaryActionBar
-            secondaryLabel={hasPhoneConnection ? 'Split Into Two Short Sessions' : 'View Progress'}
-            onSecondary={() => goTo(hasPhoneConnection ? '/display/session/plan?split=1' : '/display/progress')}
+            secondaryLabel={hasCameraConnection ? 'Split Into Two Short Sessions' : 'View Progress'}
+            onSecondary={() => goTo(hasCameraConnection ? '/display/session/plan' : '/display/progress')}
           />
         </section>
 
         <div className="step-two-status-grid">
           <MetricCard label="Current support level" value={supportLevel} detail={`Updated ${today}`} status={supportLevel === 'Low support needs' ? 'success' : 'info'} />
-          <MetricCard label="Chair Stand result" value="9 stands" detail="Previous: 10 stands. CDC reference line shown in details." status="info" />
-          <MetricCard label="Tandem Stand time" value="8.6 seconds" detail="Previous: 9.1 seconds. Measured July 7." status="info" />
+          <MetricCard label="Chair Stand result" value={chair?.chairStand?.cdcScoredRepetitions == null ? 'No valid result' : `${chair.chairStand.cdcScoredRepetitions} stands`} detail="Stored aggregate result" status="info" />
+          <MetricCard label="Tandem Stand time" value={tandem == null ? 'No valid result' : `${Number(tandem).toFixed(1)} seconds`} detail="Stored aggregate result" status="info" />
         </div>
 
         <div className="step-two-dashboard-grid">
-          <TrendSummaryCard title="Recent five-session trend" trend="Balance needs attention" detail="Small changes are easier to notice across repeated sessions." />
-          <AdherenceChart days={[
-            { label: 'Mon', value: 70 },
-            { label: 'Tue', value: 60 },
-            { label: 'Wed', value: 80 },
-            { label: 'Thu', value: 55 },
-            { label: 'Fri', value: 75 },
-          ]} />
-          <SectionCard title="Next reassessment">
-            <p>Next assessment: {nextDate}</p>
-            <p>Steply may move this date forward if recent sessions need closer review.</p>
+          <SectionCard title="Recent assessment history">
+            <p>{dashboard?.historyItems?.length ? `${dashboard.historyItems.length} stored result entries are available.` : 'No stored assessment history is available yet.'}</p>
           </SectionCard>
-          <SectionCard title="Latest weekly report">
-            <p>Your weekly report is ready to review with family or a healthcare professional.</p>
+          <SectionCard title="Care plan and reports">
+            <p>Exercise adherence, reassessment scheduling, Care Agent decisions, and reports are unavailable on this PC. Review them in the paired Steply phone app.</p>
             <PrimaryActionBar
-              primaryLabel="View Weekly Report"
+              primaryLabel="Report Guidance"
               secondaryLabel="View Progress"
               onPrimary={() => goTo('/display/reports')}
               onSecondary={() => goTo('/display/progress')}
@@ -504,7 +402,7 @@ export function DisplayHomeScreen({ dashboard }) {
 }
 
 export function DisplaySessionPlanScreen({ dashboard }) {
-  const hasPhoneConnection = Boolean(dashboard?.remoteCameraFrame?.src || dashboard?.session?.profile);
+  const hasCameraConnection = Boolean(dashboard?.isCameraLinked);
   const timeline = [
     { icon: 'i', name: 'Quick Health Check', time: '2 minutes', detail: 'Answer a few short CDC STEADI questions.' },
     { icon: '!', name: 'Safety Setup', time: '2 minutes', detail: 'Check the chair, floor, and support surface.' },
@@ -521,9 +419,9 @@ export function DisplaySessionPlanScreen({ dashboard }) {
         description="Review the plan before starting setup."
         connection={(
           <ConnectionIndicator
-            status={hasPhoneConnection ? 'connected' : 'waiting'}
-            label={hasPhoneConnection ? 'Ready to start' : 'Phone camera needed'}
-            detail={hasPhoneConnection ? 'Support surface recommended' : 'Connect the phone camera before setup'}
+            status={hasCameraConnection ? 'connected' : 'waiting'}
+            label={hasCameraConnection ? 'Ready to start' : 'Camera needed'}
+            detail={hasCameraConnection ? 'Support surface recommended' : 'Connect a phone or laptop camera before setup'}
           />
         )}
       />
@@ -547,9 +445,9 @@ export function DisplaySessionPlanScreen({ dashboard }) {
           <InfoRow label="Support surface needed" value="Chair, wall, or counter" />
           <InfoRow label="Caregiver recommended" value="Helpful, not required" />
           <PrimaryActionBar
-            primaryLabel={hasPhoneConnection ? 'Start Setup' : 'Connect Phone Camera'}
+            primaryLabel={hasCameraConnection ? 'Start Setup' : 'Connect Camera'}
             secondaryLabel="Return Home"
-            onPrimary={() => goTo(hasPhoneConnection ? '/display/session/screening' : '/display/connect')}
+            onPrimary={() => goTo(hasCameraConnection ? '/display/session/screening' : '/display/connect')}
             onSecondary={() => goTo('/display/home')}
           />
         </aside>
@@ -597,9 +495,9 @@ export function CameraConnectScreen() {
   );
 }
 
-export function CameraPermissionScreen() {
-  const denied = queryValue('denied', '') === '1' || queryValue('state', '') === 'denied';
-  const [settingsHint, setSettingsHint] = useState(queryValue('settings', '') === '1');
+export function CameraPermissionScreen({ dashboard }) {
+  const denied = dashboard?.cameraPermissionStatus === 'denied';
+  const [settingsHint, setSettingsHint] = useState(false);
 
   return (
     <div className="foundation-camera-shell step-two-phone">
@@ -642,7 +540,14 @@ export function CameraPreviewScreen({ dashboard }) {
         </div>
       </header>
       <main className="step-two-phone-preview">
-        <CameraPreview frameSrc={dashboard?.remoteCameraFrame?.src} label="Phone camera preview" guide="Keep your full body in the frame" />
+        <CameraPreview
+          frameSrc={dashboard?.activeCameraFrame?.src}
+          mediaStream={dashboard?.activeCameraStream}
+          label={dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'Laptop camera preview' : 'Phone camera preview'}
+          guide="Keep your full body in the frame"
+          onFrameLoaded={dashboard?.handleCameraFrameLoaded}
+          onFrameError={dashboard?.handleCameraFrameError}
+        />
         <ConnectionIndicator status="connected" label="Connected to display" detail="Portrait or landscape is fine if your full body is visible" />
         <SectionCard title="Framing guide">
           <p>Place the phone where the display can see your head, shoulders, hips, knees, and feet.</p>
@@ -658,17 +563,18 @@ export function CameraPreviewScreen({ dashboard }) {
   );
 }
 
-export function CameraStreamingScreen() {
-  const state = connectionScenario({ remoteCameraFrame: { src: 'ready' } });
+export function CameraStreamingScreen({ dashboard }) {
+  const state = connectionScenario(dashboard);
+  const selectedTest = dashboard?.selectedTest;
   return (
     <div className="foundation-camera-shell step-two-phone step-two-phone--streaming">
       <main className="step-two-streaming-panel">
         <HomeLogo />
         <h1>Connected to Display</h1>
-        <p>Current assessment: 4-Stage Balance Test</p>
+        <p>Current assessment: {selectedTest ? selectedTest.replaceAll('_', ' ') : 'No assessment selected'}</p>
         <InfoRow label="Battery level" value={state.batteryLevel} />
-        <InfoRow label="Network quality" value="Strong" tone="success" />
-        <InfoRow label="Camera status" value="Streaming" tone="success" />
+        <InfoRow label="Network quality" value={state.networkQuality} tone={state.status === 'connected' ? 'success' : 'info'} />
+        <InfoRow label="Camera status" value={state.cameraStatus} tone={state.status === 'connected' ? 'success' : 'info'} />
       </main>
       <EmergencyStopButton label="Stop Session" onClick={() => goTo('/camera/stopped')} />
     </div>

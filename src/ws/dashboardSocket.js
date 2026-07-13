@@ -4,20 +4,25 @@ const DASHBOARD_ROLES = new Set(['dashboard', 'unknown']);
 const { getSession, hasSession, getOrCreateSocketSet, removeSocket, broadcast } = require('../services/sessionStore');
 const { publicSession } = require('../services/sessionPresenter');
 const { cleanupSessionPersonalData } = require('../services/sessionService');
+const { resumeAssessmentSession } = require('../services/assessmentSessionService');
+const { ASSESSMENT_SESSION_SCHEMA_VERSION } = require('../../shared/stage1Assessment.cjs');
+const { CARE_AGENT_STATE_SCHEMA_VERSION } = require('../../shared/stage4CareAgentContract.cjs');
+const {
+  applyProjectionUpdate,
+  resumeProjection,
+} = require('../services/careAgentProjectionService');
+const {
+  applyFinalized: applyLandmarkSeriesFinalized,
+  acknowledge: acknowledgeLandmarkSeries,
+  pendingMessages: pendingLandmarkSeriesMessages,
+} = require('../services/landmarkSeriesRelayService');
 
 const MAX_DASHBOARD_BUFFERED_BYTES = 250_000;
 
-function normalizeFrameDataUrl(frame, mimeType = 'image/jpeg') {
-  if (typeof frame !== 'string') return '';
-  const value = frame.trim();
-  if (!value) return '';
-  if (value.startsWith('data:')) return value;
-  return `data:${mimeType || 'image/jpeg'};base64,${value}`;
-}
-
 function canMobileStream(session) {
   if (!session) return false;
-  if (session.expiresAtEpochMs && session.expiresAtEpochMs <= Date.now()) return false;
+  // Pairing expiry protects the one-time profile connection. Once that token has
+  // been consumed, the assessment session may legitimately outlive the QR TTL.
   return Boolean(session.connectedAt && session.pairingTokenConsumedAt);
 }
 
@@ -77,6 +82,9 @@ function attachDashboardWebSocket(server) {
     getOrCreateSocketSet(sessionId).add(socket);
 
     socket.send(JSON.stringify({ type: 'session', session: publicSession(session) }));
+    if (role === 'mobile') {
+      for (const pending of pendingLandmarkSeriesMessages(sessionId)) socket.send(JSON.stringify(pending));
+    }
     broadcast(sessionId, {
       type: 'remote-camera-status',
       role,
@@ -134,6 +142,131 @@ function attachDashboardWebSocket(server) {
         socket.send(JSON.stringify({ type: 'pong', at: Date.now() }));
       }
 
+      if (msg.type === 'assessment-session.resume' && socket.role === 'mobile') {
+        const resumed = resumeAssessmentSession(getSession(sessionId), msg);
+        const assessmentSession = resumed.assessmentSession;
+        if (!assessmentSession) {
+          socket.send(JSON.stringify({
+            type: 'assessment-session.ack',
+            schemaVersion: ASSESSMENT_SESSION_SCHEMA_VERSION,
+            messageId: msg.messageId,
+            assessmentSessionId: msg.assessmentSessionId,
+            revision: 0,
+          }));
+          return;
+        }
+        if (resumed.action === 'ACK' || resumed.action === 'UPDATED_FROM_MOBILE') {
+          socket.send(JSON.stringify({
+            type: 'assessment-session.ack',
+            schemaVersion: ASSESSMENT_SESSION_SCHEMA_VERSION,
+            messageId: msg.messageId,
+            assessmentSessionId: assessmentSession.assessmentSessionId,
+            revision: assessmentSession.revision,
+          }));
+          return;
+        }
+        socket.send(JSON.stringify({
+          type: 'assessment-session.updated',
+          schemaVersion: ASSESSMENT_SESSION_SCHEMA_VERSION,
+          messageId: msg.messageId,
+          assessmentSessionId: assessmentSession.assessmentSessionId,
+          baseRevision: Number.isInteger(Number(msg.knownRevision)) ? Number(msg.knownRevision) : 0,
+          revision: assessmentSession.revision,
+          session: assessmentSession,
+        }));
+        return;
+      }
+
+      if (msg.type === 'assessment-session.ack') return;
+
+      if (msg.type === 'care-agent.resume' && socket.role === 'mobile') {
+        const resumed = resumeProjection(sessionId, msg);
+        if (resumed.error) {
+          socket.send(JSON.stringify({ type: 'care-agent.error', reason: resumed.reason, error: resumed.error }));
+          return;
+        }
+        if (resumed.action === 'SEND_PROJECTION') {
+          socket.send(JSON.stringify({
+            type: 'care-agent.projection',
+            schemaVersion: CARE_AGENT_STATE_SCHEMA_VERSION,
+            messageId: msg.messageId,
+            profileId: msg.profileId,
+            stateVersion: resumed.stateVersion,
+            projection: resumed.projection,
+          }));
+          return;
+        }
+        socket.send(JSON.stringify({
+          type: 'care-agent.ack',
+          schemaVersion: CARE_AGENT_STATE_SCHEMA_VERSION,
+          messageId: msg.messageId,
+          profileId: msg.profileId,
+          stateVersion: resumed.stateVersion,
+        }));
+        return;
+      }
+
+      if (msg.type === 'care-agent.updated' && socket.role === 'mobile') {
+        const result = applyProjectionUpdate(sessionId, msg, { publish: false });
+        if (result.error) {
+          socket.send(JSON.stringify({
+            type: 'care-agent.error',
+            schemaVersion: CARE_AGENT_STATE_SCHEMA_VERSION,
+            messageId: msg.messageId || null,
+            reason: result.reason,
+            error: result.error,
+            projection: result.projection || null,
+          }));
+          return;
+        }
+        if (result.applied) sendToRole(sessionId, 'dashboard', result.update);
+        socket.send(JSON.stringify({
+          type: 'care-agent.ack',
+          schemaVersion: CARE_AGENT_STATE_SCHEMA_VERSION,
+          messageId: result.messageId,
+          profileId: msg.profileId,
+          stateVersion: result.projection.stateVersion,
+        }));
+        return;
+      }
+
+      if (msg.type === 'care-agent.ack') return;
+
+      if (msg.type === 'landmark-series.finalized' && DASHBOARD_ROLES.has(socket.role)) {
+        const result = applyLandmarkSeriesFinalized(sessionId, msg);
+        if (result.error) {
+          socket.send(JSON.stringify({
+            type: 'landmark-series.error',
+            messageId: msg.messageId || null,
+            reason: result.reason,
+            error: result.error,
+          }));
+          return;
+        }
+        if (result.ack) {
+          socket.send(JSON.stringify(result.ack));
+          return;
+        }
+        const pending = result.pending || result.envelope;
+        if (pending) sendToRole(sessionId, 'mobile', pending);
+        return;
+      }
+
+      if (msg.type === 'landmark-series.ack' && socket.role === 'mobile') {
+        const result = acknowledgeLandmarkSeries(sessionId, msg);
+        if (result.error) {
+          socket.send(JSON.stringify({
+            type: 'landmark-series.error',
+            messageId: msg.messageId || null,
+            reason: result.reason,
+            error: result.error,
+          }));
+          return;
+        }
+        sendToRole(sessionId, 'dashboard', result.ack);
+        return;
+      }
+
       if (msg.type === 'camera-frame-meta' && socket.role === 'mobile') {
         socket.pendingMobileFrameMeta = {
           mobileSequence: Number.isFinite(Number(msg.mobileSequence)) ? Number(msg.mobileSequence) : null,
@@ -165,24 +298,6 @@ function attachDashboardWebSocket(server) {
           message: 'Phone camera stream is ready.',
           at: Date.now(),
         });
-      }
-
-      if (msg.type === 'frame' && socket.role === 'mobile' && typeof msg.frame === 'string') {
-        const receivedAt = Date.now();
-        const mimeType = msg.mimeType || 'image/jpeg';
-        const frame = normalizeFrameDataUrl(msg.frame, mimeType);
-        if (!frame) return;
-        socket.frameSequence = (socket.frameSequence || 0) + 1;
-        broadcast(sessionId, {
-          type: 'remote-camera-frame',
-          frame,
-          mimeType,
-          byteLength: msg.byteLength || frame.length,
-          sentAt: msg.sentAt || null,
-          receivedAt,
-          sequence: socket.frameSequence,
-        });
-        return;
       }
 
       if (msg.type === 'stopped' && socket.role === 'mobile') {

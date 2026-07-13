@@ -68,8 +68,7 @@ export function canShowExerciseFromResult(result = null) {
 }
 
 export function sessionPlanMode(result = null) {
-  return result?.carePipeline?.agent?.loop?.finalState?.currentSessionPlan?.mode
-    || result?.agentDecision?.currentSessionPlan?.mode
+  return result?.careAgentProjection?.currentSessionPlan?.mode
     || result?.recommendationPlan?.sessionPlanMode
     || null;
 }

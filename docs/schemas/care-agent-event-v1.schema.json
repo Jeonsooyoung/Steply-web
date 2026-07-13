@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/care-agent-event-v1.schema.json",
+  "title": "Steply Care Agent Event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "eventId", "profileId", "type", "sourceEventId", "occurredAt", "payload"],
+  "properties": {
+    "schemaVersion": { "const": "care_agent_event.v1" },
+    "eventId": { "$ref": "#/$defs/id" },
+    "profileId": { "$ref": "#/$defs/id" },
+    "type": { "enum": ["session_start", "scheduled_wakeup", "safety_event", "fall_reported", "assessment_updated", "exercise_result_updated", "approval_updated", "manual_refresh"] },
+    "sourceEventId": { "$ref": "#/$defs/id" },
+    "occurredAt": { "$ref": "#/$defs/epoch" },
+    "payload": { "type": "object", "additionalProperties": { "type": "string" } }
+  },
+  "$defs": { "id": { "type": "string", "minLength": 1 }, "epoch": { "type": "integer", "minimum": 0 } }
+}

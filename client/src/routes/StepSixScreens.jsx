@@ -8,21 +8,13 @@ import {
 } from '../components/foundation/SteplyDesignSystem';
 import {
   ageYearsFromProfile,
-  chairStandBelowAverageThreshold,
   normalizeSteadiGender,
 } from '../pose/steadiRules';
-
-function queryParams() {
-  if (typeof window === 'undefined') return new URLSearchParams();
-  return new URLSearchParams(window.location.search);
-}
-
-function queryValue(name, fallback = '') {
-  return queryParams().get(name) || fallback;
-}
+import { chairStandBelowAverageThreshold } from '../pipeline/scoring/steadi/steadiSessionScorer.js';
+import { navigateSpa } from './spaNavigation';
 
 function goTo(path) {
-  if (typeof window !== 'undefined') window.location.assign(path);
+  navigateSpa(path);
 }
 
 function StepIcon({ tone = 'info' }) {
@@ -88,21 +80,18 @@ const supportLevelCopy = {
 };
 
 const balanceStageLabels = {
+  SIDE_BY_SIDE: 'Feet Side by Side',
   side_by_side: 'Feet Side by Side',
   sideBySide: 'Feet Side by Side',
+  SEMI_TANDEM: 'Semi-Tandem',
   semi_tandem: 'Semi-Tandem',
   semiTandem: 'Semi-Tandem',
+  TANDEM: 'Tandem',
   tandem: 'Tandem',
+  ONE_LEG: 'One-Leg Stand',
   one_leg: 'One-Leg Stand',
   oneLeg: 'One-Leg Stand',
 };
-
-const defaultBalanceStages = [
-  { id: 'side_by_side', label: 'Feet Side by Side', holdSeconds: 10, completed: true },
-  { id: 'semi_tandem', label: 'Semi-Tandem', holdSeconds: 10, completed: true },
-  { id: 'tandem', label: 'Tandem', holdSeconds: 8.2, completed: true, emphasized: true },
-  { id: 'one_leg', label: 'One-Leg Stand', holdSeconds: 3.8, completed: true },
-];
 
 const findingLabelMap = {
   CHAIR_STAND_BELOW_REFERENCE: {
@@ -183,14 +172,6 @@ const legacyFindingLabelMap = {
   asymmetryNeedsReview: 'Left and Right Movement Pattern',
 };
 
-const scenarioFindings = {
-  strength: ['CHAIR_STAND_BELOW_REFERENCE', 'LATE_REPETITION_SLOWDOWN'],
-  balance: ['TANDEM_HOLD_DIFFICULTY', 'MEDIOLATERAL_SWAY_PATTERN'],
-  both: ['CHAIR_STAND_BELOW_REFERENCE', 'TANDEM_HOLD_DIFFICULTY', 'MOVEMENT_ASYMMETRY_PATTERN'],
-  arm: ['ARM_SUPPORT_REQUIRED'],
-  invalid: ['LOW_MEASUREMENT_CONFIDENCE'],
-};
-
 function finite(value) {
   if (value === null || value === undefined || value === '') return null;
   const number = Number(value);
@@ -213,14 +194,12 @@ function resultFromDashboard(dashboard) {
   return dashboard?.finalResult || dashboard?.poseAnalysis?.finalResult || null;
 }
 
+function assessmentSessionFromDashboard(dashboard) {
+  return dashboard?.session?.assessmentSession || null;
+}
+
 function scenarioSupportLevel() {
-  const support = queryValue('support', '');
-  const result = queryValue('result', '');
-  if (support === 'low') return SupportLevels.Low;
-  if (support === 'moderate') return SupportLevels.Moderate;
-  if (support === 'high' || result === 'professional') return SupportLevels.High;
-  if (result === 'invalid') return SupportLevels.NotReady;
-  return SupportLevels.Moderate;
+  return SupportLevels.NotReady;
 }
 
 function normalizeSupportLevel(rawValue, result = {}) {
@@ -230,29 +209,24 @@ function normalizeSupportLevel(rawValue, result = {}) {
   }
   if (value.includes('moderate') || value.includes('medium')) return SupportLevels.Moderate;
   if (value.includes('low')) return SupportLevels.Low;
-  if (result?.recommendationPlan?.requiresProfessionalReview || result?.carePipeline?.agent?.decision?.escalation) {
+  if (result?.recommendationPlan?.requiresProfessionalReview) {
     return SupportLevels.High;
   }
   if (result?.testFlags?.clinicalResultAvailable === false || result?.invalid) return SupportLevels.NotReady;
   return scenarioSupportLevel();
 }
 
-function supportLevelFrom(result) {
+function supportLevelFrom(result, assessmentSession = null) {
   return normalizeSupportLevel(
-    result?.fallRiskLevel
-      || result?.carePipeline?.agent?.observedState?.steadiSeverity
-      || result?.recommendationPlan?.riskLevel
-      || queryValue('support', ''),
+    assessmentSession?.steadi?.riskLevel
+      || result?.fallRiskLevel
+      || result?.structuredPipeline?.steadiRiskLevel
+      || result?.recommendationPlan?.riskLevel,
     result,
   );
 }
 
 function changeFromTrend(result, dashboard) {
-  const trend = queryValue('trend', '');
-  if (trend === 'improved') return 'Improved since the previous assessment';
-  if (trend === 'declining') return 'Lower than the previous assessment';
-  if (trend === 'missing' || queryValue('previous', '') === 'missing') return 'No previous assessment available';
-
   const warnings = result?.trendWarnings || [];
   if (warnings.length) return 'Needs attention compared with recent results';
   if (!dashboard?.historyItems?.length) return 'No previous assessment available';
@@ -260,14 +234,10 @@ function changeFromTrend(result, dashboard) {
 }
 
 function mainReasonFor(result, supportLevel) {
-  if (queryValue('result', '') === 'invalid' || supportLevel === SupportLevels.NotReady) {
+  if (supportLevel === SupportLevels.NotReady) {
     return 'The assessment quality was not clear enough for a complete summary.';
   }
-  if (queryValue('problem', '') === 'strength') return "Chair stand repetitions were below the CDC reference for today's profile.";
-  if (queryValue('problem', '') === 'balance') return 'Tandem Stand was below the CDC 10-second reference.';
-  if (queryValue('problem', '') === 'both') return 'Both balance and chair stand results showed areas for supported practice.';
-  if (queryValue('result', '') === 'arm') return 'Hand support was used during the Chair Stand Test.';
-  const findings = result?.functionalFindings || result?.carePipeline?.agent?.observedState?.activeFunctionalFindings || [];
+  const findings = result?.functionalFindings || [];
   const firstFinding = findings[0]?.findingType || findings[0]?.type;
   if (firstFinding && findingLabelMap[firstFinding]) return findingLabelMap[firstFinding].observed;
   if (supportLevel === SupportLevels.High) return supportLevelCopy[SupportLevels.High].description;
@@ -275,40 +245,39 @@ function mainReasonFor(result, supportLevel) {
   return supportLevelCopy[SupportLevels.Moderate].description;
 }
 
-function recommendationPlanFrom(result) {
-  return result?.carePipeline?.agent?.currentExercisePlan
-    || result?.carePipeline?.finalResultPatch?.recommendationPlan
-    || result?.recommendationPlan
+function recommendationPlanFrom(result, assessmentSession = null) {
+  return result?.recommendationPlan
+    || assessmentSession?.exercisePrescription?.plan
+    || result?.carePipeline?.agent?.currentExercisePlan
     || {};
 }
 
-function isProfessionalReviewRequired(result, supportLevel) {
-  const plan = recommendationPlanFrom(result);
+function isProfessionalReviewRequired(result, supportLevel, assessmentSession = null) {
+  const plan = recommendationPlanFrom(result, assessmentSession);
   return supportLevel === SupportLevels.High
     || plan.requiresProfessionalReview
-    || plan.status === 'PENDING_REVIEW'
-    || result?.carePipeline?.agent?.decision?.escalation === 'professional_review_recommended';
+    || plan.status === 'PENDING_REVIEW';
 }
 
-function balanceResultFrom(result) {
-  return result?.balanceResult
+function balanceResultFrom(result, assessmentSession = null) {
+  const canonicalBalance = assessmentSession?.functionalTests?.FOUR_STAGE_BALANCE?.acceptedResult?.balance;
+  const aggregateBalance = result?.structuredPipeline?.assessmentResults
+    ?.find((assessment) => assessment?.assessmentType === 'FOUR_STAGE_BALANCE');
+  return canonicalBalance
+    || result?.balanceResult
     || result?.rawAnalysisResult?.balanceResult
-    || result?.carePipeline?.stages?.poseJudgement?.assessmentResult?.balanceResult
+    || (aggregateBalance ? { stages: aggregateBalance.primaryMeasurements?.stages } : null)
     || null;
 }
 
-function balanceStagesFrom(result) {
-  const balance = balanceResultFrom(result);
+function balanceStagesFrom(result, assessmentSession = null) {
+  const balance = balanceResultFrom(result, assessmentSession);
   const stages = Array.isArray(balance?.stages) && balance.stages.length
     ? balance.stages
     : Object.values(balance?.stageById || {});
 
   if (!stages.length) {
-    return defaultBalanceStages.map((stage) => {
-      if (queryValue('problem', '') === 'balance' || queryValue('problem', '') === 'both') return stage;
-      if (queryValue('support', '') === 'low') return { ...stage, holdSeconds: stage.id === 'one_leg' ? 8 : 10 };
-      return stage;
-    });
+    return [];
   }
 
   return stages.map((stage) => {
@@ -319,67 +288,65 @@ function balanceStagesFrom(result) {
       label,
       holdSeconds: finite(stage.holdSeconds ?? stage.holdDurationSeconds ?? stage.durationSeconds) ?? 0,
       completed: stage.status ? !String(stage.status).toLowerCase().includes('not') : true,
-      emphasized: id === 'tandem',
+      emphasized: id === 'TANDEM' || id === 'tandem',
     };
   });
 }
 
-function tandemHoldFrom(result) {
-  const stages = balanceStagesFrom(result);
-  return stages.find((stage) => stage.id === 'tandem' || stage.label === 'Tandem')?.holdSeconds ?? null;
+function tandemHoldFrom(result, assessmentSession = null) {
+  const stages = balanceStagesFrom(result, assessmentSession);
+  return stages.find((stage) => stage.id === 'TANDEM' || stage.id === 'tandem' || stage.label === 'Tandem')?.holdSeconds ?? null;
 }
 
-function chairResultFrom(result) {
-  return result?.chairStandResult
+function chairResultFrom(result, assessmentSession = null) {
+  const canonicalChair = assessmentSession?.functionalTests?.CHAIR_STAND_30S?.acceptedResult?.chairStand;
+  const aggregateChair = result?.structuredPipeline?.assessmentResults
+    ?.find((assessment) => assessment?.assessmentType === 'CHAIR_STAND_30S');
+  return canonicalChair
+    || result?.chairStandResult
     || result?.rawAnalysisResult?.chairStandResult
     || (result?.testType === 'chair_stand' ? result : null)
+    || (aggregateChair ? { repetitionCount: aggregateChair.primaryMeasurements?.completedRepetitions } : null)
     || {};
 }
 
-function chairRepsFrom(result) {
-  const chair = chairResultFrom(result);
+function chairRepsFrom(result, assessmentSession = null) {
+  const chair = chairResultFrom(result, assessmentSession);
   return finite(
-    queryValue('reps', '')
-      || chair.repetitionCount
-      || chair.countedRepetitionCount
-      || result?.repetitionCount
-      || result?.primaryValue
-      || result?.count,
-  ) ?? (queryValue('support', '') === 'low' ? 12 : queryValue('result', '') === 'arm' ? 0 : 9);
+    chair.cdcScoredRepetitions
+      ?? chair.repetitionCount
+      ?? chair.countedRepetitionCount
+      ?? result?.repetitionCount
+      ?? result?.primaryValue
+      ?? result?.count,
+  );
 }
 
 function profileFromDashboard(dashboard) {
-  return dashboard?.session?.profile || dashboard?.profile || {};
+  return dashboard?.session?.profile || {};
 }
 
 function chairReferenceFrom(result, dashboard) {
-  const signal = result?.carePipeline?.stages?.steadiAssessment?.functionalRisk?.signals?.chairStandBelowAverage;
-  const fromSignal = finite(signal?.cutoffRepetitions);
-  if (fromSignal !== null) return fromSignal;
   const profile = profileFromDashboard(dashboard);
-  const age = finite(queryValue('age', '')) ?? ageYearsFromProfile(profile);
-  const gender = queryValue('gender', '') || normalizeSteadiGender(profile?.gender || profile?.sex);
-  return finite(queryValue('reference', '')) ?? chairStandBelowAverageThreshold(age, gender) ?? 10;
+  const age = ageYearsFromProfile(profile);
+  const gender = normalizeSteadiGender(profile?.sex)?.toUpperCase() || null;
+  return chairStandBelowAverageThreshold(age, gender);
 }
 
 function previousChairReps(dashboard) {
-  if (queryValue('previous', '') === 'missing') return null;
-  const fromQuery = finite(queryValue('previousReps', ''));
-  if (fromQuery !== null) return fromQuery;
   const previous = (dashboard?.historyItems || []).find((item) => item.testType === 'chair_stand' || item.selectedTest === 'chair_stand');
   return finite(previous?.repetitionCount ?? previous?.chairStandResult?.repetitionCount ?? previous?.count);
 }
 
 function previousTandemHold(dashboard) {
-  if (queryValue('previous', '') === 'missing') return null;
-  const fromQuery = finite(queryValue('previousTandem', ''));
-  if (fromQuery !== null) return fromQuery;
   const previous = (dashboard?.historyItems || []).find((item) => item.testType === 'four_stage_balance' || item.selectedTest === 'four_stage_balance');
   return finite(previous?.balanceResult?.stageById?.tandem?.holdSeconds ?? previous?.primaryValue ?? previous?.count);
 }
 
 function compareText(current, previous, unit) {
-  if (previous === null || previous === undefined) return 'No previous assessment available';
+  if (current === null || current === undefined || previous === null || previous === undefined) {
+    return 'No previous assessment available';
+  }
   const diff = current - previous;
   if (Math.abs(diff) < 0.1) return 'Similar to the previous assessment';
   const direction = diff > 0 ? 'up' : 'down';
@@ -388,14 +355,9 @@ function compareText(current, previous, unit) {
 }
 
 function findingsFrom(result) {
-  const direct = result?.functionalFindings || result?.carePipeline?.agent?.observedState?.activeFunctionalFindings || [];
+  const direct = result?.functionalFindings || [];
   if (direct.length) return direct;
-  const scenario = queryValue('result', '') === 'arm'
-    ? 'arm'
-    : queryValue('result', '') === 'invalid'
-      ? 'invalid'
-      : queryValue('problem', 'both');
-  return (scenarioFindings[scenario] || scenarioFindings.both).map((findingType) => ({ findingType }));
+  return [];
 }
 
 function findingCardsFrom(result) {
@@ -421,45 +383,35 @@ function findingCardsFrom(result) {
       });
     }
   }
-  if (!cards.length) {
-    cards.push({
-      key: 'maintenance',
-      label: 'General Movement Maintenance',
-      observed: 'Your movement check did not highlight a specific area requiring extra support.',
-      exercise: 'A gentle maintenance exercise plan was selected.',
-    });
-  }
   return cards.slice(0, 4);
 }
 
-function selectedExercisesFrom(result) {
-  const plan = recommendationPlanFrom(result);
+function selectedExercisesFrom(result, assessmentSession = null) {
+  const plan = recommendationPlanFrom(result, assessmentSession);
   const selected = plan.selectedExercises || plan.recommendedExercises || result?.recommendedExercises || result?.recommendations || [];
   if (selected.length) return selected;
-  if (isProfessionalReviewRequired(result, supportLevelFrom(result))) {
-    return [
-      { displayName: 'Supported standing practice', category: 'balance', supportRequirement: 'Stable support' },
-      { displayName: 'Seated knee extension', category: 'strength', supportRequirement: 'Chair' },
-    ];
-  }
-  return [
-    { displayName: 'Supported sit-to-stand practice', category: 'strength', supportRequirement: 'Stable chair' },
-    { displayName: 'Supported tandem stance', category: 'balance', supportRequirement: 'Countertop nearby' },
-  ];
+  return [];
 }
 
-function resultContext(dashboard) {
+function buildResultsContext(dashboard) {
   const result = resultFromDashboard(dashboard) || {};
-  const supportLevel = supportLevelFrom(result);
+  const assessmentSession = assessmentSessionFromDashboard(dashboard);
+  const supportLevel = supportLevelFrom(result, assessmentSession);
   const supportCopy = supportLevelCopy[supportLevel];
-  const professionalRequired = isProfessionalReviewRequired(result, supportLevel);
-  const chairReps = chairRepsFrom(result);
+  const professionalRequired = isProfessionalReviewRequired(result, supportLevel, assessmentSession);
+  const chairReps = chairRepsFrom(result, assessmentSession);
   const chairReference = chairReferenceFrom(result, dashboard);
-  const tandemHold = tandemHoldFrom(result);
-  const balanceStages = balanceStagesFrom(result);
+  const tandemHold = tandemHoldFrom(result, assessmentSession);
+  const balanceStages = balanceStagesFrom(result, assessmentSession);
   const previousReps = previousChairReps(dashboard);
   const previousTandem = previousTandemHold(dashboard);
-  const invalid = queryValue('result', '') === 'invalid' || supportLevel === SupportLevels.NotReady;
+  const canonicalComplete = assessmentSession?.status === 'COMPLETED'
+    && assessmentSession?.steadi?.status === 'SCORED'
+    && assessmentSession?.functionalTests?.CHAIR_STAND_30S?.acceptedResult?.status === 'VALID'
+    && assessmentSession?.functionalTests?.FOUR_STAGE_BALANCE?.acceptedResult?.status === 'VALID';
+  const invalid = assessmentSession
+    ? !canonicalComplete
+    : (!result || result?.structuredPipeline?.aggregateReady !== true || supportLevel === SupportLevels.NotReady);
 
   return {
     result,
@@ -472,21 +424,25 @@ function resultContext(dashboard) {
     nextAction: professionalRequired ? supportLevelCopy[SupportLevels.High].action : supportCopy.action,
     chairReps,
     chairReference,
-    chairComparison: chairReps >= chairReference ? 'At or above the CDC reference value' : 'Below the CDC reference value',
+    chairComparison: chairReps === null || chairReference === null
+      ? 'Not measured'
+      : chairReps >= chairReference ? 'At or above the CDC reference value' : 'Below the CDC reference value',
     chairPrevious: compareText(chairReps, previousReps, 'stands'),
     balanceStages,
     tandemHold,
-    tandemPrevious: compareText(tandemHold ?? 0, previousTandem, 'seconds'),
+    tandemPrevious: compareText(tandemHold, previousTandem, 'seconds'),
     findingCards: findingCardsFrom(result),
-    exercises: selectedExercisesFrom(result),
-    plan: recommendationPlanFrom(result),
+    exercises: selectedExercisesFrom(result, assessmentSession),
+    plan: recommendationPlanFrom(result, assessmentSession),
   };
 }
 
 function analysisProgress(dashboard) {
-  const stage = queryValue('stage', '');
-  const done = queryValue('done', '') === '1' || Boolean(dashboard?.finalResult);
-  const index = done ? 3 : stage ? Math.max(0, Math.min(3, Number(stage) || 0)) : dashboard?.poseAnalysis?.analysisState ? 1 : 0;
+  const assessmentSession = assessmentSessionFromDashboard(dashboard);
+  const done = assessmentSession
+    ? assessmentSession.status === 'COMPLETED' && assessmentSession.steadi?.status === 'SCORED'
+    : Boolean(dashboard?.finalResult?.structuredPipeline?.aggregateReady);
+  const index = done ? 3 : dashboard?.poseAnalysis?.analysisState ? 1 : 0;
   return [
     { label: 'Checking assessment quality', complete: index >= 1 },
     { label: 'Comparing results with CDC reference values', complete: index >= 2 },
@@ -681,7 +637,7 @@ export function DisplayAnalyzingScreen({ dashboard }) {
 }
 
 export function DisplayResultsSummaryScreen({ dashboard }) {
-  const context = useMemo(() => resultContext(dashboard), [dashboard]);
+  const context = useMemo(() => buildResultsContext(dashboard), [dashboard]);
 
   return (
     <SessionShell
@@ -775,7 +731,7 @@ function ExercisesPanel({ context }) {
         {context.exercises.slice(0, 4).map((exercise, index) => (
           <article key={exercise.exerciseId || exercise.id || exercise.displayName || index}>
             <span>{exercise.category || 'Exercise'}</span>
-            <strong>{exercise.displayName || exercise.title || exercise.name || 'Recommended exercise'}</strong>
+            <strong>{exercise.displayName || 'Recommended exercise'}</strong>
             <p>{exercise.safetyInstruction || exercise.safetyNote || 'Use support nearby and stop if you feel unsafe.'}</p>
           </article>
         ))}
@@ -826,7 +782,7 @@ function DetailedMovementData({ context }) {
 }
 
 export function DisplayResultsDetailsScreen({ dashboard }) {
-  const context = useMemo(() => resultContext(dashboard), [dashboard]);
+  const context = useMemo(() => buildResultsContext(dashboard), [dashboard]);
   const [openPanel, setOpenPanel] = useState('assessment');
   const panels = [
     { id: 'assessment', title: 'Assessment Results', content: <AssessmentResultsPanel context={context} /> },

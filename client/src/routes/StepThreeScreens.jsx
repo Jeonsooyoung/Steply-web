@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PoseOverlay } from '../components/pose/PoseOverlay';
+import { useStableAssessmentCountdown } from '../hooks/useStableAssessmentCountdown.js';
+import {
+  ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS,
+  isStableAssessmentStartReady,
+} from '../pipeline/ui/assessmentAutoStart.js';
+import { navigateSpa } from './spaNavigation';
 import {
   AppHeader,
   CameraPreview,
@@ -9,30 +15,8 @@ import {
   SessionProgress,
 } from '../components/foundation/SteplyDesignSystem';
 
-function queryParams() {
-  if (typeof window === 'undefined') return new URLSearchParams();
-  return new URLSearchParams(window.location.search);
-}
-
-function queryValue(name, fallback = '') {
-  return queryParams().get(name) || fallback;
-}
-
 function goTo(path) {
-  if (typeof window !== 'undefined') window.location.assign(path);
-}
-
-function routeWithParams(path, updates = {}) {
-  const params = queryParams();
-  Object.entries(updates).forEach(([key, value]) => {
-    if (value === null || value === undefined || value === '') {
-      params.delete(key);
-    } else {
-      params.set(key, value);
-    }
-  });
-  const query = params.toString();
-  return query ? `${path}?${query}` : path;
+  navigateSpa(path);
 }
 
 function StepIcon({ children = 'i', tone = 'info' }) {
@@ -107,14 +91,41 @@ function answerLabel(value, map = {}) {
   return map[value] || (value === 'yes' ? 'Yes' : value === 'no' ? 'No' : value);
 }
 
-function screeningAnswers() {
-  const params = queryParams();
+function screeningAnswers(dashboard) {
+  const screening = dashboard?.assessmentSession?.screening || {};
+  const responses = screening.responses || {};
+  const fallHistory = screening.fallHistory || {};
   return {
-    fallen: params.get('fallen') || '',
-    fallCount: params.get('fallCount') || '',
-    injured: params.get('injured') || '',
-    unsteady: params.get('unsteady') || '',
-    worried: params.get('worried') || '',
+    fallen: typeof responses.fallenPastYear === 'boolean' ? (responses.fallenPastYear ? 'yes' : 'no') : '',
+    fallCount: fallHistory.count || '',
+    injured: typeof fallHistory.injuriousFall === 'boolean' ? (fallHistory.injuriousFall ? 'yes' : 'no') : '',
+    unsteady: typeof responses.feelsUnsteady === 'boolean' ? (responses.feelsUnsteady ? 'yes' : 'no') : '',
+    worried: typeof responses.worriedAboutFalling === 'boolean' ? (responses.worriedAboutFalling ? 'yes' : 'no') : '',
+    status: screening.status || 'NOT_STARTED',
+  };
+}
+
+function firstIncompleteScreen(answers) {
+  if (!answers.fallen) return '1';
+  if (answers.fallen === 'yes' && !answers.fallCount) return 'fall-count';
+  if (answers.fallen === 'yes' && !answers.injured) return 'fall-injury';
+  if (!answers.unsteady) return '2';
+  if (!answers.worried) return '3';
+  return 'summary';
+}
+
+function canonicalScreening(answers, status = 'IN_PROGRESS') {
+  return {
+    status,
+    responses: {
+      fallenPastYear: answers.fallen ? answers.fallen === 'yes' : null,
+      feelsUnsteady: answers.unsteady ? answers.unsteady === 'yes' : null,
+      worriedAboutFalling: answers.worried ? answers.worried === 'yes' : null,
+    },
+    fallHistory: {
+      count: answers.fallCount || null,
+      injuriousFall: answers.injured ? answers.injured === 'yes' : null,
+    },
   };
 }
 
@@ -127,26 +138,47 @@ const screeningVoiceScripts = {
   summary: 'Please review your answers. You can confirm them or make changes.',
 };
 
-export function DisplayScreeningScreen() {
-  const screen = queryValue('q', '1');
-  const answers = screeningAnswers();
+export function DisplayScreeningScreen({ dashboard }) {
+  const persistedAnswers = screeningAnswers(dashboard);
+  const [screen, setScreen] = useState(() => firstIncompleteScreen(persistedAnswers));
+  const [answers, setAnswers] = useState(persistedAnswers);
+  const [saveError, setSaveError] = useState('');
   const [lastReplay, setLastReplay] = useState('');
   const isSummary = screen === 'summary';
   const questionNumber = screen === '2' ? 2 : screen === '3' ? 3 : 1;
   const voiceScript = screeningVoiceScripts[screen] || screeningVoiceScripts[1];
 
-  const previousPath = useMemo(() => {
-    if (screen === 'fall-count') return routeWithParams('/display/session/screening', { q: '1' });
-    if (screen === 'fall-injury') return routeWithParams('/display/session/screening', { q: 'fall-count' });
+  const previousScreen = useMemo(() => {
+    if (screen === 'fall-count') return '1';
+    if (screen === 'fall-injury') return 'fall-count';
     if (screen === '2') {
       return answers.fallen === 'yes'
-        ? routeWithParams('/display/session/screening', { q: 'fall-injury' })
-        : routeWithParams('/display/session/screening', { q: '1' });
+        ? 'fall-injury'
+        : '1';
     }
-    if (screen === '3') return routeWithParams('/display/session/screening', { q: '2' });
-    if (screen === 'summary') return routeWithParams('/display/session/screening', { q: '3' });
-    return '/display/session/plan';
+    if (screen === '3') return '2';
+    if (screen === 'summary') return '3';
+    return null;
   }, [answers.fallen, screen]);
+
+  useEffect(() => {
+    const next = screeningAnswers(dashboard);
+    setAnswers(next);
+    if (next.status === 'COMPLETED') setScreen('summary');
+  }, [dashboard?.assessmentSession?.revision]);
+
+  const saveAnswers = async (nextAnswers, nextScreen, status = 'IN_PROGRESS') => {
+    setSaveError('');
+    try {
+      await dashboard?.handleUpdateScreening?.(canonicalScreening(nextAnswers, status));
+      setAnswers(nextAnswers);
+      if (nextScreen) setScreen(nextScreen);
+      return true;
+    } catch (error) {
+      setSaveError(error.message || 'Could not save the health check answer. Please try again.');
+      return false;
+    }
+  };
 
   const replay = () => setLastReplay(voiceScript);
 
@@ -171,7 +203,7 @@ export function DisplayScreeningScreen() {
             <StatusRow label="Fallen in the past year" status="ready" detail={answerLabel(answers.fallen)} />
             {answers.fallen === 'yes' ? (
               <>
-                <StatusRow label="Number of falls" status="ready" detail={answerLabel(answers.fallCount, { once: 'Once', twoPlus: 'Two or more times' })} />
+                <StatusRow label="Number of falls" status="ready" detail={answerLabel(answers.fallCount, { ZERO: 'Zero', ONE: 'Once', TWO_OR_MORE: 'Two or more times' })} />
                 <StatusRow label="Injured in a fall" status="ready" detail={answerLabel(answers.injured)} />
               </>
             ) : null}
@@ -183,10 +215,14 @@ export function DisplayScreeningScreen() {
             <PrimaryActionBar
               primaryLabel="Confirm Answers"
               secondaryLabel="Make Changes"
-              onPrimary={() => goTo('/display/session/safety')}
-              onSecondary={() => goTo('/display/session/screening?q=1')}
+              onPrimary={async () => {
+                const saved = await saveAnswers(answers, null, 'COMPLETED');
+                if (saved) goTo('/display/session/safety');
+              }}
+              onSecondary={() => setScreen('1')}
             />
           </div>
+          {saveError ? <p className="step-three-disabled-note" role="alert">{saveError}</p> : null}
           {lastReplay ? <span className="step-three-sr-status" role="status">{lastReplay}</span> : null}
         </main>
       </SessionShell>
@@ -196,37 +232,38 @@ export function DisplayScreeningScreen() {
   let question = 'Have you fallen in the past year?';
   let support = 'This is part of the CDC STEADI health check.';
   let options = [
-    { label: 'Yes', path: routeWithParams('/display/session/screening', { q: 'fall-count', fallen: 'yes' }) },
-    { label: 'No', path: routeWithParams('/display/session/screening', { q: '2', fallen: 'no', fallCount: null, injured: null }) },
+    { label: 'Yes', patch: { fallen: 'yes', fallCount: '', injured: '' }, next: 'fall-count' },
+    { label: 'No', patch: { fallen: 'no', fallCount: 'ZERO', injured: 'no' }, next: '2' },
   ];
 
   if (screen === 'fall-count') {
     question = 'How many times have you fallen?';
     support = 'Choose the answer that best matches the past year.';
     options = [
-      { label: 'Once', path: routeWithParams('/display/session/screening', { q: 'fall-injury', fallCount: 'once' }) },
-      { label: 'Two or more times', path: routeWithParams('/display/session/screening', { q: 'fall-injury', fallCount: 'twoPlus' }) },
+      { label: 'Zero', patch: { fallCount: 'ZERO' }, next: 'fall-injury' },
+      { label: 'Once', patch: { fallCount: 'ONE' }, next: 'fall-injury' },
+      { label: 'Two or more times', patch: { fallCount: 'TWO_OR_MORE' }, next: 'fall-injury' },
     ];
   } else if (screen === 'fall-injury') {
     question = 'Were you injured in a fall?';
     support = 'Choose Yes if any fall caused pain, a cut, a bruise, or needed medical attention.';
     options = [
-      { label: 'Yes', path: routeWithParams('/display/session/screening', { q: '2', injured: 'yes' }) },
-      { label: 'No', path: routeWithParams('/display/session/screening', { q: '2', injured: 'no' }) },
+      { label: 'Yes', patch: { injured: 'yes' }, next: '2' },
+      { label: 'No', patch: { injured: 'no' }, next: '2' },
     ];
   } else if (screen === '2') {
     question = 'Do you feel unsteady when standing or walking?';
     support = 'Think about normal standing, turning, and walking at home or outside.';
     options = [
-      { label: 'Yes', path: routeWithParams('/display/session/screening', { q: '3', unsteady: 'yes' }) },
-      { label: 'No', path: routeWithParams('/display/session/screening', { q: '3', unsteady: 'no' }) },
+      { label: 'Yes', patch: { unsteady: 'yes' }, next: '3' },
+      { label: 'No', patch: { unsteady: 'no' }, next: '3' },
     ];
   } else if (screen === '3') {
     question = 'Are you worried about falling?';
     support = 'Choose the answer that feels most true today.';
     options = [
-      { label: 'Yes', path: routeWithParams('/display/session/screening', { q: 'summary', worried: 'yes' }) },
-      { label: 'No', path: routeWithParams('/display/session/screening', { q: 'summary', worried: 'no' }) },
+      { label: 'Yes', patch: { worried: 'yes' }, next: 'summary' },
+      { label: 'No', patch: { worried: 'no' }, next: 'summary' },
     ];
   }
 
@@ -254,16 +291,21 @@ export function DisplayScreeningScreen() {
                 type="button"
                 className="ds-button ds-button--primary step-three-answer-button"
                 key={option.label}
-                onClick={() => goTo(option.path)}
+                onClick={() => saveAnswers({ ...answers, ...option.patch }, option.next)}
               >
                 {option.label}
               </button>
             ))}
           </div>
-          <button type="button" className="ds-button ds-button--secondary" onClick={() => goTo(previousPath)}>
+          <button
+            type="button"
+            className="ds-button ds-button--secondary"
+            onClick={() => previousScreen ? setScreen(previousScreen) : goTo('/display/session/plan')}
+          >
             Previous Question
           </button>
         </div>
+        {saveError ? <p className="step-three-disabled-note" role="alert">{saveError}</p> : null}
         {lastReplay ? <span className="step-three-sr-status" role="status">{lastReplay}</span> : null}
       </main>
     </SessionShell>
@@ -286,15 +328,12 @@ const safetyGuideCards = [
 ];
 
 function initialSafetyChecks() {
-  const checked = queryValue('checked', '');
-  if (checked === 'all') return Object.fromEntries(safetyItems.map((item) => [item.id, true]));
-  if (checked === 'partial') return { support: true, floor: true };
   return {};
 }
 
 export function DisplaySafetyScreen() {
   const [checked, setChecked] = useState(initialSafetyChecks);
-  const [guideOpen, setGuideOpen] = useState(queryValue('guide', '') === '1');
+  const [guideOpen, setGuideOpen] = useState(false);
   const allChecked = safetyItems.every((item) => checked[item.id]);
   const voiceScript = 'Check the support surface, chair, floor, clothing, and how you feel before starting.';
 
@@ -364,43 +403,36 @@ export function DisplaySafetyScreen() {
 
 const setupInstructions = {
   balance: [
-    'Place the phone about 2 meters away.',
+    'Place the selected camera about 2 meters away.',
     'Keep the camera at about hip height.',
     'Face the camera directly.',
     'Make sure your full body, including both feet, is visible.',
   ],
   chair: [
-    'Place the phone about 2 meters away.',
+    'Place the selected camera about 2 meters away.',
     'Position the camera at a 45-degree front-side angle.',
     'Keep the camera at about hip height.',
+    'Stand upright and hold still for the standing calibration.',
     'Make sure the chair, your knees, and both feet are visible.',
     'Place the chair firmly against a wall.',
   ],
 };
 
-function setupMode() {
-  const test = queryValue('test', 'balance');
+function setupMode(dashboard) {
+  const test = dashboard?.selectedTest
+    || (dashboard?.assessmentCompletion?.balanceCompleted ? 'chair_stand' : 'four_stage_balance');
   return test === 'chair' || test === 'chair_stand' ? 'chair' : 'balance';
 }
 
-function normalizeQualityMessage(quality) {
-  if (quality === 'body') return 'Step back until your full body is visible.';
-  if (quality === 'feet') return 'Lower the camera slightly so both feet are visible.';
-  if (quality === 'angle') return 'Adjust the phone to match the guide.';
-  if (quality === 'lighting') return 'Move to a brighter area.';
-  if (quality === 'person') return 'Only one person should remain in the assessment area.';
-  return 'Hold still while Steply checks the camera view.';
-}
-
 function cameraQualityScenario(dashboard, mode) {
-  const urlQuality = queryValue('quality', '');
-  const state = queryValue('state', '');
-  if (state === 'lost') {
+  const connectionStatus = String(dashboard?.activeCameraStatus || '').toLowerCase();
+  const cameraLabel = dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'Laptop Camera' : 'Phone Connected';
+  if (connectionStatus.includes('lost') || connectionStatus.includes('disconnect')) {
     return {
       ready: false,
-      correction: 'The phone connection was lost. Reconnect before continuing.',
+      correction: 'The camera connection was lost. Reconnect before continuing.',
       rows: [
-        { label: 'Phone Connected', status: 'lost' },
+        { label: cameraLabel, status: 'lost' },
         { label: 'Full Body Visible', status: 'checking' },
         { label: 'Feet Visible', status: 'checking' },
         { label: 'Camera Angle', status: 'checking' },
@@ -410,41 +442,24 @@ function cameraQualityScenario(dashboard, mode) {
     };
   }
 
-  if (urlQuality) {
-    const ready = urlQuality === 'ready';
-    const checking = urlQuality === 'checking';
-    const statusFor = (key) => {
-      if (ready) return 'ready';
-      if (checking) return 'checking';
-      return key === urlQuality ? 'adjust' : 'ready';
-    };
-    return {
-      ready,
-      correction: ready ? 'Camera setup looks ready.' : normalizeQualityMessage(urlQuality),
-      rows: [
-        { label: 'Phone Connected', status: 'ready' },
-        { label: 'Full Body Visible', status: statusFor('body') },
-        { label: 'Feet Visible', status: statusFor('feet') },
-        { label: 'Camera Angle', status: statusFor('angle') },
-        { label: 'Lighting', status: statusFor('lighting') },
-        { label: 'Ready to Continue', status: ready ? 'ready' : checking ? 'checking' : 'adjust' },
-      ],
-    };
-  }
-
   const readiness = dashboard?.poseAnalysis?.cameraReadiness;
-  const phoneConnected = Boolean(dashboard?.remoteCameraFrame?.src || dashboard?.session?.profile);
+  const cameraConnected = Boolean(dashboard?.isCameraLinked);
   const fullBodyVisible = Boolean(readiness?.fullBodyVisible || readiness?.checks?.fullBodyVisible);
-  const ready = Boolean(dashboard?.remoteCameraFrame?.src && fullBodyVisible);
+  const landmarkCount = dashboard?.poseAnalysis?.landmarks?.length || 0;
+  const ready = isStableAssessmentStartReady({
+    cameraReady: dashboard?.isCameraReady,
+    cameraReadiness: readiness,
+    landmarkCount,
+  });
   return {
     ready,
     correction: ready ? 'Camera setup looks ready.' : readiness?.mainMessage || readiness?.message || 'Stand where your full body and both feet are visible.',
     rows: [
-      { label: 'Phone Connected', status: phoneConnected ? 'ready' : 'checking' },
-      { label: 'Full Body Visible', status: fullBodyVisible ? 'ready' : phoneConnected ? 'checking' : 'checking' },
-      { label: 'Feet Visible', status: readiness?.feetVisible ? 'ready' : phoneConnected ? 'checking' : 'checking' },
+      { label: cameraLabel, status: cameraConnected ? 'ready' : 'checking' },
+      { label: 'Full Body Visible', status: fullBodyVisible ? 'ready' : cameraConnected ? 'checking' : 'checking' },
+      { label: 'Feet Visible', status: readiness?.feetVisible ? 'ready' : cameraConnected ? 'checking' : 'checking' },
       { label: 'Camera Angle', status: mode === 'chair' && !ready ? 'checking' : readiness?.checks?.correctDirection === false ? 'adjust' : ready ? 'ready' : 'checking' },
-      { label: 'Lighting', status: readiness?.brightnessOk ? 'ready' : phoneConnected ? 'checking' : 'checking' },
+      { label: 'Lighting', status: readiness?.brightnessOk ? 'ready' : cameraConnected ? 'checking' : 'checking' },
       { label: 'Ready to Continue', status: ready ? 'ready' : 'checking' },
     ],
   };
@@ -463,46 +478,33 @@ function FramingOverlay({ mode }) {
 }
 
 export function DisplayCameraSetupScreen({ dashboard }) {
-  const mode = setupMode();
+  const mode = setupMode(dashboard);
   const scenario = cameraQualityScenario(dashboard, mode);
-  const [autoContinueSeconds, setAutoContinueSeconds] = useState(null);
-  const autoStartDelaySeconds = mode === 'chair' ? 5 : 3;
   const nextTestPath = mode === 'chair'
-    ? '/display/assessment/chair/live?state=ready&ready=1'
-    : '/display/assessment/balance/instruction';
+    ? '/display/assessment/chair/instruction'
+    : '/display/assessment/balance/live';
   const title = mode === 'chair' ? 'Chair Stand Camera Setup' : 'Balance Test Camera Setup';
+  const cameraName = dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'laptop' : 'phone';
   const voiceScript = mode === 'chair'
-    ? 'Place the phone about 2 meters away at a front-side angle. Keep the chair, knees, and both feet visible.'
-    : 'Place the phone about 2 meters away at hip height. Face the camera and keep your full body visible.';
+    ? `Place the ${cameraName} camera about 2 meters away at a front-side angle. Stand upright and hold still. Keep the chair, knees, and both feet visible.`
+    : `Place the ${cameraName} camera about 2 meters away at hip height. Face the camera and keep your full body visible.`;
+  const calibrationStatus = dashboard?.poseAnalysis?.calibrationStatus;
+  const calibrationGateReady = mode === 'chair'
+    ? calibrationStatus?.progress?.standingStable === true
+    : calibrationStatus?.canStartAssessment === true;
 
-  useEffect(() => {
-    if (!scenario.ready) {
-      setAutoContinueSeconds(null);
-      return undefined;
-    }
-
-    const startedAt = Date.now();
-    setAutoContinueSeconds(autoStartDelaySeconds);
-    const intervalId = window.setInterval(() => {
-      const elapsedSeconds = (Date.now() - startedAt) / 1000;
-      setAutoContinueSeconds(Math.max(1, autoStartDelaySeconds - Math.floor(elapsedSeconds)));
-    }, 100);
-    const timeoutId = window.setTimeout(() => {
-      goTo(nextTestPath);
-    }, autoStartDelaySeconds * 1000);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.clearTimeout(timeoutId);
-    };
-  }, [autoStartDelaySeconds, nextTestPath, scenario.ready]);
+  const autoContinueSeconds = useStableAssessmentCountdown({
+    ready: scenario.ready,
+    completionReady: scenario.ready && calibrationGateReady,
+    onComplete: () => goTo(nextTestPath),
+  });
 
   return (
     <SessionShell
       eyebrow="Camera setup"
       title={title}
       description="Keep your full body visible. The selected test starts automatically after the countdown."
-      connection={<ConnectionIndicator status={queryValue('state') === 'lost' ? 'lost' : scenario.ready ? 'connected' : 'waiting'} label={scenario.ready ? 'Camera ready' : queryValue('state') === 'lost' ? 'Connection lost' : 'Camera check needed'} detail={scenario.correction} />}
+      connection={<ConnectionIndicator status={scenario.rows[0]?.status === 'lost' ? 'lost' : scenario.ready ? 'connected' : 'waiting'} label={scenario.ready ? 'Camera ready' : scenario.rows[0]?.status === 'lost' ? 'Connection lost' : 'Camera check needed'} detail={scenario.correction} />}
       progress={<SessionProgress current={4} total={9} label="Session progress" />}
       className="step-three-camera-shell"
     >
@@ -512,26 +514,32 @@ export function DisplayCameraSetupScreen({ dashboard }) {
             <button
               type="button"
               className={mode === 'balance' ? 'step-three-mode-switch__button step-three-mode-switch__button--active' : 'step-three-mode-switch__button'}
-              onClick={() => goTo('/display/session/camera-setup?test=balance')}
+              onClick={() => dashboard?.handleSelectTest?.('four_stage_balance')}
             >
               Balance Test
             </button>
             <button
               type="button"
               className={mode === 'chair' ? 'step-three-mode-switch__button step-three-mode-switch__button--active' : 'step-three-mode-switch__button'}
-              onClick={() => goTo('/display/session/camera-setup?test=chair')}
+              onClick={() => dashboard?.handleSelectTest?.('chair_stand')}
             >
               Chair Stand Test
             </button>
           </div>
-          <CameraPreview frameSrc={dashboard?.remoteCameraFrame?.src} label={`${title} preview`} guide="Keep your body inside the guide">
+          <CameraPreview frameSrc={dashboard?.activeCameraFrame?.src} mediaStream={dashboard?.activeCameraStream} label={`${title} preview`} guide="Keep your body inside the guide" onFrameLoaded={dashboard?.handleCameraFrameLoaded} onFrameError={dashboard?.handleCameraFrameError}>
             <PoseOverlay
               landmarks={dashboard?.poseAnalysis?.landmarks || []}
               rawLandmarks={dashboard?.poseAnalysis?.rawLandmarks || []}
               frameSize={dashboard?.poseAnalysis?.frameSize}
-              fit="cover"
+              fit={dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'contain' : 'cover'}
             />
             <FramingOverlay mode={mode} />
+            {autoContinueSeconds !== null ? (
+              <div className="step-three-auto-start-countdown" role="timer" aria-live="assertive" aria-label={`Test starts in ${autoContinueSeconds} seconds`}>
+                <strong>{autoContinueSeconds || 'GO'}</strong>
+                <span>Starting test</span>
+              </div>
+            ) : null}
           </CameraPreview>
           <div className="step-three-setup-instructions">
             {setupInstructions[mode].map((item) => (
@@ -558,11 +566,13 @@ export function DisplayCameraSetupScreen({ dashboard }) {
           <div className="step-three-actions">
             <VoiceButton script={voiceScript} onReplay={() => {}} />
             <PrimaryActionBar
-              primaryLabel="Continue"
+              primaryLabel={scenario.ready
+                ? `Starting in ${autoContinueSeconds ?? ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS}...`
+                : 'Waiting for stable standing'}
               secondaryLabel="Check Camera"
-              primaryDisabled={!scenario.ready}
-              onPrimary={() => goTo(nextTestPath)}
-              onSecondary={() => goTo(`/display/session/camera-setup?test=${mode}&quality=ready`)}
+              primaryDisabled
+              onPrimary={() => {}}
+              onSecondary={() => goTo('/display/session/camera-setup')}
             />
           </div>
         </aside>
@@ -571,37 +581,13 @@ export function DisplayCameraSetupScreen({ dashboard }) {
   );
 }
 
-function calibrationState() {
-  const state = queryValue('state', '');
-  const result = queryValue('result', '');
-  const quality = queryValue('quality', 'ready');
-  if (state === 'lost') {
+function calibrationState(dashboard) {
+  const connectionStatus = String(dashboard?.activeCameraStatus || '').toLowerCase();
+  if (connectionStatus.includes('lost') || connectionStatus.includes('disconnect')) {
     return {
       type: 'lost',
-      title: 'Phone Connection Lost',
+      title: 'Camera Connection Lost',
       message: 'The assessment has been paused.',
-      canContinue: false,
-    };
-  }
-  if (result === 'success') {
-    return {
-      type: 'success',
-      title: 'Calibration Complete',
-      message: 'The camera position is ready for the next step.',
-      canContinue: true,
-    };
-  }
-  if (result === 'failed' || quality !== 'ready') {
-    const fail = queryValue('fail', quality);
-    const message = fail === 'feet'
-      ? 'Please keep both feet still.'
-      : fail === 'lighting'
-        ? 'The lighting changed during calibration.'
-        : 'Your full body was not visible.';
-    return {
-      type: 'failed',
-      title: 'Calibration needs another try',
-      message,
       canContinue: false,
     };
   }
@@ -614,10 +600,9 @@ function calibrationState() {
 }
 
 export function DisplayCalibrationScreen({ dashboard }) {
-  const test = setupMode();
-  const position = queryValue('position', test === 'chair' ? 'standing' : 'standing');
-  const isSeated = test === 'chair' && position === 'seated';
-  const fallbackState = calibrationState();
+  const test = setupMode(dashboard);
+  const isSeated = false;
+  const fallbackState = calibrationState(dashboard);
   const poseAnalysis = dashboard?.poseAnalysis;
   const hasPose = (poseAnalysis?.landmarks?.length || 0) > 0;
   const fullBodyVisible = Boolean(
@@ -632,10 +617,7 @@ export function DisplayCalibrationScreen({ dashboard }) {
   const instruction = isSeated
     ? 'Sit in the middle of the chair with both feet flat on the floor.'
     : 'Stand upright, face the camera, and keep both feet still.';
-  const needsSeatedCalibration = test === 'chair' && !isSeated && queryValue('seated', '') === '1';
-  const nextPath = needsSeatedCalibration
-    ? '/display/session/calibration?test=chair&position=seated&count=3'
-    : test === 'chair'
+  const nextPath = test === 'chair'
     ? '/display/assessment/chair/instruction'
     : '/display/assessment/balance/instruction';
   const voiceScript = `${instruction} Steply will count down from 3 while checking the camera view.`;
@@ -681,12 +663,12 @@ export function DisplayCalibrationScreen({ dashboard }) {
     >
       <main className="step-three-calibration">
         <section className="step-three-calibration-stage">
-          <CameraPreview frameSrc={dashboard?.remoteCameraFrame?.src} label="Calibration preview" guide={isSeated ? 'Keep the chair and both feet visible' : 'Keep your full body visible'}>
+          <CameraPreview frameSrc={dashboard?.activeCameraFrame?.src} mediaStream={dashboard?.activeCameraStream} label="Calibration preview" guide={isSeated ? 'Keep the chair and both feet visible' : 'Keep your full body visible'} onFrameLoaded={dashboard?.handleCameraFrameLoaded} onFrameError={dashboard?.handleCameraFrameError}>
             <PoseOverlay
               landmarks={poseAnalysis?.landmarks || []}
               rawLandmarks={poseAnalysis?.rawLandmarks || []}
               frameSize={poseAnalysis?.frameSize}
-              fit="cover"
+              fit={dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'contain' : 'cover'}
             />
             <FramingOverlay mode={test === 'chair' ? 'chair' : 'balance'} />
           </CameraPreview>
@@ -705,7 +687,7 @@ export function DisplayCalibrationScreen({ dashboard }) {
           <h2>{state.title}</h2>
           <p>{state.message}</p>
           <div className="step-three-quality-list">
-            <StatusRow label="Phone Connected" status={state.type === 'lost' ? 'lost' : 'ready'} />
+            <StatusRow label={dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'Laptop Camera' : 'Phone Connected'} status={state.type === 'lost' ? 'lost' : 'ready'} />
             <StatusRow label="Camera quality" status={state.type === 'success' ? 'ready' : state.type === 'failed' ? 'adjust' : 'checking'} />
             <StatusRow label={isSeated ? 'Seated position' : 'Standing position'} status={state.type === 'success' ? 'ready' : state.type === 'failed' ? 'adjust' : 'checking'} />
           </div>
@@ -726,14 +708,14 @@ export function DisplayCalibrationScreen({ dashboard }) {
                 primaryLabel="Continue"
                 secondaryLabel="Check Camera Position"
                 onPrimary={() => goTo(nextPath)}
-                onSecondary={() => goTo(`/display/session/camera-setup?test=${test}`)}
+                onSecondary={() => goTo('/display/session/camera-setup')}
               />
             ) : (
               <PrimaryActionBar
-                primaryLabel={state.type === 'lost' ? 'Reconnect Phone' : 'Try Again'}
+                primaryLabel={state.type === 'lost' ? 'Reconnect Camera' : 'Try Again'}
                 secondaryLabel="Check Camera Position"
-                onPrimary={() => goTo(`/display/session/calibration?test=${test}${isSeated ? '&position=seated' : ''}&count=3`)}
-                onSecondary={() => goTo(`/display/session/camera-setup?test=${test}`)}
+                onPrimary={() => goTo('/display/session/calibration')}
+                onSecondary={() => goTo('/display/session/camera-setup')}
               />
             )}
           </div>

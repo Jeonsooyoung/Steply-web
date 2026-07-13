@@ -100,6 +100,7 @@ export function createPoseFrame({
   receivedAtMs,
   completedAtMs,
   mirrored = false,
+  secondaryPeople = [],
 } = {}) {
   const numericFrameId = normalizeFrameId(frameId);
   const poseLandmarks = normalizedLandmarks.map(toPoseLandmark);
@@ -118,6 +119,10 @@ export function createPoseFrame({
     ...(worldLandmarks ? { worldLandmarks: worldLandmarks.map(toPoseWorldLandmark) } : {}),
     confidence: confidence || confidenceFromLandmarks(poseLandmarks),
     detectedPersonCount: Math.max(0, Math.trunc(detectedPersonCount || 0)),
+    secondaryPeople: secondaryPeople.map((person) => ({
+      normalizedLandmarks: (person.normalizedLandmarks || []).map(toPoseLandmark),
+      worldLandmarks: (person.worldLandmarks || []).map(toPoseWorldLandmark),
+    })),
     processing: {
       receivedAtMs: received,
       completedAtMs: completed,
@@ -135,6 +140,7 @@ export function poseFrameFromWorkerDetection({
   image,
   normalizedLandmarks = detected?.landmarks || [],
   worldLandmarks = null,
+  secondaryPeople = detected?.people?.slice(1) || [],
   completedAtMs = Date.now(),
   mirrored = false,
 } = {}) {
@@ -146,6 +152,7 @@ export function poseFrameFromWorkerDetection({
     image,
     normalizedLandmarks: landmarksForFrame,
     worldLandmarks,
+    secondaryPeople,
     confidence: confidenceFromLandmarks(landmarksForFrame, detected?.confidence),
     detectedPersonCount: detected?.poseCount || 0,
     receivedAtMs: detected?.inputReceivedAt,

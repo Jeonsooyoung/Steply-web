@@ -1,0 +1,61 @@
+{
+  "contractVersion": "stage4_care_agent_contract.v1",
+  "stateSchemaVersion": "care_agent_state.v1",
+  "eventSchemaVersion": "care_agent_event.v1",
+  "actionSchemaVersion": "care_agent_action.v1",
+  "decisionSchemaVersion": "care_agent_decision.v1",
+  "toolResultSchemaVersion": "care_agent_tool_result.v1",
+  "projectionSchemaVersion": "care_agent_projection.v1",
+  "decisionPriority": [
+    "safety_event",
+    "fall_reported",
+    "high_or_v6_v7",
+    "declining_trend",
+    "reassessment_due",
+    "low_adherence",
+    "progression_available",
+    "maintenance"
+  ],
+  "loopPhases": [
+    "PERCEIVE",
+    "EVALUATE",
+    "GENERATE_ACTIONS",
+    "GUARDRAIL",
+    "PRIORITIZE",
+    "ACT",
+    "OBSERVE",
+    "PERSIST"
+  ],
+  "toolIds": [
+    "scheduler",
+    "notifier",
+    "report_composer",
+    "progress_store"
+  ],
+  "actionTypes": [
+    "stop_session",
+    "request_immediate_reassessment",
+    "recommend_medical_review",
+    "require_professional_review",
+    "hold_progression",
+    "advance_reassessment",
+    "schedule_due_reassessment",
+    "schedule_session",
+    "adjust_reminder",
+    "propose_split_session",
+    "notify_consented_caregiver",
+    "propose_progression",
+    "maintain_plan",
+    "compose_weekly_report"
+  ],
+  "eventTypes": [
+    "session_start",
+    "scheduled_wakeup",
+    "safety_event",
+    "fall_reported",
+    "assessment_updated",
+    "exercise_result_updated",
+    "approval_updated",
+    "manual_refresh"
+  ]
+}

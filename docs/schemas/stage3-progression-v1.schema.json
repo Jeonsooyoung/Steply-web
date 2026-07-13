@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/stage3-progression-v1.schema.json",
+  "title": "Steply Stage 3 progression proposal v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["proposalId", "exerciseId", "fromLevel", "toLevel", "fromVariantId", "toVariantId", "progressionType", "weightIncrementMinKg", "weightIncrementMaxKg", "status", "qualifyingSessionIds", "approval"],
+  "properties": {
+    "proposalId": { "$ref": "#/$defs/id" },
+    "exerciseId": { "$ref": "#/$defs/exerciseId" },
+    "fromLevel": { "$ref": "#/$defs/level" },
+    "toLevel": { "$ref": "#/$defs/level" },
+    "fromVariantId": { "$ref": "#/$defs/id" },
+    "toVariantId": { "$ref": "#/$defs/id" },
+    "progressionType": { "enum": ["INCREASE_WEIGHT", "REMOVE_SUPPORT", "ADVANCE_VARIANT", "INCREASE_SETS"] },
+    "weightIncrementMinKg": { "type": ["number", "null"], "minimum": 0 },
+    "weightIncrementMaxKg": { "type": ["number", "null"], "minimum": 0 },
+    "status": { "enum": ["PENDING_APPROVAL", "APPROVED", "APPLIED"] },
+    "qualifyingSessionIds": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "approval": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/approval" }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "progressionType": { "const": "INCREASE_WEIGHT" } }, "required": ["progressionType"] },
+      "then": {
+        "properties": {
+          "exerciseId": { "enum": ["S1", "S2", "S3"] },
+          "weightIncrementMinKg": { "const": 0.5 },
+          "weightIncrementMaxKg": { "const": 1 }
+        }
+      },
+      "else": {
+        "properties": {
+          "weightIncrementMinKg": { "type": "null" },
+          "weightIncrementMaxKg": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "PENDING_APPROVAL" } }, "required": ["status"] },
+      "then": { "properties": { "approval": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "status": { "enum": ["APPROVED", "APPLIED"] } }, "required": ["status"] },
+      "then": { "properties": { "approval": { "$ref": "#/$defs/approval" } } }
+    }
+  ],
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "level": { "enum": ["A", "B", "C", "D"] },
+    "exerciseId": {
+      "enum": ["W1", "W2", "W3", "W4", "W5", "S1", "S2", "S3", "S4", "S5", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "WALK"]
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor", "approvedBy", "approvedAt"],
+      "properties": {
+        "actor": { "enum": ["USER", "CAREGIVER_OR_RESPONSIBLE"] },
+        "approvedBy": { "$ref": "#/$defs/id" },
+        "approvedAt": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

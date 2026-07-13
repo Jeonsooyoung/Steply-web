@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { HomeLogo } from '../HomeLogo';
 
 function Icon({ children = 'i', tone = 'info' }) {
@@ -128,6 +129,7 @@ export function PrimaryActionBar({
   onSecondary,
   onTertiary,
   primaryDisabled = false,
+  tertiaryDisabled = false,
 }) {
   return (
     <div className="primary-action-bar">
@@ -142,7 +144,7 @@ export function PrimaryActionBar({
         </button>
       ) : null}
       {tertiaryLabel ? (
-        <button type="button" className="ds-button ds-button--ghost" onClick={onTertiary}>
+        <button type="button" className="ds-button ds-button--ghost" onClick={onTertiary} disabled={tertiaryDisabled}>
           {tertiaryLabel}
         </button>
       ) : null}
@@ -278,14 +280,44 @@ export function SkeletonOverlay({ label = 'Loading camera view' }) {
 
 export function CameraPreview({
   frameSrc,
+  mediaStream = null,
   label = 'Camera preview',
   guide = 'Full body view',
+  onFrameLoaded,
+  onFrameError,
   children,
 }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return undefined;
+    video.srcObject = mediaStream;
+    if (mediaStream) video.play().catch(() => {});
+    return () => {
+      if (video.srcObject === mediaStream) video.srcObject = null;
+    };
+  }, [mediaStream]);
+
   return (
-    <section className="camera-preview" aria-label={label}>
-      {frameSrc ? (
-        <img src={frameSrc} alt="Live phone camera preview" />
+    <section className={`camera-preview${mediaStream ? ' camera-preview--local' : ''}`} aria-label={label}>
+      {mediaStream ? (
+        <video ref={videoRef} autoPlay muted playsInline aria-label="Live laptop camera preview" />
+      ) : frameSrc ? (
+        <img
+          src={frameSrc}
+          alt="Live phone camera preview"
+          onLoad={(event) => {
+            const { naturalWidth, naturalHeight } = event.currentTarget;
+            const loadedSrc = event.currentTarget.currentSrc || event.currentTarget.src;
+            if (naturalWidth > 0 && naturalHeight > 0) {
+              onFrameLoaded?.(loadedSrc, { naturalWidth, naturalHeight });
+            } else {
+              onFrameError?.(loadedSrc);
+            }
+          }}
+          onError={(event) => onFrameError?.(event.currentTarget.currentSrc || event.currentTarget.src)}
+        />
       ) : (
         <div className="camera-preview__placeholder">
           <div className="camera-preview__person" aria-hidden="true" />

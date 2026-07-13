@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/steply-data-contract-v1.schema.json",
+  "title": "Steply Mobile-owned connection data projection v1",
+  "description": "Strict session-scoped Mobile projection. The PC stores it in memory only and never receives raw frames, landmarks, attempts, prescriptions, or decision logs through this contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "profile", "recentAssessments", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "steply_data_contract.v1" },
+    "profile": { "$ref": "#/$defs/profile" },
+    "recentAssessments": {
+      "type": "array",
+      "maxItems": 5,
+      "items": { "$ref": "#/$defs/recentAssessment" }
+    },
+    "generatedAt": { "$ref": "#/$defs/epoch" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "epoch": { "type": "integer", "minimum": 0 },
+    "vulnerability": { "enum": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"] },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "birthYear", "sex"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "displayName": { "$ref": "#/$defs/id" },
+        "birthYear": { "type": "integer", "minimum": 1900 },
+        "sex": { "type": ["string", "null"], "enum": ["MALE", "FEMALE", null] }
+      }
+    },
+    "balanceHoldSeconds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["SIDE_BY_SIDE", "SEMI_TANDEM", "TANDEM", "ONE_LEG"],
+      "properties": {
+        "SIDE_BY_SIDE": { "type": "number", "minimum": 0, "maximum": 10 },
+        "SEMI_TANDEM": { "type": "number", "minimum": 0, "maximum": 10 },
+        "TANDEM": { "type": "number", "minimum": 0, "maximum": 10 },
+        "ONE_LEG": { "type": "number", "minimum": 0, "maximum": 10 }
+      }
+    },
+    "recentAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assessmentSessionId", "completedAt", "risk", "vulnerabilityIds", "valid", "chairStandRepetitions", "balanceSecondsByStage"],
+      "properties": {
+        "assessmentSessionId": { "$ref": "#/$defs/id" },
+        "completedAt": { "$ref": "#/$defs/epoch" },
+        "risk": { "enum": ["LOW", "MODERATE", "HIGH"] },
+        "vulnerabilityIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/vulnerability" } },
+        "valid": { "const": true },
+        "chairStandRepetitions": { "type": "integer", "minimum": 0 },
+        "balanceSecondsByStage": { "$ref": "#/$defs/balanceHoldSeconds" }
+      }
+    }
+  }
+}

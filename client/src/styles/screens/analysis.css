@@ -451,18 +451,14 @@
 }
 
 .movement-guide-list li::before {
-  content: "✓";
+  content: "";
   position: absolute;
-  top: -1px;
-  left: 0;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  color: var(--on-primary);
-  background: linear-gradient(145deg, color-mix(in srgb, var(--primary) 88%, white), var(--primary-dark));
-  border-radius: 7px;
-  font-size: 18px;
+  top: 7px;
+  left: 9px;
+  width: 10px;
+  height: 10px;
+  background: var(--primary);
+  border-radius: 50%;
 }
 
 .movement-guide-tip {

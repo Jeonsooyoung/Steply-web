@@ -1,8 +1,9 @@
 import { MediaPipePoseNames } from './poseLandmarks';
 import { derivePoseMetrics } from './poseKinematics';
+import { stage2Operational } from '../pipeline/shared/config/stage2Analysis.config.js';
 
-export const STEADI_LANDMARK_SERIES_FRAME_LIMIT = 450;
-export const STEADI_LANDMARK_SERIES_MAX_AGE_MS = 45_000;
+export const STEADI_LANDMARK_SERIES_FRAME_LIMIT = stage2Operational.landmarkSeries.maximumSamples;
+export const STEADI_LANDMARK_SERIES_MAX_AGE_MS = stage2Operational.landmarkSeries.maximumAgeMs;
 
 const SERIES_TYPE = 'steadi_landmark_timeseries';
 const LANDMARK_MODEL = 'mediapipe_pose_33';
@@ -34,11 +35,28 @@ export function normalizePoseLandmarks(landmarks = []) {
   });
 }
 
+export function normalizeWorldPoseLandmarks(landmarks = []) {
+  return MediaPipePoseNames.map((name, index) => {
+    const point = landmarks[index] || {};
+    return {
+      index,
+      name,
+      x: finiteOrNull(point.xMeters ?? point.x),
+      y: finiteOrNull(point.yMeters ?? point.y),
+      z: finiteOrNull(point.zMeters ?? point.z),
+      visibility: visibilityOrZero(point.visibility),
+    };
+  });
+}
+
 export function createPoseLandmarkFrame({
   sequence = 0,
   timestampMs,
   receivedAt = timestampMs,
   landmarks = [],
+  worldLandmarks = [],
+  retainedNormalizedLandmarks = landmarks,
+  retainedWorldLandmarks = worldLandmarks,
   confidence = 0,
 } = {}) {
   return {
@@ -46,6 +64,9 @@ export function createPoseLandmarkFrame({
     timestampMs,
     receivedAt,
     landmarks: normalizePoseLandmarks(landmarks),
+    worldLandmarks: normalizeWorldPoseLandmarks(worldLandmarks),
+    retainedNormalizedLandmarks: normalizePoseLandmarks(retainedNormalizedLandmarks),
+    retainedWorldLandmarks: normalizeWorldPoseLandmarks(retainedWorldLandmarks),
     confidence: Number.isFinite(confidence) ? confidence : 0,
     landmarkModel: LANDMARK_MODEL,
   };

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "fuzzy_topsis_recommendation_tables.v1",
+  "algorithmVersion": "safety_constrained_fuzzy_topsis.v1",
+  "purpose": "The function-exercise links are the only source of candidate exercises and starting variants. Stage 3 clinical safety rules cap or block those candidates before Fuzzy-TOPSIS ranking. The CDC STEADI risk score is not altered.",
+  "criteria": [
+    { "criterionId": "DEFICIT_MATCH", "nameKo": "기능 부족 일치도", "type": "BENEFIT", "fuzzyWeight": [0.27, 0.30, 0.33] },
+    { "criterionId": "SIDE_MATCH", "nameKo": "좌우 방향 일치도", "type": "BENEFIT", "fuzzyWeight": [0.12, 0.15, 0.18] },
+    { "criterionId": "DIFFICULTY_FIT", "nameKo": "현재 난이도 적합성", "type": "BENEFIT", "fuzzyWeight": [0.15, 0.18, 0.21] },
+    { "criterionId": "SAFETY_MARGIN", "nameKo": "안전 여유도", "type": "BENEFIT", "fuzzyWeight": [0.22, 0.25, 0.28] },
+    { "criterionId": "FATIGUE_FIT", "nameKo": "피로 부담 적합성", "type": "BENEFIT", "fuzzyWeight": [0.05, 0.07, 0.09] },
+    { "criterionId": "PROGRESSION_FIT", "nameKo": "단계 진행 가능성", "type": "BENEFIT", "fuzzyWeight": [0.03, 0.05, 0.07] }
+  ],
+  "fuzzyRatingSpread": 0.08,
+  "targetDifficultyByRisk": { "LOW": 0.65, "MODERATE": 0.40, "HIGH": 0.20 },
+  "supportDemandMultiplier": {
+    "TWO_HAND": 0.45,
+    "ONE_HAND": 0.60,
+    "WALKING_AID": 0.60,
+    "STABLE_SUPPORT": 0.65,
+    "NONE": 1.00
+  },
+  "exerciseInformationTable": [
+    { "exerciseId": "S1", "sideMode": "PER_SIDE", "functionalRole": "MOVING_LIMB", "difficultyByLevel": { "A": 0.20, "B": 0.42, "C": 0.65 }, "balanceDemand": 0.10, "strengthDemand": 0.55, "fatigueDemand": 0.45 },
+    { "exerciseId": "S2", "sideMode": "PER_SIDE", "functionalRole": "MOVING_LIMB", "difficultyByLevel": { "A": 0.28, "B": 0.48, "C": 0.70 }, "balanceDemand": 0.35, "strengthDemand": 0.55, "fatigueDemand": 0.48 },
+    { "exerciseId": "S3", "sideMode": "PER_SIDE", "functionalRole": "MOVING_LIMB", "difficultyByLevel": { "A": 0.30, "B": 0.50, "C": 0.72 }, "balanceDemand": 0.42, "strengthDemand": 0.55, "fatigueDemand": 0.48 },
+    { "exerciseId": "S4", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "C": 0.35, "D": 0.58 }, "balanceDemand": 0.48, "strengthDemand": 0.45, "fatigueDemand": 0.45 },
+    { "exerciseId": "S5", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "C": 0.35, "D": 0.58 }, "balanceDemand": 0.48, "strengthDemand": 0.42, "fatigueDemand": 0.42 },
+    { "exerciseId": "B1", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "A": 0.30, "B": 0.48, "C": 0.65, "D": 0.78 }, "balanceDemand": 0.50, "strengthDemand": 0.50, "fatigueDemand": 0.55 },
+    { "exerciseId": "B2", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "A": 0.48, "B": 0.68 }, "balanceDemand": 0.72, "strengthDemand": 0.25, "fatigueDemand": 0.50 },
+    { "exerciseId": "B3", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "A": 0.48, "B": 0.70 }, "balanceDemand": 0.75, "strengthDemand": 0.25, "fatigueDemand": 0.52 },
+    { "exerciseId": "B4", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "A": 0.42, "B": 0.65 }, "balanceDemand": 0.68, "strengthDemand": 0.32, "fatigueDemand": 0.52 },
+    { "exerciseId": "B5", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "A": 0.35, "B": 0.58 }, "balanceDemand": 0.68, "strengthDemand": 0.12, "fatigueDemand": 0.25 },
+    { "exerciseId": "B6", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "A": 0.52, "B": 0.74 }, "balanceDemand": 0.82, "strengthDemand": 0.18, "fatigueDemand": 0.48 },
+    { "exerciseId": "B7", "sideMode": "PER_SIDE", "functionalRole": "SUPPORT_LIMB", "difficultyByLevel": { "A": 0.45, "B": 0.72, "C": 0.88 }, "balanceDemand": 0.92, "strengthDemand": 0.28, "fatigueDemand": 0.35 },
+    { "exerciseId": "B8", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "A": 0.48, "B": 0.70 }, "balanceDemand": 0.75, "strengthDemand": 0.30, "fatigueDemand": 0.48 },
+    { "exerciseId": "B9", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "A": 0.50, "B": 0.72 }, "balanceDemand": 0.78, "strengthDemand": 0.35, "fatigueDemand": 0.50 },
+    { "exerciseId": "B10", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "A": 0.82 }, "balanceDemand": 0.92, "strengthDemand": 0.22, "fatigueDemand": 0.55 },
+    { "exerciseId": "B11", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "A": 0.25, "B": 0.38, "C": 0.58, "D": 0.75 }, "balanceDemand": 0.40, "strengthDemand": 0.78, "fatigueDemand": 0.70 },
+    { "exerciseId": "B12", "sideMode": "BILATERAL", "functionalRole": "BILATERAL", "difficultyByLevel": { "A": 0.42, "B": 0.55, "C": 0.68, "D": 0.82 }, "balanceDemand": 0.72, "strengthDemand": 0.78, "fatigueDemand": 0.75 }
+  ],
+  "functionExerciseConnectionTable": [
+    { "functionId": "V1", "functionNameKo": "발목 전략·고유수용성감각", "links": [{ "exerciseId": "S4", "variantId": "S4-C", "relevance": 0.95 }, { "exerciseId": "S5", "variantId": "S5-C", "relevance": 0.90 }, { "exerciseId": "B5", "variantId": "B5-A", "relevance": 0.75 }, { "exerciseId": "B6", "variantId": "B6-A", "relevance": 0.80 }, { "exerciseId": "B7", "variantId": "B7-A", "relevance": 0.65 }] },
+    { "functionId": "V2", "functionNameKo": "고관절 외전근·측방 안정성", "links": [{ "exerciseId": "S3", "variantId": "S3-C", "relevance": 0.95 }, { "exerciseId": "B4", "variantId": "B4-A", "relevance": 0.90 }, { "exerciseId": "B5", "variantId": "B5-A", "relevance": 0.65 }] },
+    { "functionId": "V3", "functionNameKo": "하지 근력·근지구력", "links": [{ "exerciseId": "S1", "variantId": "S1-C", "relevance": 0.95 }, { "exerciseId": "S2", "variantId": "S2-C", "relevance": 0.75 }, { "exerciseId": "S3", "variantId": "S3-C", "relevance": 0.75 }, { "exerciseId": "B1", "variantId": "B1-A", "relevance": 0.80 }, { "exerciseId": "B11", "variantId": "B11-A", "relevance": 0.95 }] },
+    { "functionId": "V4", "functionNameKo": "하지 근지구력", "links": [{ "exerciseId": "S1", "variantId": "S1-C", "relevance": 0.80 }, { "exerciseId": "S2", "variantId": "S2-C", "relevance": 0.80 }, { "exerciseId": "B11", "variantId": "B11-B", "relevance": 0.90 }, { "exerciseId": "B1", "variantId": "B1-A", "relevance": 0.75 }] },
+    { "functionId": "V5", "functionNameKo": "고관절 신전근", "links": [{ "exerciseId": "S2", "variantId": "S2-C", "relevance": 0.80 }, { "exerciseId": "S3", "variantId": "S3-C", "relevance": 0.85 }, { "exerciseId": "B1", "variantId": "B1-A", "relevance": 0.75 }, { "exerciseId": "B11", "variantId": "B11-A", "relevance": 0.90 }] },
+    { "functionId": "V6", "functionNameKo": "독립 의자 일어서기", "links": [{ "exerciseId": "S1", "variantId": "S1-A", "relevance": 0.70 }, { "exerciseId": "B11", "variantId": "B11-A", "relevance": 1.00 }] },
+    { "functionId": "V7", "functionNameKo": "기본 정적 균형", "links": [{ "exerciseId": "S4", "variantId": "S4-C", "relevance": 0.60 }, { "exerciseId": "S5", "variantId": "S5-C", "relevance": 0.60 }, { "exerciseId": "B5", "variantId": "B5-A", "relevance": 0.95 }, { "exerciseId": "B1", "variantId": "B1-A", "relevance": 0.75 }] },
+    { "functionId": "V8", "functionNameKo": "고난도 한발 지지 균형", "links": [{ "exerciseId": "S3", "variantId": "S3-C", "relevance": 0.70 }, { "exerciseId": "S4", "variantId": "S4-C", "relevance": 0.60 }, { "exerciseId": "B7", "variantId": "B7-A", "relevance": 1.00 }, { "exerciseId": "B5", "variantId": "B5-A", "relevance": 0.65 }] },
+    { "functionId": "V9", "functionNameKo": "좌우 사용 패턴 대칭성", "links": [{ "exerciseId": "S1", "variantId": "S1-C", "relevance": 0.85, "weakSideAdditionalSets": 1 }, { "exerciseId": "S2", "variantId": "S2-C", "relevance": 0.80, "weakSideAdditionalSets": 1 }, { "exerciseId": "S3", "variantId": "S3-C", "relevance": 0.80, "weakSideAdditionalSets": 1 }, { "exerciseId": "B4", "variantId": "B4-A", "relevance": 0.70 }, { "exerciseId": "B11", "variantId": "B11-A", "relevance": 0.90 }] }
+  ]
+}

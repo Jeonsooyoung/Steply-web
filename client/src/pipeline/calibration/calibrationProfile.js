@@ -32,6 +32,7 @@ export function createCalibrationProfile({
   status = CalibrationStatuses.NotStarted,
   failureReasons = [],
   createdAtMs = Date.now(),
+  sampledDurationMs = 0,
 } = {}) {
   const profile = {
     calibrationId,
@@ -55,6 +56,7 @@ export function createCalibrationProfile({
     status,
     failureReasons,
     createdAtMs,
+    sampledDurationMs,
   };
   return {
     value: profile,
@@ -67,4 +69,3 @@ export function createCalibrationApplicationContext({ sessionId, assessmentType 
 }
 
 export { validateCalibrationApplication, validateCalibrationProfile };
-

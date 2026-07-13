@@ -18,6 +18,12 @@ import {
   hipCenter,
   normalizeSittingToStandingProgress,
   shoulderCenter,
+  worldBodyScale,
+  worldFootCenter,
+  worldHipCenter,
+  worldLandmarkByIndex,
+  worldShoulderCenter,
+  LandmarkIndexes,
 } from '../pose/coordinateMapping.js';
 
 function finite(value) {
@@ -31,15 +37,25 @@ function average(values = []) {
 
 function distance(first, second) {
   if (!first || !second || !finite(first.x) || !finite(first.y) || !finite(second.x) || !finite(second.y)) return null;
-  return Math.hypot(first.x - second.x, first.y - second.y);
+  const dz = finite(first.z) && finite(second.z) ? first.z - second.z : 0;
+  return Math.hypot(first.x - second.x, first.y - second.y, dz);
 }
 
 function sampleFromFrame(frame, qualityStatus) {
-  const hip = hipCenter(frame);
-  const shoulders = shoulderCenter(frame);
-  const center = bodyCenter(frame);
-  const scale = bodyScale(frame);
+  const hip = worldHipCenter(frame);
+  const shoulders = worldShoulderCenter(frame);
+  const center = hip && shoulders ? {
+    x: (hip.x + shoulders.x) / 2,
+    y: (hip.y + shoulders.y) / 2,
+    z: (hip.z + shoulders.z) / 2,
+  } : null;
+  const scale = worldBodyScale(frame);
   const camera = estimateCameraView(frame);
+  const leftWrist = worldLandmarkByIndex(frame, LandmarkIndexes.LeftWrist);
+  const rightWrist = worldLandmarkByIndex(frame, LandmarkIndexes.RightWrist);
+  const leftShoulder = worldLandmarkByIndex(frame, LandmarkIndexes.LeftShoulder);
+  const rightShoulder = worldLandmarkByIndex(frame, LandmarkIndexes.RightShoulder);
+  const foldDistances = [distance(leftWrist, rightShoulder), distance(rightWrist, leftShoulder)].filter(finite);
   return {
     timestampMs: frame.timestampMs,
     hip,
@@ -47,8 +63,8 @@ function sampleFromFrame(frame, qualityStatus) {
     center,
     scale,
     feet: {
-      left: footCenter(frame, 'left'),
-      right: footCenter(frame, 'right'),
+      left: worldFootCenter(frame, 'left'),
+      right: worldFootCenter(frame, 'right'),
       confidence: feetConfidence(frame),
       placementObservable: footPlacementObservability(frame),
     },
@@ -58,6 +74,7 @@ function sampleFromFrame(frame, qualityStatus) {
       qualityStatus?.scores?.overall ?? frame.confidence?.overall ?? 0,
     ),
     foldedArmConfidence: foldedArmConfidence(frame),
+    foldDistance: average(foldDistances),
   };
 }
 
@@ -65,7 +82,7 @@ function stableWindow(samples = [], holdMs, config = calibrationConfig) {
   if (samples.length < 2) return { stable: false, confidence: 0 };
   const first = samples[0];
   const latest = samples.at(-1);
-  if (!first?.timestampMs || !latest?.timestampMs || latest.timestampMs - first.timestampMs < holdMs) {
+  if (!finite(first?.timestampMs) || !finite(latest?.timestampMs) || latest.timestampMs - first.timestampMs < holdMs) {
     return { stable: false, confidence: 0 };
   }
   const centers = samples.map((sample) => sample.center).filter(Boolean);
@@ -91,7 +108,7 @@ function stableWindow(samples = [], holdMs, config = calibrationConfig) {
   };
 }
 
-function pruneSamples(samples, latestTimestampMs, windowMs = 3_500) {
+function pruneSamples(samples, latestTimestampMs, windowMs = calibrationConfig.sampleRetentionMs) {
   return samples.filter((sample) => latestTimestampMs - sample.timestampMs <= windowMs);
 }
 
@@ -108,6 +125,10 @@ function averageScale(samples = []) {
     footLengthRight: average(samples.map((sample) => sample.scale.footLengthRight)) ?? undefined,
     averageFootLength: average(samples.map((sample) => sample.scale.averageFootLength)) ?? undefined,
   };
+}
+
+function meanFoldDistance(samples = []) {
+  return average(samples.map((sample) => sample.foldDistance));
 }
 
 function cameraViewFromSamples(samples = []) {
@@ -152,7 +173,7 @@ function requiredReferencesReady(state, assessmentType, config = calibrationConf
     return Boolean(
       state.balanceFootStable?.stable
       && state.footGeometryConfidence >= config.minFeetConfidence
-      && state.footPlacementObservableScore >= 0.55
+      && state.footPlacementObservableScore >= config.minFootPlacementObservableScore
     );
   }
   return standingStable;
@@ -168,7 +189,7 @@ function failureReasonsFor(state, assessmentType) {
   if (assessmentType === AssessmentTypes.FourStageBalance) {
     if (!state.balanceFootStable?.stable) reasons.push({ code: 'BALANCE_FOOT_BASELINE_NOT_STABLE' });
     if (state.footGeometryConfidence < calibrationConfig.minFeetConfidence) reasons.push({ code: 'FOOT_LANDMARK_CONFIDENCE_LOW' });
-    if (state.footPlacementObservableScore < 0.55) reasons.push({ code: 'FOOT_PLACEMENT_NOT_OBSERVABLE' });
+    if (state.footPlacementObservableScore < calibrationConfig.minFootPlacementObservableScore) reasons.push({ code: 'FOOT_PLACEMENT_NOT_OBSERVABLE' });
   }
   return reasons;
 }
@@ -194,6 +215,29 @@ export function createPersonalCalibrationState({
     footGeometryConfidence: 0,
     footPlacementObservableScore: 0,
     profile: null,
+  };
+}
+
+export function rebindValidPersonalCalibrationState(state, {
+  sessionId,
+  assessmentType,
+} = {}) {
+  if (
+    !state
+    || !sessionId
+    || !assessmentType
+    || state.assessmentType !== assessmentType
+    || state.profile?.assessmentType !== assessmentType
+    || state.profile?.status !== CalibrationStatuses.Valid
+  ) return null;
+
+  return {
+    ...state,
+    sessionId,
+    profile: {
+      ...state.profile,
+      sessionId,
+    },
   };
 }
 
@@ -247,8 +291,14 @@ export function updatePersonalCalibration(state, {
     references: {
       standingHipPosition,
       sittingHipPosition,
+      H_stand: standingHipPosition,
+      H_sit: sittingHipPosition,
+      L_foot: averageScale(next.standingSamples.length ? next.standingSamples : [sample]).averageFootLength,
+      W_shoulder: averageScale(next.standingSamples.length ? next.standingSamples : [sample]).shoulderWidth,
+      D_fold: meanFoldDistance(next.sittingSamples.length ? next.sittingSamples : next.standingSamples),
       foldedArmReference: next.assessmentType === AssessmentTypes.ChairStand30s ? {
         confidence: next.foldedArmConfidence,
+        distanceMeters: meanFoldDistance(next.sittingSamples.length ? next.sittingSamples : next.standingSamples),
       } : undefined,
       neutralFootPosition: next.assessmentType === AssessmentTypes.FourStageBalance
         ? footReferenceFromSamples(next.balanceFootSamples)
@@ -278,6 +328,7 @@ export function updatePersonalCalibration(state, {
       : CalibrationStatuses.InProgress,
     failureReasons: failureReasonsFor(next, next.assessmentType),
     createdAtMs: next.createdAtMs,
+    sampledDurationMs: next.standingStable?.durationMs || 0,
   });
   next.profile = profileResult.value;
 
@@ -294,6 +345,7 @@ export function updatePersonalCalibration(state, {
       footGeometryConfidence: next.footGeometryConfidence,
       footPlacementObservableScore: next.footPlacementObservableScore,
       failureReasons: next.profile.failureReasons,
+      sampledDurationMs: next.profile.sampledDurationMs,
     },
   };
 }

@@ -1,359 +1,106 @@
+import stage3Catalog from '../../../../shared/stage3ExerciseCatalog.json';
 import {
-  CameraVerificationModes,
-  ExercisePlanStatuses,
-  FindingClassifications,
-  FunctionalDomains,
-  ResultSources,
-  SteadiRiskLevels,
-  SupervisionRequirements,
-  SupportRequirements,
-} from '../shared/types/index.js';
-import { validateExercisePlan } from '../shared/validation/runtimeValidation.js';
-import { FunctionalFindingTypes } from '../findings/functionalFindings.js';
+  FUZZY_TOPSIS_ALGORITHM_VERSION,
+  FUZZY_TOPSIS_FUNCTION_EXERCISE_TABLE,
+  rankOtagoExercisesWithFuzzyTopsis,
+} from './fuzzyTopsisRecommender.js';
 
-export const DETERMINISTIC_OTAGO_ENGINE_VERSION = 'deterministic_otago_engine.v1';
+export const FUZZY_TOPSIS_OTAGO_ENGINE_VERSION = 'fuzzy_topsis_otago_engine.v1';
+export const STAGE3_PRESCRIPTION_SCHEMA_VERSION = 'otago_prescription.v1';
+export const STAGE3_PROGRESSION_SCHEMA_VERSION = 'stage3_progression_decision.v1';
 
-export const ExerciseCategories = {
-  Strength: 'strength',
-  Balance: 'balance',
-};
+export const ExerciseCategories = Object.freeze({
+  Warmup: 'WARMUP',
+  Strength: 'STRENGTH',
+  Balance: 'BALANCE',
+  Walking: 'WALKING',
+});
 
-export const ExerciseProgressionDecisions = {
+export const ExerciseProgressionDecisions = Object.freeze({
   Maintain: 'MAINTAIN',
-  ProgressionEligible: 'PROGRESSION_ELIGIBLE',
+  ProgressionEligible: 'PROGRESSION_PROPOSED',
+  ProgressionProposed: 'PROGRESSION_PROPOSED',
   RegressionRequired: 'REGRESSION_REQUIRED',
   ProfessionalReviewRequired: 'PROFESSIONAL_REVIEW_REQUIRED',
-};
+});
 
-export const OtagoExerciseIds = {
-  FrontKneeStrengthening: 'front_knee_strengthening',
-  BackKneeStrengthening: 'back_knee_strengthening',
-  SideHipStrengthening: 'side_hip_strengthening',
-  CalfRaises: 'calf_raises',
-  ToeRaises: 'toe_raises',
-  KneeBends: 'knee_bends',
-  TandemStance: 'tandem_stance',
-  OneLegStand: 'one_leg_stand',
-  SitToStand: 'sit_to_stand',
-};
+export const OtagoExerciseIds = Object.freeze({
+  W1: 'W1', W2: 'W2', W3: 'W3', W4: 'W4', W5: 'W5',
+  S1: 'S1', S2: 'S2', S3: 'S3', S4: 'S4', S5: 'S5',
+  B1: 'B1', B2: 'B2', B3: 'B3', B4: 'B4', B5: 'B5', B6: 'B6',
+  B7: 'B7', B8: 'B8', B9: 'B9', B10: 'B10', B11: 'B11', B12: 'B12',
+  Walking: 'WALK',
+  FrontKneeStrengthening: 'S1',
+  BackKneeStrengthening: 'S2',
+  SideHipStrengthening: 'S3',
+  CalfRaises: 'S4',
+  ToeRaises: 'S5',
+  KneeBends: 'B1',
+  TandemStance: 'B5',
+  OneLegStand: 'B7',
+  SitToStand: 'B11',
+});
 
-const ExerciseLevels = {
-  Seated: 'seated',
-  SupportedTwoHand: 'supported_two_hand',
-  Supported: 'supported',
-  Standard: 'standard',
-  Unsupported: 'unsupported',
-};
+const LEVEL_RANK = Object.freeze({ A: 0, B: 1, C: 2, D: 3 });
+const SUPPORT_RANK = Object.freeze({ TWO_HAND: 0, ONE_HAND: 1, WALKING_AID: 1, STABLE_SUPPORT: 1, NONE: 2 });
+const CANONICAL_WARMUP_IDS = Object.freeze(['W1', 'W2', 'W3', 'W4', 'W5']);
+const WEIGHTED_STRENGTH_IDS = Object.freeze(['S1', 'S2', 'S3']);
+const SUPPORTED_BODYWEIGHT_STRENGTH_IDS = Object.freeze(['S4', 'S5']);
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  Object.values(value).forEach(deepFreeze);
+  return Object.freeze(value);
+}
 
-const LEVEL_RANK = {
-  [ExerciseLevels.Seated]: 0,
-  [ExerciseLevels.SupportedTwoHand]: 1,
-  [ExerciseLevels.Supported]: 1,
-  [ExerciseLevels.Standard]: 2,
-  [ExerciseLevels.Unsupported]: 3,
-};
-
-const RISK_RANK = {
-  [SteadiRiskLevels.Low]: 0,
-  [SteadiRiskLevels.Moderate]: 1,
-  [SteadiRiskLevels.High]: 2,
-  [SteadiRiskLevels.NotScorable]: 3,
-};
-
-const DEFAULT_REPETITIONS = {
-  [ExerciseLevels.Seated]: 6,
-  [ExerciseLevels.SupportedTwoHand]: 5,
-  [ExerciseLevels.Supported]: 6,
-  [ExerciseLevels.Standard]: 8,
-  [ExerciseLevels.Unsupported]: 8,
-};
-
-function level(level, supportRequirement, {
-  repetitions = DEFAULT_REPETITIONS[level] ?? 6,
-  sets = 1,
-  cameraVerification = CameraVerificationModes.Partial,
-  supervisionRequirement = SupervisionRequirements.None,
-} = {}) {
+function normalizedVariant(exercise, variant) {
+  const balanceDefaults = stage3Catalog.balanceDefaults;
   return {
-    level,
-    repetitions,
-    sets,
-    supportRequirement,
-    supervisionRequirement,
-    cameraVerification,
+    ...variant,
+    weight: variant.weight || balanceDefaults.weight,
+    tempo: variant.tempo || balanceDefaults.tempo,
+    breathing: variant.breathing || balanceDefaults.breathing,
+    rest: variant.rest || balanceDefaults.rest,
+    cameraVerification: variant.cameraVerification
+      || balanceDefaults.cameraByExerciseId[exercise.exerciseId]
+      || { mode: 'MANUAL_ONLY', autoCount: false },
   };
 }
 
-export const OTAGO_EXERCISE_CATALOG = [
-  {
-    exerciseId: OtagoExerciseIds.FrontKneeStrengthening,
-    displayName: 'Front knee strengthening',
-    otagoSourceName: 'Front Knee Strengthening',
-    category: ExerciseCategories.Strength,
-    supportedFunctionalDomains: [FunctionalDomains.LowerBodyFunction, FunctionalDomains.MovementEndurance],
-    availableLevels: [
-      level(ExerciseLevels.Seated, SupportRequirements.StableSupport, { cameraVerification: CameraVerificationModes.Supported }),
-      level(ExerciseLevels.Standard, SupportRequirements.None, { repetitions: 8, cameraVerification: CameraVerificationModes.Supported }),
-    ],
-    repetitions: 8,
-    sets: 1,
-    supportRequirement: SupportRequirements.None,
-    supervisionRequirement: SupervisionRequirements.None,
-    minimumRiskLevel: SteadiRiskLevels.Low,
-    maximumRiskLevel: SteadiRiskLevels.Moderate,
-    cameraVerifiable: true,
-    contraindicationTags: ['acute_knee_pain'],
-    progressionRule: 'Increase repetitions only after two safe sessions with good control.',
-    regressionRule: 'Use seated repetitions or reduce range if knee pain, form loss, or fatigue appears.',
-    instructionMessageKeys: ['exercise.frontKneeStrengthening.instructions'],
-    safetyMessageKeys: ['exercise.frontKneeStrengthening.safety'],
-  },
-  {
-    exerciseId: OtagoExerciseIds.BackKneeStrengthening,
-    displayName: 'Back knee strengthening',
-    otagoSourceName: 'Back Knee Strengthening',
-    category: ExerciseCategories.Strength,
-    supportedFunctionalDomains: [FunctionalDomains.LowerBodyFunction],
-    availableLevels: [
-      level(ExerciseLevels.Supported, SupportRequirements.StableSupport, { repetitions: 6 }),
-      level(ExerciseLevels.Standard, SupportRequirements.StableSupport, { repetitions: 8 }),
-    ],
-    repetitions: 8,
-    sets: 1,
-    supportRequirement: SupportRequirements.StableSupport,
-    supervisionRequirement: SupervisionRequirements.None,
-    minimumRiskLevel: SteadiRiskLevels.Low,
-    maximumRiskLevel: SteadiRiskLevels.Moderate,
-    cameraVerifiable: true,
-    contraindicationTags: ['acute_knee_pain'],
-    progressionRule: 'Progress only when the standing leg remains steady and the motion is controlled.',
-    regressionRule: 'Return to supported range or seated work if balance support is needed more often.',
-    instructionMessageKeys: ['exercise.backKneeStrengthening.instructions'],
-    safetyMessageKeys: ['exercise.backKneeStrengthening.safety'],
-  },
-  {
-    exerciseId: OtagoExerciseIds.SideHipStrengthening,
-    displayName: 'Side hip strengthening',
-    otagoSourceName: 'Side Hip Strengthening',
-    category: ExerciseCategories.Strength,
-    supportedFunctionalDomains: [FunctionalDomains.SingleLegBalance, FunctionalDomains.MovementControl],
-    availableLevels: [
-      level(ExerciseLevels.Supported, SupportRequirements.StableSupport, { repetitions: 6 }),
-      level(ExerciseLevels.Standard, SupportRequirements.StableSupport, { repetitions: 8 }),
-    ],
-    repetitions: 8,
-    sets: 1,
-    supportRequirement: SupportRequirements.StableSupport,
-    supervisionRequirement: SupervisionRequirements.None,
-    minimumRiskLevel: SteadiRiskLevels.Low,
-    maximumRiskLevel: SteadiRiskLevels.Moderate,
-    cameraVerifiable: true,
-    contraindicationTags: ['hip_pain'],
-    progressionRule: 'Add repetitions after repeated controlled sessions without trunk sway.',
-    regressionRule: 'Use smaller side lifts or extra hand support when the pelvis shifts.',
-    instructionMessageKeys: ['exercise.sideHipStrengthening.instructions'],
-    safetyMessageKeys: ['exercise.sideHipStrengthening.safety'],
-  },
-  {
-    exerciseId: OtagoExerciseIds.CalfRaises,
-    displayName: 'Calf raises',
-    otagoSourceName: 'Calf Raises',
-    category: ExerciseCategories.Balance,
-    supportedFunctionalDomains: [FunctionalDomains.BasicStaticBalance, FunctionalDomains.NarrowBaseBalance],
-    availableLevels: [
-      level(ExerciseLevels.Supported, SupportRequirements.StableSupport, { repetitions: 6 }),
-      level(ExerciseLevels.Standard, SupportRequirements.StableSupport, { repetitions: 8 }),
-      level(ExerciseLevels.Unsupported, SupportRequirements.None, { repetitions: 8 }),
-    ],
-    repetitions: 8,
-    sets: 1,
-    supportRequirement: SupportRequirements.StableSupport,
-    supervisionRequirement: SupervisionRequirements.None,
-    minimumRiskLevel: SteadiRiskLevels.Low,
-    maximumRiskLevel: SteadiRiskLevels.Moderate,
-    cameraVerifiable: true,
-    contraindicationTags: ['severe_foot_pain'],
-    progressionRule: 'Progress support level only after stable balance across two sessions.',
-    regressionRule: 'Use both hands on support or reduce repetitions after sway or safety events.',
-    instructionMessageKeys: ['exercise.calfRaises.instructions'],
-    safetyMessageKeys: ['exercise.calfRaises.safety'],
-  },
-  {
-    exerciseId: OtagoExerciseIds.ToeRaises,
-    displayName: 'Toe raises',
-    otagoSourceName: 'Toe Raises',
-    category: ExerciseCategories.Balance,
-    supportedFunctionalDomains: [FunctionalDomains.BasicStaticBalance, FunctionalDomains.NarrowBaseBalance],
-    availableLevels: [
-      level(ExerciseLevels.Supported, SupportRequirements.StableSupport, { repetitions: 6 }),
-      level(ExerciseLevels.Standard, SupportRequirements.StableSupport, { repetitions: 8 }),
-      level(ExerciseLevels.Unsupported, SupportRequirements.None, { repetitions: 8 }),
-    ],
-    repetitions: 8,
-    sets: 1,
-    supportRequirement: SupportRequirements.StableSupport,
-    supervisionRequirement: SupervisionRequirements.None,
-    minimumRiskLevel: SteadiRiskLevels.Low,
-    maximumRiskLevel: SteadiRiskLevels.Moderate,
-    cameraVerifiable: true,
-    contraindicationTags: ['severe_foot_pain'],
-    progressionRule: 'Progress support level only after stable balance across two sessions.',
-    regressionRule: 'Use both hands on support or reduce repetitions after sway or safety events.',
-    instructionMessageKeys: ['exercise.toeRaises.instructions'],
-    safetyMessageKeys: ['exercise.toeRaises.safety'],
-  },
-  {
-    exerciseId: OtagoExerciseIds.KneeBends,
-    displayName: 'Knee bends',
-    otagoSourceName: 'Knee Bends',
-    category: ExerciseCategories.Strength,
-    supportedFunctionalDomains: [FunctionalDomains.LowerBodyFunction, FunctionalDomains.MovementEndurance, FunctionalDomains.BasicStaticBalance],
-    availableLevels: [
-      level(ExerciseLevels.Supported, SupportRequirements.StableSupport, { repetitions: 5 }),
-      level(ExerciseLevels.Standard, SupportRequirements.StableSupport, { repetitions: 8 }),
-    ],
-    repetitions: 8,
-    sets: 1,
-    supportRequirement: SupportRequirements.StableSupport,
-    supervisionRequirement: SupervisionRequirements.None,
-    minimumRiskLevel: SteadiRiskLevels.Low,
-    maximumRiskLevel: SteadiRiskLevels.Moderate,
-    cameraVerifiable: true,
-    contraindicationTags: ['acute_knee_pain'],
-    progressionRule: 'Increase depth or repetitions only after controlled, pain-free sessions.',
-    regressionRule: 'Reduce range and use stable support if form changes or knee discomfort appears.',
-    instructionMessageKeys: ['exercise.kneeBends.instructions'],
-    safetyMessageKeys: ['exercise.kneeBends.safety'],
-  },
-  {
-    exerciseId: OtagoExerciseIds.TandemStance,
-    displayName: 'Tandem stance',
-    otagoSourceName: 'Tandem Stance',
-    category: ExerciseCategories.Balance,
-    supportedFunctionalDomains: [FunctionalDomains.NarrowBaseBalance],
-    availableLevels: [
-      level(ExerciseLevels.Supported, SupportRequirements.StableSupport, { repetitions: 2, sets: 1, cameraVerification: CameraVerificationModes.Supported }),
-      level(ExerciseLevels.Unsupported, SupportRequirements.None, { repetitions: 2, sets: 1, cameraVerification: CameraVerificationModes.Supported }),
-    ],
-    repetitions: 2,
-    sets: 1,
-    supportRequirement: SupportRequirements.StableSupport,
-    supervisionRequirement: SupervisionRequirements.None,
-    minimumRiskLevel: SteadiRiskLevels.Low,
-    maximumRiskLevel: SteadiRiskLevels.Moderate,
-    cameraVerifiable: true,
-    contraindicationTags: ['dizziness_uncontrolled'],
-    progressionRule: 'Reduce hand support only after two safe holds without foot movement.',
-    regressionRule: 'Return to supported semi-tandem stance after foot movement, support use, or near loss of balance.',
-    instructionMessageKeys: ['exercise.tandemStance.instructions'],
-    safetyMessageKeys: ['exercise.tandemStance.safety'],
-  },
-  {
-    exerciseId: OtagoExerciseIds.OneLegStand,
-    displayName: 'One-leg stand',
-    otagoSourceName: 'One-leg Stand',
-    category: ExerciseCategories.Balance,
-    supportedFunctionalDomains: [FunctionalDomains.SingleLegBalance],
-    availableLevels: [
-      level(ExerciseLevels.Supported, SupportRequirements.StableSupport, { repetitions: 2, sets: 1, cameraVerification: CameraVerificationModes.Supported }),
-      level(ExerciseLevels.Unsupported, SupportRequirements.None, { repetitions: 2, sets: 1, cameraVerification: CameraVerificationModes.Supported }),
-    ],
-    repetitions: 2,
-    sets: 1,
-    supportRequirement: SupportRequirements.StableSupport,
-    supervisionRequirement: SupervisionRequirements.None,
-    minimumRiskLevel: SteadiRiskLevels.Low,
-    maximumRiskLevel: SteadiRiskLevels.Moderate,
-    cameraVerifiable: true,
-    contraindicationTags: ['dizziness_uncontrolled'],
-    progressionRule: 'Reduce support only after repeated safe holds with no touchdown or support event.',
-    regressionRule: 'Use both hands on support or practice shorter holds after touchdown or support use.',
-    instructionMessageKeys: ['exercise.oneLegStand.instructions'],
-    safetyMessageKeys: ['exercise.oneLegStand.safety'],
-  },
-  {
-    exerciseId: OtagoExerciseIds.SitToStand,
-    displayName: 'Sit to stand',
-    otagoSourceName: 'Sit to Stand',
-    category: ExerciseCategories.Strength,
-    supportedFunctionalDomains: [FunctionalDomains.LowerBodyFunction, FunctionalDomains.MovementEndurance, FunctionalDomains.MovementControl],
-    availableLevels: [
-      level(ExerciseLevels.SupportedTwoHand, SupportRequirements.StableSupport, { repetitions: 4, cameraVerification: CameraVerificationModes.Supported }),
-      level(ExerciseLevels.Supported, SupportRequirements.StableSupport, { repetitions: 5, cameraVerification: CameraVerificationModes.Supported }),
-      level(ExerciseLevels.Standard, SupportRequirements.None, { repetitions: 6, cameraVerification: CameraVerificationModes.Supported }),
-    ],
-    repetitions: 6,
-    sets: 1,
-    supportRequirement: SupportRequirements.None,
-    supervisionRequirement: SupervisionRequirements.None,
-    minimumRiskLevel: SteadiRiskLevels.Low,
-    maximumRiskLevel: SteadiRiskLevels.Moderate,
-    cameraVerifiable: true,
-    contraindicationTags: ['unsafe_transfer', 'acute_knee_pain'],
-    progressionRule: 'Progress repetitions only after safe, controlled chair stands without arm support when allowed.',
-    regressionRule: 'Use two-hand support or fewer repetitions after fatigue, trunk compensation, or safety events.',
-    instructionMessageKeys: ['exercise.sitToStand.instructions'],
-    safetyMessageKeys: ['exercise.sitToStand.safety'],
-  },
-];
+export const STAGE3_EXERCISE_CATALOG = deepFreeze(stage3Catalog.exercises.map((exercise) => {
+  const variants = exercise.variants.map((variant) => normalizedVariant(exercise, variant));
+  const first = variants[0];
+  return {
+    ...exercise,
+    displayName: exercise.nameEn,
+    otagoSourceName: exercise.nameEn,
+    variants,
+    availableLevels: variants.map((variant) => ({
+      ...variant,
+      repetitions: variant.dosage.repetitions ?? variant.dosage.steps ?? null,
+      sets: variant.dosage.sets ?? 1,
+      cameraVerification: variant.cameraVerification.mode,
+    })),
+    repetitions: first.dosage.repetitions ?? first.dosage.steps ?? null,
+    sets: first.dosage.sets ?? 1,
+    supportRequirement: first.supportRequirement,
+    weight: first.weight.type,
+    tempo: first.tempo,
+    breathing: first.breathing,
+    rest: first.rest,
+    cameraVerification: first.cameraVerification.mode,
+    cameraVerifiable: first.cameraVerification.mode === 'FULL',
+  };
+}));
 
-const CATALOG_BY_ID = Object.fromEntries(OTAGO_EXERCISE_CATALOG.map((exercise) => [exercise.exerciseId, exercise]));
-
-const PRIMARY_MAPPING = {
-  [FunctionalFindingTypes.ChairStandBelowReference]: [
-    { exerciseId: OtagoExerciseIds.FrontKneeStrengthening, desiredLevel: ExerciseLevels.Standard, priority: 10 },
-    { exerciseId: OtagoExerciseIds.KneeBends, desiredLevel: ExerciseLevels.Supported, priority: 20 },
-    { exerciseId: OtagoExerciseIds.SitToStand, desiredLevel: ExerciseLevels.Standard, priority: 30 },
-  ],
-  [FunctionalFindingTypes.ArmSupportRequired]: [
-    { exerciseId: OtagoExerciseIds.SitToStand, desiredLevel: ExerciseLevels.SupportedTwoHand, priority: 5 },
-    { exerciseId: OtagoExerciseIds.FrontKneeStrengthening, desiredLevel: ExerciseLevels.Seated, priority: 15 },
-  ],
-  [FunctionalFindingTypes.BasicBalanceDifficulty]: [
-    { exerciseId: OtagoExerciseIds.CalfRaises, desiredLevel: ExerciseLevels.Supported, priority: 5 },
-    { exerciseId: OtagoExerciseIds.ToeRaises, desiredLevel: ExerciseLevels.Supported, priority: 15 },
-    { exerciseId: OtagoExerciseIds.KneeBends, desiredLevel: ExerciseLevels.Supported, priority: 25 },
-  ],
-  [FunctionalFindingTypes.SemiTandemHoldDifficulty]: [
-    { exerciseId: OtagoExerciseIds.TandemStance, desiredLevel: ExerciseLevels.Supported, priority: 5 },
-    { exerciseId: OtagoExerciseIds.CalfRaises, desiredLevel: ExerciseLevels.Supported, priority: 15 },
-    { exerciseId: OtagoExerciseIds.ToeRaises, desiredLevel: ExerciseLevels.Supported, priority: 25 },
-  ],
-  [FunctionalFindingTypes.TandemHoldDifficulty]: [
-    { exerciseId: OtagoExerciseIds.TandemStance, desiredLevel: ExerciseLevels.Supported, priority: 5 },
-    { exerciseId: OtagoExerciseIds.CalfRaises, desiredLevel: ExerciseLevels.Supported, priority: 15 },
-    { exerciseId: OtagoExerciseIds.ToeRaises, desiredLevel: ExerciseLevels.Supported, priority: 25 },
-  ],
-  [FunctionalFindingTypes.SingleLegHoldDifficulty]: [
-    { exerciseId: OtagoExerciseIds.OneLegStand, desiredLevel: ExerciseLevels.Supported, priority: 5 },
-    { exerciseId: OtagoExerciseIds.SideHipStrengthening, desiredLevel: ExerciseLevels.Supported, priority: 15 },
-    { exerciseId: OtagoExerciseIds.CalfRaises, desiredLevel: ExerciseLevels.Supported, priority: 25 },
-  ],
-};
-
-const SECONDARY_MAPPING = {
-  [FunctionalFindingTypes.LateRepetitionSlowdown]: [
-    { exerciseId: OtagoExerciseIds.SitToStand, desiredLevel: ExerciseLevels.Supported, priority: 60, cueCode: 'CUE_SPLIT_SETS_AND_REST' },
-  ],
-  [FunctionalFindingTypes.TrunkCompensationPattern]: [
-    { exerciseId: OtagoExerciseIds.SitToStand, desiredLevel: ExerciseLevels.Supported, priority: 65, cueCode: 'CUE_KEEP_TRUNK_CONTROLLED' },
-  ],
-  [FunctionalFindingTypes.MediolateralSwayPattern]: [
-    { exerciseId: OtagoExerciseIds.CalfRaises, desiredLevel: ExerciseLevels.Supported, priority: 70, cueCode: 'CUE_USE_STABLE_SUPPORT_FOR_SWAY' },
-  ],
-  [FunctionalFindingTypes.AnteriorPosteriorSwayPattern]: [
-    { exerciseId: OtagoExerciseIds.ToeRaises, desiredLevel: ExerciseLevels.Supported, priority: 70, cueCode: 'CUE_USE_STABLE_SUPPORT_FOR_SWAY' },
-  ],
-  [FunctionalFindingTypes.FrequentPositionCorrection]: [
-    { exerciseId: OtagoExerciseIds.CalfRaises, desiredLevel: ExerciseLevels.Supported, priority: 75, cueCode: 'CUE_RESET_POSITION_BETWEEN_REPS' },
-  ],
-};
+export const OTAGO_EXERCISE_CATALOG = STAGE3_EXERCISE_CATALOG;
+const CATALOG_BY_ID = new Map(STAGE3_EXERCISE_CATALOG.map((exercise) => [exercise.exerciseId, exercise]));
+const FUNCTION_EXERCISE_LINKS_BY_ID = new Map(
+  FUZZY_TOPSIS_FUNCTION_EXERCISE_TABLE.map((row) => [row.functionId, row.links]),
+);
 
 function stableStringify(value) {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
-  }
+  if (value && typeof value === 'object') return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
   return JSON.stringify(value);
 }
 
@@ -371,432 +118,416 @@ function unique(values = []) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function sourceFrom(result = {}) {
-  return result.metadata?.source || result.source || null;
+function professionalApprovalValue(value, riskLevel) {
+  if (riskLevel !== 'HIGH') return { status: 'NOT_REQUIRED', approvalId: null, approvedByRole: null, approvedAt: null };
+  if (
+    value?.status === 'APPROVED'
+    && value.approvalId
+    && value.approvedByRole === 'PROFESSIONAL'
+    && Number.isFinite(value.approvedAt)
+  ) return { status: 'APPROVED', approvalId: value.approvalId, approvedByRole: 'PROFESSIONAL', approvedAt: value.approvedAt };
+  return { status: 'PENDING', approvalId: null, approvedByRole: null, approvedAt: null };
 }
 
-function validSourceAssessment(result = {}) {
-  return (
-    sourceFrom(result) === ResultSources.LivePose
-    && result.status === 'VALID'
-    && result.metadata?.isClinicallyScorable !== false
-  );
+function canonicalVulnerabilityAssessment(vulnerabilityAssessment) {
+  const source = vulnerabilityAssessment?.activeIds ? vulnerabilityAssessment : { activeIds: [], evidence: [] };
+  const activeIds = unique(source?.activeIds || []).filter((id) => FUNCTION_EXERCISE_LINKS_BY_ID.has(id)).sort();
+  return { ...source, activeIds, evidence: source?.evidence || [] };
 }
 
-function riskLevelFrom({ steadiScore, riskLevel }) {
-  return riskLevel || steadiScore?.riskLevel || SteadiRiskLevels.NotScorable;
+function variantById(exercise, variantId) {
+  return exercise?.variants.find((variant) => variant.variantId === variantId) || null;
 }
 
-function supervisionForRisk(riskLevel, requiresProfessionalReview = false) {
-  if (requiresProfessionalReview || riskLevel === SteadiRiskLevels.High) return SupervisionRequirements.ProfessionalReviewRequired;
-  if (riskLevel === SteadiRiskLevels.Moderate) return SupervisionRequirements.CaregiverRecommended;
-  return SupervisionRequirements.None;
+function lowerVariant(first, second) {
+  if (!first) return second;
+  if (!second) return first;
+  const firstLevel = LEVEL_RANK[first.level] ?? 99;
+  const secondLevel = LEVEL_RANK[second.level] ?? 99;
+  if (firstLevel !== secondLevel) return firstLevel < secondLevel ? first : second;
+  return (SUPPORT_RANK[first.supportRequirement] ?? 99) <= (SUPPORT_RANK[second.supportRequirement] ?? 99) ? first : second;
 }
 
-function compareRisk(value, min, max) {
-  const rank = RISK_RANK[value] ?? RISK_RANK[SteadiRiskLevels.NotScorable];
-  return rank >= (RISK_RANK[min] ?? 0) && rank <= (RISK_RANK[max] ?? 99);
+function cappedVariant(exercise, requested, { riskLevel, forceLowest }) {
+  if (forceLowest) return exercise.variants[0];
+  if (exercise.category === ExerciseCategories.Balance) {
+    const maxLevel = riskLevel === 'LOW' ? 'B' : 'A';
+    const candidates = exercise.variants.filter((variant) => (LEVEL_RANK[variant.level] ?? 99) <= LEVEL_RANK[maxLevel]);
+    return candidates.includes(requested) ? requested : candidates.at(-1) || exercise.variants[0];
+  }
+  if (exercise.category === ExerciseCategories.Strength && ['S1', 'S2', 'S3'].includes(exercise.exerciseId)) {
+    const maxLevel = riskLevel === 'LOW' ? 'C' : riskLevel === 'MODERATE' ? 'B' : 'A';
+    const candidates = exercise.variants.filter((variant) => (LEVEL_RANK[variant.level] ?? 99) <= LEVEL_RANK[maxLevel]);
+    return candidates.includes(requested) ? requested : candidates.at(-1) || exercise.variants[0];
+  }
+  return requested;
 }
 
-function hasBalanceFinding(findings = []) {
-  return findings.some((finding) => [
-    FunctionalFindingTypes.BasicBalanceDifficulty,
-    FunctionalFindingTypes.SemiTandemHoldDifficulty,
-    FunctionalFindingTypes.TandemHoldDifficulty,
-    FunctionalFindingTypes.SingleLegHoldDifficulty,
-  ].includes(finding.findingType));
-}
-
-function levelByName(exercise, levelName) {
-  return exercise.availableLevels.find((item) => item.level === levelName) || null;
-}
-
-function highestAllowedLevel(exercise, {
-  desiredLevel,
-  riskLevel,
-  hasBalancePrimary,
-  armSupportRequired,
-}) {
-  const desired = levelByName(exercise, desiredLevel) || exercise.availableLevels[0];
-  const desiredRank = LEVEL_RANK[desired.level] ?? 0;
-  const exclusionReasons = [];
-  let maxRank = desiredRank;
-
-  if (riskLevel === SteadiRiskLevels.Moderate) {
-    maxRank = Math.min(maxRank, LEVEL_RANK[ExerciseLevels.Standard]);
-    if (exercise.category === ExerciseCategories.Balance) {
-      exclusionReasons.push('RISK_CAP_MODERATE_REQUIRES_SUPPORTED_BALANCE');
+function safetyAdmittedCandidatesFromFunctionTable(vulnerabilityAssessment, riskLevel, currentPlan = null) {
+  const candidates = new Map();
+  const forceLowest = vulnerabilityAssessment.activeIds.includes('V6');
+  for (const vulnerabilityId of vulnerabilityAssessment.activeIds) {
+    for (const mapping of FUNCTION_EXERCISE_LINKS_BY_ID.get(vulnerabilityId) || []) {
+      const exercise = CATALOG_BY_ID.get(mapping.exerciseId);
+      const currentExercise = vulnerabilityId === 'V9'
+        ? currentPlan?.selectedExercises?.find((item) => item.exerciseId === mapping.exerciseId)
+        : null;
+      const requested = variantById(exercise, currentExercise?.variantId || mapping.variantId);
+      if (!exercise || !requested) continue;
+      const existing = candidates.get(exercise.exerciseId) || { exercise, requested: null, vulnerabilityIds: [], modifiers: [] };
+      existing.requested = lowerVariant(existing.requested, requested);
+      existing.vulnerabilityIds.push(vulnerabilityId);
+      existing.modifiers.push(mapping);
+      candidates.set(exercise.exerciseId, existing);
     }
   }
-
-  if (riskLevel === SteadiRiskLevels.Low && hasBalancePrimary && exercise.category === ExerciseCategories.Balance) {
-    maxRank = Math.min(maxRank, LEVEL_RANK[ExerciseLevels.Supported]);
-    exclusionReasons.push('BALANCE_FINDING_REQUIRES_SUPPORTED_START');
-  }
-
-  if (armSupportRequired && exercise.exerciseId === OtagoExerciseIds.SitToStand) {
-    maxRank = Math.min(maxRank, LEVEL_RANK[ExerciseLevels.SupportedTwoHand]);
-    exclusionReasons.push('ARM_SUPPORT_REQUIRED_UNSUPPORTED_SIT_TO_STAND_EXCLUDED');
-  }
-
-  const candidates = exercise.availableLevels
-    .filter((item) => (LEVEL_RANK[item.level] ?? 0) <= maxRank)
-    .sort((first, second) => (LEVEL_RANK[second.level] ?? 0) - (LEVEL_RANK[first.level] ?? 0));
-  return {
-    level: candidates[0] || exercise.availableLevels[0],
-    excludedLevelReasons: unique(exclusionReasons),
-  };
+  return [...candidates.values()].map((candidate) => ({
+    ...candidate,
+    selected: cappedVariant(candidate.exercise, candidate.requested, { riskLevel, forceLowest }),
+  }));
 }
 
-function addCandidate(candidates, finding, mapping, classification) {
-  const exercise = CATALOG_BY_ID[mapping.exerciseId];
-  if (!exercise) return;
-  const existing = candidates.get(mapping.exerciseId) || {
-    exercise,
-    sourceFindingIds: [],
-    findingTypes: [],
-    reasonCodes: [],
-    cueCodes: [],
-    priority: mapping.priority,
-    desiredLevel: mapping.desiredLevel,
-    classification,
-  };
-  existing.sourceFindingIds.push(finding.findingId);
-  existing.findingTypes.push(finding.findingType);
-  existing.reasonCodes.push(`SELECTED_FOR_${finding.findingType}`);
-  if (mapping.cueCode) existing.cueCodes.push(mapping.cueCode);
-  existing.priority = Math.min(existing.priority, mapping.priority);
-  if ((LEVEL_RANK[mapping.desiredLevel] ?? 0) < (LEVEL_RANK[existing.desiredLevel] ?? 0)) {
-    existing.desiredLevel = mapping.desiredLevel;
-  }
-  if (classification === FindingClassifications.Primary) existing.classification = classification;
-  candidates.set(mapping.exerciseId, existing);
+function supervisionFor({ riskLevel, vulnerabilityIds }) {
+  if (riskLevel === 'HIGH') return 'PROFESSIONAL_REVIEW_REQUIRED';
+  if (riskLevel === 'MODERATE' || vulnerabilityIds.includes('V7')) return 'CAREGIVER_RECOMMENDED';
+  return 'NONE';
 }
 
-function candidateListFromFindings(findings = []) {
-  const candidates = new Map();
-  for (const finding of findings) {
-    if (finding.findingType === FunctionalFindingTypes.LowMeasurementConfidence) continue;
-    const primaryMappings = finding.classification === FindingClassifications.Primary
-      ? PRIMARY_MAPPING[finding.findingType] || []
-      : [];
-    for (const mapping of primaryMappings) addCandidate(candidates, finding, mapping, FindingClassifications.Primary);
-    const secondaryMappings = finding.classification === FindingClassifications.Secondary
-      ? SECONDARY_MAPPING[finding.findingType] || []
-      : [];
-    for (const mapping of secondaryMappings) addCandidate(candidates, finding, mapping, FindingClassifications.Secondary);
-  }
-  return [...candidates.values()].sort((first, second) => first.priority - second.priority || first.exercise.exerciseId.localeCompare(second.exercise.exerciseId));
-}
-
-function exerciseCameraVerification(exercise, selectedLevel) {
-  if (selectedLevel.cameraVerification) return selectedLevel.cameraVerification;
-  return exercise.cameraVerifiable ? CameraVerificationModes.Partial : CameraVerificationModes.NotSupported;
-}
-
-function recommendationMessageFor(findingType) {
-  const messages = {
-    [FunctionalFindingTypes.ChairStandBelowReference]: 'Selected because the chair stand count was below the reference for age and sex.',
-    [FunctionalFindingTypes.ArmSupportRequired]: 'Selected because arm support was observed during the test.',
-    [FunctionalFindingTypes.BasicBalanceDifficulty]: 'Selected because the side-by-side balance hold was shorter than 10 seconds.',
-    [FunctionalFindingTypes.SemiTandemHoldDifficulty]: 'Selected because the semi-tandem hold was shorter than 10 seconds.',
-    [FunctionalFindingTypes.TandemHoldDifficulty]: 'Selected because the tandem hold was shorter than 10 seconds.',
-    [FunctionalFindingTypes.SingleLegHoldDifficulty]: 'Selected because the one-leg hold was shorter than 10 seconds.',
-    [FunctionalFindingTypes.LateRepetitionSlowdown]: 'Selected to start with lower repetitions and rest because later chair stand repetitions slowed.',
-    [FunctionalFindingTypes.TrunkCompensationPattern]: 'Selected with a trunk-control cue because forward lean was observed.',
-    [FunctionalFindingTypes.MediolateralSwayPattern]: 'Selected as supported balance practice because side-to-side movement was observed.',
-    [FunctionalFindingTypes.AnteriorPosteriorSwayPattern]: 'Selected as supported balance practice because forward-back movement was observed.',
-    [FunctionalFindingTypes.FrequentPositionCorrection]: 'Selected with reset cues because position corrections were observed.',
-  };
-  return messages[findingType] || 'Selected from the functional finding map.';
-}
-
-function createSelectedExercise(candidate, context) {
-  const { exercise } = candidate;
-  const levelResult = highestAllowedLevel(exercise, {
-    desiredLevel: candidate.desiredLevel,
-    riskLevel: context.riskLevel,
-    hasBalancePrimary: context.hasBalancePrimary,
-    armSupportRequired: context.armSupportRequired,
-  });
-  const selectedLevel = levelResult.level;
-  const reasonCodes = unique([
-    ...candidate.reasonCodes,
-    ...candidate.cueCodes,
-    ...levelResult.excludedLevelReasons,
-    context.riskLevel === SteadiRiskLevels.Moderate ? 'RISK_CAP_MODERATE_APPLIED' : null,
-    context.armSupportRequired ? 'ARM_SUPPORT_REQUIRED_SAFETY_RULE_APPLIED' : null,
-  ]);
-  const repetitions = candidate.cueCodes.includes('CUE_SPLIT_SETS_AND_REST')
-    ? Math.max(3, Math.min(selectedLevel.repetitions, 5))
-    : selectedLevel.repetitions;
+function flatPrescribedExercise(exercise, selected, {
+  reasonVulnerabilityIds = [],
+  weakSideExtraSets = 0,
+  forceNoWeight = false,
+} = {}) {
+  const dosage = selected.dosage || {};
+  const tempoUp = Array.isArray(selected.tempo?.concentricSeconds) ? selected.tempo.concentricSeconds : [null, null];
+  const tempoDown = Array.isArray(selected.tempo?.eccentricSeconds) ? selected.tempo.eccentricSeconds : [null, null];
+  const loadKg = Array.isArray(selected.weight?.loadKg) ? selected.weight.loadKg : [null, null];
+  const perSide = dosage.perSide === true;
   return {
     exerciseId: exercise.exerciseId,
-    displayName: exercise.displayName,
-    otagoSourceName: exercise.otagoSourceName,
+    displayName: exercise.nameEn,
     category: exercise.category,
-    level: selectedLevel.level,
-    repetitions,
-    sets: selectedLevel.sets,
-    supportRequirement: selectedLevel.supportRequirement,
-    supervisionRequirement: context.planSupervision,
-    cameraVerification: exerciseCameraVerification(exercise, selectedLevel),
-    reasonFindingIds: unique(candidate.sourceFindingIds),
-    reasonCodes,
-    reasonMessages: unique(candidate.findingTypes.map(recommendationMessageFor)),
-    riskCapApplied: context.riskLevel,
-    excludedLevelReasons: levelResult.excludedLevelReasons,
-    instructionMessageKeys: exercise.instructionMessageKeys,
-    safetyMessageKeys: unique([
-      ...exercise.safetyMessageKeys,
-      context.riskLevel === SteadiRiskLevels.Moderate ? 'safety.caregiverNearbyRecommended' : null,
-      context.armSupportRequired ? 'safety.useSupportedSitToStandOnly' : null,
-    ]),
-    progressionRule: exercise.progressionRule,
-    regressionRule: exercise.regressionRule,
+    level: selected.level,
+    variantId: selected.variantId,
+    repetitions: perSide ? null : dosage.repetitions ?? null,
+    sets: dosage.sets ?? 1,
+    repetitionsPerSide: perSide ? dosage.repetitions ?? null : null,
+    steps: dosage.steps ?? null,
+    holdSeconds: dosage.holdSeconds ?? null,
+    supportRequirement: selected.supportRequirement,
+    weightMode: forceNoWeight ? 'NONE' : selected.weight.type,
+    weightMinKg: forceNoWeight ? null : loadKg[0],
+    weightMaxKg: forceNoWeight ? null : loadKg[1],
+    tempoUpMinSeconds: tempoUp[0],
+    tempoUpMaxSeconds: tempoUp[1],
+    tempoDownMinSeconds: tempoDown[0],
+    tempoDownMaxSeconds: tempoDown[1],
+    breathingRule: selected.breathing,
+    restMinSeconds: selected.rest.minimumSeconds,
+    restMaxSeconds: selected.rest.maximumSeconds,
+    cameraVerification: selected.cameraVerification.mode,
+    reasonVulnerabilityIds: unique(reasonVulnerabilityIds).sort(),
+    weakSideExtraSets,
   };
 }
 
-function selectionOrder(candidates) {
-  const balance = candidates.find((item) => item.exercise.category === ExerciseCategories.Balance);
-  const strength = candidates.filter((item) => item.exercise.category === ExerciseCategories.Strength);
-  const ordered = [];
-  if (balance) ordered.push(balance);
-  ordered.push(...strength);
-  ordered.push(...candidates.filter((item) => !ordered.includes(item)));
-  return ordered;
+function selectedExercise(candidate, context) {
+  const { exercise, selected, modifiers } = candidate;
+  const vulnerabilityIds = unique(candidate.vulnerabilityIds).sort();
+  return flatPrescribedExercise(exercise, selected, {
+    reasonVulnerabilityIds: vulnerabilityIds,
+    weakSideExtraSets: Math.max(0, ...modifiers.map((item) => item.weakSideAdditionalSets || 0)),
+    forceNoWeight: context.riskLevel === 'HIGH',
+  });
 }
 
-function exclusion(exercise, reasonCodes, reasonMessage, sourceFindingIds = []) {
+function sourceIds(vulnerabilityAssessment, explicit = []) {
+  return {
+    assessmentIds: unique(explicit.map((assessment) => assessment.assessmentId)),
+    resultIds: unique([
+      ...explicit.map((assessment) => assessment.resultId),
+      ...(vulnerabilityAssessment.evidence || []).map((evidence) => evidence.sourceResultId),
+    ]),
+  };
+}
+
+function walkingPlan() {
+  const exercise = CATALOG_BY_ID.get('WALK');
+  const variant = exercise.variants[0];
   return {
     exerciseId: exercise.exerciseId,
-    displayName: exercise.displayName,
-    reasonCodes: unique(reasonCodes),
-    reasonMessage,
-    sourceFindingIds: unique(sourceFindingIds),
+    category: 'WALKING',
+    targetMinutes: variant.dosage.maximumMinutes,
+    splitMinutes: variant.dosage.splitMinutes,
+    weeklyFrequency: stage3Catalog.program.walkingFrequencyPerWeek,
+    pace: variant.dosage.pace,
+    cameraVerification: variant.cameraVerification.mode,
+    requiresStrengthAndBalance: true,
   };
 }
 
-function createPlanId({ userId, riskLevel, findings }) {
-  return `exercise-plan-${stableHash({
-    userId,
-    riskLevel,
-    findings: findings.map((finding) => ({
-      findingId: finding.findingId,
-      findingType: finding.findingType,
-      classification: finding.classification,
-    })).sort((first, second) => first.findingId.localeCompare(second.findingId)),
-  })}`;
+function warmupExercises() {
+  return CANONICAL_WARMUP_IDS.map((exerciseId) => {
+    const exercise = CATALOG_BY_ID.get(exerciseId);
+    return flatPrescribedExercise(exercise, exercise.variants[0]);
+  });
 }
 
-function sourceAssessmentIdsFrom(findings = [], sourceAssessments = []) {
-  return unique([
-    ...sourceAssessments.map((assessment) => assessment.assessmentId),
-    ...findings.flatMap((finding) => finding.evidence?.sourceAssessmentIds || [finding.assessmentId]),
-  ]);
+function validatePlan(plan) {
+  const failures = [];
+  const ids = plan.selectedExercises.map((exercise) => exercise.exerciseId);
+  if (new Set(ids).size !== ids.length) failures.push({ code: 'DUPLICATE_EXERCISE' });
+  if (
+    plan.warmups.length !== CANONICAL_WARMUP_IDS.length
+    || plan.warmups.some((exercise, index) => exercise.exerciseId !== CANONICAL_WARMUP_IDS[index])
+  ) failures.push({ code: 'CANONICAL_WARMUPS_REQUIRED' });
+  if (
+    plan.status === 'BLOCKED'
+    && (plan.selectedExercises.length > 0 || plan.walkingPlan !== null || plan.progressionProposals.length > 0)
+  ) failures.push({ code: 'BLOCKED_PLAN_EXPOSES_EXECUTABLE_CONTENT' });
+  if (plan.riskLevel === 'HIGH') {
+    if (plan.selectedExercises.some((exercise) => exercise.category === 'BALANCE' && exercise.level !== 'A')) failures.push({ code: 'HIGH_BALANCE_ABOVE_LEVEL_A' });
+    if (plan.selectedExercises.some((exercise) => WEIGHTED_STRENGTH_IDS.includes(exercise.exerciseId) && (exercise.level !== 'A' || exercise.weightMode !== 'NONE'))) failures.push({ code: 'HIGH_WEIGHTED_STRENGTH_NOT_LEVEL_A_NO_WEIGHT' });
+    if (plan.selectedExercises.some((exercise) => SUPPORTED_BODYWEIGHT_STRENGTH_IDS.includes(exercise.exerciseId) && (exercise.level !== 'C' || exercise.supportRequirement !== 'STABLE_SUPPORT' || exercise.weightMode !== 'NONE'))) failures.push({ code: 'HIGH_BODYWEIGHT_STRENGTH_NOT_SUPPORTED_LEVEL_C' });
+    if (plan.walkingPlan !== null) failures.push({ code: 'HIGH_WALKING_PLAN_NOT_ALLOWED' });
+    if (plan.progressionProposals.length > 0) failures.push({ code: 'HIGH_PROGRESSION_NOT_ALLOWED' });
+    if (plan.professionalApproval.status !== 'APPROVED' && plan.status !== 'PENDING_PROFESSIONAL_REVIEW') failures.push({ code: 'HIGH_NOT_BLOCKED_PENDING_REVIEW' });
+  }
+  return { ok: failures.length === 0, failures };
 }
 
-function blockedPlan({
-  userId,
-  riskLevel,
-  findings,
-  sourceAssessments,
-  reasonCodes,
-  safetyNotices,
-  requiresProfessionalReview = false,
-}) {
-  const sourceFindingIds = findings.map((finding) => finding.findingId);
-  const planSupervision = supervisionForRisk(riskLevel, requiresProfessionalReview);
-  const plan = {
-    planId: createPlanId({ userId, riskLevel, findings }),
-    userId,
-    riskLevel,
-    selectedExercises: [],
-    excludedExercises: OTAGO_EXERCISE_CATALOG.map((exercise) => exclusion(
-      exercise,
-      reasonCodes,
-      requiresProfessionalReview
-        ? 'Exercise selection is blocked until professional review is complete.'
-        : 'Exercise selection is blocked by the current safety gate.',
-      sourceFindingIds,
-    )),
-    supervisionRequirement: planSupervision,
-    requiresProfessionalReview,
-    safetyNotices,
-    generatedByRuleVersion: DETERMINISTIC_OTAGO_ENGINE_VERSION,
-    sourceAssessmentIds: sourceAssessmentIdsFrom(findings, sourceAssessments),
-    sourceFindingIds,
-    status: requiresProfessionalReview ? ExercisePlanStatuses.PendingReview : ExercisePlanStatuses.Blocked,
-    decisionTrace: reasonCodes,
-  };
-  return {
-    value: plan,
-    validation: validateExercisePlan(plan, { sourceAssessments }),
-  };
-}
-
-export function createDeterministicOtagoExercisePlan({
+export function createFuzzyTopsisOtagoExercisePlan({
   userId = 'anonymous-user',
-  findings = [],
+  vulnerabilityAssessment = null,
   steadiScore = null,
   riskLevel = null,
   sourceAssessments = [],
-  contraindicationTags = [],
-  maxExercises = 3,
+  professionalApproval = null,
+  sessionResults = [],
+  currentPlan = null,
+  currentExercisePlan = null,
+  currentPrescription = null,
 } = {}) {
-  const resolvedRisk = riskLevelFrom({ steadiScore, riskLevel });
-  const sourceFindingIds = findings.map((finding) => finding.findingId);
-  const lowConfidenceOnly = findings.length > 0 && findings.every((finding) => finding.findingType === FunctionalFindingTypes.LowMeasurementConfidence);
-  const invalidAssessment = sourceAssessments.find((assessment) => !validSourceAssessment(assessment));
-
-  if (invalidAssessment) {
-    return blockedPlan({
-      userId,
-      riskLevel: resolvedRisk,
-      findings,
-      sourceAssessments,
-      reasonCodes: ['INVALID_OR_NON_CLINICAL_ASSESSMENT'],
-      safetyNotices: ['INVALID_ASSESSMENT_BLOCKED'],
-    });
-  }
-  if (resolvedRisk === SteadiRiskLevels.High) {
-    return blockedPlan({
-      userId,
-      riskLevel: resolvedRisk,
-      findings,
-      sourceAssessments,
-      reasonCodes: ['HIGH_RISK_REQUIRES_PROFESSIONAL_REVIEW'],
-      safetyNotices: ['HIGH_RISK_PROFESSIONAL_REVIEW_REQUIRED'],
-      requiresProfessionalReview: true,
-    });
-  }
-  if (resolvedRisk === SteadiRiskLevels.NotScorable) {
-    return blockedPlan({
-      userId,
-      riskLevel: resolvedRisk,
-      findings,
-      sourceAssessments,
-      reasonCodes: ['RISK_LEVEL_NOT_SCORABLE'],
-      safetyNotices: ['RISK_NOT_SCORABLE_BLOCKED'],
-    });
-  }
-
-  const hasBalancePrimary = hasBalanceFinding(findings);
-  const armSupportRequired = findings.some((finding) => finding.findingType === FunctionalFindingTypes.ArmSupportRequired);
-  const planSupervision = supervisionForRisk(resolvedRisk);
-  const context = {
+  const resolvedRisk = riskLevel || steadiScore?.riskLevel || 'NOT_SCORABLE';
+  const vulnerabilities = canonicalVulnerabilityAssessment(vulnerabilityAssessment);
+  const requestedApproval = professionalApprovalValue(professionalApproval, resolvedRisk);
+  const isHigh = resolvedRisk === 'HIGH';
+  const invalidSource = sourceAssessments.some((assessment) => (
+    (assessment.status && assessment.status !== 'VALID')
+    || (assessment.metadata?.source && assessment.metadata.source !== 'LIVE_POSE')
+    || assessment.metadata?.isClinicallyScorable === false
+  ));
+  const approval = isHigh && invalidSource
+    ? { status: 'PENDING', approvalId: null, approvedByRole: null, approvedAt: null }
+    : requestedApproval;
+  const highApproved = isHigh && !invalidSource && approval.status === 'APPROVED';
+  const supervisionRequirement = supervisionFor({ riskLevel: resolvedRisk, vulnerabilityIds: vulnerabilities.activeIds });
+  const context = { riskLevel: resolvedRisk, supervisionRequirement };
+  const previousPlan = currentPlan || currentExercisePlan || currentPrescription?.plan || currentPrescription || null;
+  const admittedExercises = !invalidSource && ['LOW', 'MODERATE', 'HIGH'].includes(resolvedRisk)
+    ? safetyAdmittedCandidatesFromFunctionTable(vulnerabilities, resolvedRisk, previousPlan).map((candidate) => selectedExercise(candidate, context))
+    : [];
+  const recommendationRanking = rankOtagoExercisesWithFuzzyTopsis({
+    prescribedExercises: admittedExercises,
+    vulnerabilityAssessment: vulnerabilities,
     riskLevel: resolvedRisk,
-    hasBalancePrimary,
-    armSupportRequired,
-    planSupervision,
-  };
-  const candidates = candidateListFromFindings(findings);
-  const selected = [];
-  const excluded = [];
-  const selectedIds = new Set();
-  const contraindicationSet = new Set(contraindicationTags);
-
-  for (const candidate of selectionOrder(candidates)) {
-    const { exercise } = candidate;
-    if (selectedIds.has(exercise.exerciseId)) {
-      excluded.push(exclusion(exercise, ['DUPLICATE_EXERCISE_REMOVED'], 'Duplicate exercise removed from the session.', candidate.sourceFindingIds));
-      continue;
-    }
-    if (!compareRisk(resolvedRisk, exercise.minimumRiskLevel, exercise.maximumRiskLevel)) {
-      excluded.push(exclusion(exercise, ['RISK_LEVEL_OUTSIDE_EXERCISE_RANGE'], 'Exercise excluded by the current risk-level range.', candidate.sourceFindingIds));
-      continue;
-    }
-    const contraindication = exercise.contraindicationTags.find((tag) => contraindicationSet.has(tag));
-    if (contraindication) {
-      excluded.push(exclusion(exercise, [`CONTRAINDICATION_${contraindication}`], 'Exercise excluded because a contraindication tag is present.', candidate.sourceFindingIds));
-      continue;
-    }
-    if (selected.length >= maxExercises) {
-      excluded.push(exclusion(exercise, ['SESSION_EXERCISE_LIMIT_REACHED'], `Only ${maxExercises} exercises are selected for one session.`, candidate.sourceFindingIds));
-      continue;
-    }
-    const selectedExercise = createSelectedExercise(candidate, context);
-    selected.push(selectedExercise);
-    selectedIds.add(exercise.exerciseId);
-  }
-
-  for (const exercise of OTAGO_EXERCISE_CATALOG) {
-    if (selectedIds.has(exercise.exerciseId)) continue;
-    if (excluded.some((item) => item.exerciseId === exercise.exerciseId)) continue;
-    excluded.push(exclusion(
-      exercise,
-      lowConfidenceOnly ? ['LOW_MEASUREMENT_CONFIDENCE_NO_SPECIFIC_EXERCISE'] : ['NOT_RELATED_TO_CURRENT_FINDINGS'],
-      lowConfidenceOnly
-        ? 'Low measurement confidence does not add a specific exercise.'
-        : 'Exercise was not directly related to the current functional findings.',
-      sourceFindingIds,
-    ));
-  }
-
-  const safetyNotices = unique([
-    resolvedRisk === SteadiRiskLevels.Moderate ? 'MODERATE_RISK_STABLE_SUPPORT_AND_CAREGIVER_RECOMMENDED' : null,
-    armSupportRequired ? 'ARM_SUPPORT_REQUIRED_USE_SUPPORTED_SIT_TO_STAND_ONLY' : null,
-    lowConfidenceOnly ? 'LOW_MEASUREMENT_CONFIDENCE_NO_SPECIFIC_EXERCISES' : null,
-  ]);
+  });
+  const exerciseById = new Map(admittedExercises.map((exercise) => [exercise.exerciseId, exercise]));
+  const selectedExercises = recommendationRanking.items
+    .map((ranking) => exerciseById.get(ranking.exerciseId))
+    .filter(Boolean);
+  const noPrescription = selectedExercises.length === 0;
+  const status = isHigh
+    ? highApproved ? 'ACTIVE' : 'PENDING_PROFESSIONAL_REVIEW'
+    : invalidSource || resolvedRisk === 'NOT_SCORABLE' || noPrescription
+      ? 'BLOCKED'
+      : 'ACTIVE';
+  const planId = `exercise-plan-${stableHash({
+    userId,
+    resolvedRisk,
+    vulnerabilityIds: vulnerabilities.activeIds,
+    selectedVariants: selectedExercises.map((exercise) => [exercise.exerciseId, exercise.variantId]),
+  })}`;
+  const ids = sourceIds(vulnerabilities, sourceAssessments);
+  const progressionProposals = status === 'ACTIVE'
+    ? selectedExercises.map((exercise) => evaluateExerciseProgression({
+      sessionResults: sessionResults.filter((result) => result.planId === planId),
+      prescriptionExercise: exercise,
+      currentRiskLevel: resolvedRisk,
+      planId,
+    }).proposal).filter(Boolean)
+    : [];
   const plan = {
-    planId: createPlanId({ userId, riskLevel: resolvedRisk, findings }),
+    schemaVersion: STAGE3_PRESCRIPTION_SCHEMA_VERSION,
+    catalogVersion: stage3Catalog.catalogVersion,
+    planId,
     userId,
     riskLevel: resolvedRisk,
-    selectedExercises: selected,
-    excludedExercises: excluded,
-    supervisionRequirement: planSupervision,
-    requiresProfessionalReview: false,
-    safetyNotices,
-    generatedByRuleVersion: DETERMINISTIC_OTAGO_ENGINE_VERSION,
-    sourceAssessmentIds: sourceAssessmentIdsFrom(findings, sourceAssessments),
-    sourceFindingIds,
-    status: selected.length ? ExercisePlanStatuses.Active : ExercisePlanStatuses.Blocked,
+    status,
+    vulnerabilityIds: vulnerabilities.activeIds,
+    warmups: warmupExercises(),
+    selectedExercises,
+    walkingPlan: selectedExercises.length && !isHigh ? walkingPlan() : null,
+    supervisionRequirement,
+    caregiverRecommendedDays: resolvedRisk === 'MODERATE' || vulnerabilities.activeIds.includes('V7') ? 14 : 0,
+    requiresProfessionalReview: isHigh && !highApproved,
+    professionalApproval: approval,
+    progressionProposals,
+    safetyNotices: unique([
+      isHigh ? 'HIGH_RISK_PROFESSIONAL_REVIEW_REQUIRED' : null,
+      resolvedRisk === 'MODERATE' ? 'MODERATE_FIRST_TWO_WEEKS_CAREGIVER_RECOMMENDED' : null,
+      vulnerabilities.activeIds.includes('V6') ? 'V6_PROFESSIONAL_CONSULTATION_REQUIRED' : null,
+      vulnerabilities.activeIds.includes('V7') ? 'V7_SUPPORTED_SUPERVISED_PERFORMANCE_RECOMMENDED' : null,
+      invalidSource ? 'INVALID_ASSESSMENT_BLOCKED' : null,
+    ]),
+    generatedByRuleVersion: FUZZY_TOPSIS_OTAGO_ENGINE_VERSION,
+    sourceAssessmentIds: ids.assessmentIds,
+    sourceResultIds: ids.resultIds,
     decisionTrace: unique([
-      'VALID_INPUTS_CONFIRMED',
-      `RISK_LEVEL_${resolvedRisk}`,
-      selected.length ? 'EXERCISES_SELECTED_FROM_FUNCTIONAL_FINDINGS' : 'NO_EXERCISES_SELECTED',
+      `RISK_${resolvedRisk}`,
+      ...vulnerabilities.activeIds.map((id) => `VULNERABILITY_${id}`),
+      selectedExercises.length ? `RANKED_${FUZZY_TOPSIS_ALGORITHM_VERSION}` : null,
+      status === 'ACTIVE' ? 'PRESCRIPTION_ACTIVE' : status,
     ]),
   };
-  return {
-    value: plan,
-    validation: validateExercisePlan(plan, { sourceAssessments }),
+  const validation = validatePlan(plan);
+  if (invalidSource) {
+    validation.ok = false;
+    validation.failures.push({
+      code: sourceAssessments.some((assessment) => assessment.metadata?.source && assessment.metadata.source !== 'LIVE_POSE')
+        ? 'NON_LIVE_ASSESSMENT_EXERCISE_PLAN'
+        : 'INVALID_OR_NON_CLINICAL_ASSESSMENT',
+    });
+  }
+  return { value: plan, validation, recommendationRanking };
+}
+
+function nextVariant(exercise, currentVariantId) {
+  const index = exercise?.variants.findIndex((variant) => variant.variantId === currentVariantId) ?? -1;
+  return index >= 0 ? exercise.variants[index + 1] || null : null;
+}
+
+function exactSessionCompletion(result, prescriptionExercise, completionMinimum = null, expectedPlanId = null) {
+  const expected = {
+    repetitions: prescriptionExercise.repetitions,
+    sets: prescriptionExercise.sets,
+    repetitionsPerSide: prescriptionExercise.repetitionsPerSide,
+    steps: prescriptionExercise.steps,
+    holdSeconds: prescriptionExercise.holdSeconds,
   };
+  const requiredCompleted = completionMinimum || expected;
+  const prescribed = result.prescribedDosage || {};
+  const completed = result.completedDosage || {};
+  const prescribedMatches = Object.entries(expected).every(([key, value]) => prescribed[key] === value);
+  const completedMatches = completed.sets >= requiredCompleted.sets
+    && (requiredCompleted.repetitions === null || completed.repetitions >= requiredCompleted.repetitions)
+    && (requiredCompleted.repetitionsPerSide === null || completed.repetitionsPerSide >= requiredCompleted.repetitionsPerSide)
+    && (requiredCompleted.steps === null || completed.steps >= requiredCompleted.steps)
+    && (requiredCompleted.holdSeconds === null || completed.holdSeconds >= requiredCompleted.holdSeconds);
+  const sourceMatches = prescriptionExercise.cameraVerification === 'FULL'
+    ? result.source === 'LIVE_POSE' && result.cameraVerification === 'FULL'
+    : result.source === 'USER_CONFIRMED' && result.cameraVerification === prescriptionExercise.cameraVerification;
+  return result.status === 'COMPLETED'
+    && result.planId
+    && (!expectedPlanId || result.planId === expectedPlanId)
+    && result.exerciseId === prescriptionExercise.exerciseId
+    && result.variantId === prescriptionExercise.variantId
+    && result.level === prescriptionExercise.level
+    && prescribedMatches
+    && completedMatches
+    && sourceMatches
+    && result.formAccurate === true
+    && Array.isArray(result.safetyEvents)
+    && result.safetyEvents.length === 0;
 }
 
 export function evaluateExerciseProgression({
-  recentSessionResult = {},
-  postureAccuracy = recentSessionResult.postureAccuracy,
-  requiredRepetitionsAchieved = recentSessionResult.requiredRepetitionsAchieved,
-  consecutiveSuccessfulSessions = recentSessionResult.consecutiveSuccessfulSessions,
-  safetyEvents = recentSessionResult.safetyEvents || [],
-  currentRiskLevel,
+  sessionResults = [],
+  prescriptionExercise = null,
+  currentRiskLevel = 'NOT_SCORABLE',
+  professionalReassessmentApproved = false,
+  planId = null,
 } = {}) {
-  if (currentRiskLevel === SteadiRiskLevels.High) {
-    return {
-      decision: ExerciseProgressionDecisions.ProfessionalReviewRequired,
-      reasonCodes: ['HIGH_RISK_REQUIRES_PROFESSIONAL_REVIEW'],
-    };
+  const maintain = (reasonCodes) => ({ schemaVersion: STAGE3_PROGRESSION_SCHEMA_VERSION, decision: ExerciseProgressionDecisions.Maintain, proposal: null, reasonCodes });
+  if (!prescriptionExercise) return maintain(['MISSING_PRESCRIBED_EXERCISE']);
+  if (!['S1', 'S2', 'S3', 'S4', 'S5', 'B1', 'B5', 'B7', 'B11'].includes(prescriptionExercise.exerciseId)) {
+    return maintain(['CAMERA_VERIFICATION_NOT_AVAILABLE_FOR_AUTOMATIC_PROGRESSION']);
   }
-  if (safetyEvents.length > 0) {
-    return {
-      decision: ExerciseProgressionDecisions.RegressionRequired,
-      reasonCodes: ['SAFETY_EVENT_RECORDED'],
-    };
+  const exercise = CATALOG_BY_ID.get(prescriptionExercise.exerciseId);
+  const isWeightedStrength = ['S1', 'S2', 'S3'].includes(prescriptionExercise.exerciseId);
+  const target = isWeightedStrength
+    ? variantById(exercise, prescriptionExercise.variantId)
+    : nextVariant(exercise, prescriptionExercise.variantId);
+  if (!target) return maintain(['HIGHEST_CATALOG_VARIANT_REACHED']);
+  if (currentRiskLevel === 'HIGH' && !professionalReassessmentApproved) {
+    return { schemaVersion: STAGE3_PROGRESSION_SCHEMA_VERSION, decision: ExerciseProgressionDecisions.ProfessionalReviewRequired, proposal: null, reasonCodes: ['HIGH_REQUIRES_PROFESSIONAL_REASSESSMENT_FOR_PROGRESSION'] };
   }
-  if (postureAccuracy < 0.75 || requiredRepetitionsAchieved === false) {
-    return {
-      decision: ExerciseProgressionDecisions.RegressionRequired,
-      reasonCodes: ['FORM_OR_REPETITION_TARGET_NOT_MET'],
-    };
+  const relevant = [...sessionResults]
+    .filter((result) => result.exerciseId === prescriptionExercise.exerciseId && result.variantId === prescriptionExercise.variantId)
+    .sort((first, second) => Number(second.completedAt || 0) - Number(first.completedAt || 0));
+  const distinct = [];
+  const seen = new Set();
+  for (const result of relevant) {
+    if (!result.exerciseSessionId || seen.has(result.exerciseSessionId)) continue;
+    seen.add(result.exerciseSessionId);
+    distinct.push(result);
   }
-  if (postureAccuracy >= 0.9 && requiredRepetitionsAchieved === true && consecutiveSuccessfulSessions >= 2) {
-    return {
-      decision: ExerciseProgressionDecisions.ProgressionEligible,
-      reasonCodes: ['TWO_SAFE_SUCCESSFUL_SESSIONS'],
-    };
+  const qualifying = distinct.slice(0, 2);
+  const qualificationDosage = isWeightedStrength ? {
+    repetitions: null,
+    sets: 2,
+    repetitionsPerSide: 10,
+    steps: null,
+    holdSeconds: null,
+  } : null;
+  const qualifyingPlanId = planId || qualifying[0]?.planId || null;
+  if (
+    qualifying.length !== 2
+    || qualifying.some((result) => result.planId !== qualifyingPlanId)
+    || qualifying.some((result) => !exactSessionCompletion(result, prescriptionExercise, qualificationDosage, qualifyingPlanId))
+  ) {
+    return maintain(['TWO_CONSECUTIVE_EXACT_SESSIONS_NOT_COMPLETED']);
   }
+  if (exercise.category === ExerciseCategories.Balance && target.supportRequirement === 'NONE') {
+    const lowerBodyRecoveryConfirmed = qualifying.every((result) => result.lowerBodyRecoveryWithoutGripping === true && result.supportUsed === false);
+    if (!lowerBodyRecoveryConfirmed) return maintain(['LOWER_BODY_RECOVERY_WITHOUT_GRIPPING_NOT_CONFIRMED']);
+  }
+  const qualifyingSessionIds = qualifying.map((result) => result.exerciseSessionId);
+  const proposal = {
+    proposalId: `progression-${stableHash({ planId: qualifying[0].planId, exerciseId: exercise.exerciseId, from: prescriptionExercise.variantId, to: target.variantId, qualifyingSessionIds })}`,
+    exerciseId: exercise.exerciseId,
+    fromLevel: prescriptionExercise.level,
+    toLevel: target.level,
+    fromVariantId: prescriptionExercise.variantId,
+    toVariantId: target.variantId,
+    progressionType: isWeightedStrength
+      ? 'INCREASE_WEIGHT'
+      : ['S4', 'S5'].includes(exercise.exerciseId)
+        ? 'REMOVE_SUPPORT'
+        : target.supportRequirement === prescriptionExercise.supportRequirement
+          && (target.dosage?.sets ?? 1) > prescriptionExercise.sets
+          ? 'INCREASE_SETS'
+          : 'ADVANCE_VARIANT',
+    weightIncrementMinKg: isWeightedStrength ? 0.5 : null,
+    weightIncrementMaxKg: isWeightedStrength ? 1 : null,
+    status: 'PENDING_APPROVAL',
+    qualifyingSessionIds,
+    approval: null,
+  };
+  return { schemaVersion: STAGE3_PROGRESSION_SCHEMA_VERSION, decision: ExerciseProgressionDecisions.ProgressionProposed, proposal, reasonCodes: ['TWO_CONSECUTIVE_EXACT_SESSIONS_COMPLETED', 'USER_OR_RESPONSIBLE_CAREGIVER_APPROVAL_REQUIRED'] };
+}
+
+export function applyExerciseProgressionApproval({ proposal, approval, apply = false } = {}) {
+  if (!proposal || proposal.status !== 'PENDING_APPROVAL') throw new Error('A pending progression proposal is required');
+  if (!['USER', 'CAREGIVER_OR_RESPONSIBLE'].includes(approval?.actor)) throw new Error('Progression approval actor must be USER or CAREGIVER_OR_RESPONSIBLE');
+  if (!approval.approvedBy || !Number.isFinite(approval.approvedAt)) throw new Error('Progression approval requires approvedBy and approvedAt');
   return {
-    decision: ExerciseProgressionDecisions.Maintain,
-    reasonCodes: ['MAINTAIN_CURRENT_LEVEL'],
+    ...proposal,
+    status: apply ? 'APPLIED' : 'APPROVED',
+    approval: {
+      actor: approval.actor,
+      approvedBy: approval.approvedBy,
+      approvedAt: approval.approvedAt,
+    },
   };
 }

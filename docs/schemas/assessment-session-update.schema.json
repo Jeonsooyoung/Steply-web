@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/assessment-session-update.schema.json",
+  "title": "Steply AssessmentSession update envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "schemaVersion",
+    "messageId",
+    "assessmentSessionId",
+    "baseRevision",
+    "revision",
+    "session"
+  ],
+  "properties": {
+    "type": { "const": "assessment-session.updated" },
+    "schemaVersion": { "const": "assessment_session.v1" },
+    "messageId": { "type": "string", "minLength": 1 },
+    "assessmentSessionId": { "type": "string", "minLength": 1 },
+    "baseRevision": { "type": "integer", "minimum": 0 },
+    "revision": { "type": "integer", "minimum": 0 },
+    "session": { "$ref": "assessment-session.schema.json" }
+  }
+}

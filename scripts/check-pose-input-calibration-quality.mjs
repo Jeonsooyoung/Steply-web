@@ -72,6 +72,14 @@ try {
       timestampMs,
       image: { width: 640, height: 480, mirrored },
       normalizedLandmarks: landmarks,
+      worldLandmarks: landmarks.map((point) => ({
+        index: point.index,
+        xMeters: point.x,
+        yMeters: point.y,
+        zMeters: point.z,
+        visibility: point.visibility,
+        isValid: true,
+      })),
       confidence: {
         overall: confidence,
         lowerBody: Math.min(confidence, footConfidence),
@@ -126,21 +134,21 @@ try {
     qualityStatus: readyQuality(mirroredFrame),
   });
   calibration = updatePersonalCalibration(calibration.state, {
-    poseFrame: mockFrame({ mirrored: true, frameId: 2, timestampMs: 3_100, hipY: 0.48 }),
-    qualityStatus: readyQuality(mockFrame({ mirrored: true, frameId: 2, timestampMs: 3_100, hipY: 0.48 })),
+    poseFrame: mockFrame({ mirrored: true, frameId: 2, timestampMs: 4_100, hipY: 0.48 }),
+    qualityStatus: readyQuality(mockFrame({ mirrored: true, frameId: 2, timestampMs: 4_100, hipY: 0.48 })),
   });
   calibration = updatePersonalCalibration(calibration.state, {
-    poseFrame: mockFrame({ mirrored: true, frameId: 3, timestampMs: 4_200, hipY: 0.68 }),
-    qualityStatus: readyQuality(mockFrame({ mirrored: true, frameId: 3, timestampMs: 4_200, hipY: 0.68 })),
+    poseFrame: mockFrame({ mirrored: true, frameId: 3, timestampMs: 5_200, hipY: 0.68 }),
+    qualityStatus: readyQuality(mockFrame({ mirrored: true, frameId: 3, timestampMs: 5_200, hipY: 0.68 })),
     phaseHint: 'sitting',
   });
   calibration = updatePersonalCalibration(calibration.state, {
-    poseFrame: mockFrame({ mirrored: true, frameId: 4, timestampMs: 5_400, hipY: 0.68 }),
-    qualityStatus: readyQuality(mockFrame({ mirrored: true, frameId: 4, timestampMs: 5_400, hipY: 0.68 })),
+    poseFrame: mockFrame({ mirrored: true, frameId: 4, timestampMs: 6_400, hipY: 0.68 }),
+    qualityStatus: readyQuality(mockFrame({ mirrored: true, frameId: 4, timestampMs: 6_400, hipY: 0.68 })),
     phaseHint: 'sitting',
   });
   assert.equal(calibration.profile.coordinateOrientation.cameraMirrored, true, 'mirrored camera is stored');
-  assert.equal(calibration.profile.status, CalibrationStatuses.Valid, 'chair calibration becomes valid with standing, sitting, and folded arms');
+  assert.equal(calibration.profile.status, CalibrationStatuses.Valid, 'S2-CAL-01 requires at least 3 seconds of neutral standing');
 
   const downPositiveProfile = {
     references: { sittingHipPosition: 0.7, standingHipPosition: 0.4 },
@@ -172,12 +180,12 @@ try {
   const lostFrameLongB = mockFrame({ timestampMs: 1_100, frameId: 13, confidence: 0.1, footConfidence: 0.1 });
   assert.equal(
     qualityMachineLongLoss.update({ frame: lostFrameLongB, metrics: evaluatePoseFrameQuality(lostFrameLongB, { assessmentType: AssessmentTypes.ChairStand30s, brightness: 0.6 }), timestampMs: 1_100 }).value.state,
-    QualityStates.Paused,
-    '1s landmark loss pauses tracking',
+    QualityStates.Invalid,
+    'S2-Q-G3-02 invalidates when cumulative G1/G2 violation ratio exceeds 20%',
   );
 
   const footOutMetrics = evaluatePoseFrameQuality(mockFrame({ footOutside: true }), { assessmentType: AssessmentTypes.FourStageBalance, brightness: 0.6 });
-  assert.ok(footOutMetrics.reasons.some((reason) => reason.code === QualityReasonCodes.FeetNotVisible), 'feet outside frame is rejected');
+  assert.ok(footOutMetrics.reasons.some((reason) => reason.code === QualityReasonCodes.BodyOutOfFrame), 'S2-Q-G2-01 rejects a core landmark outside [0.02, 0.98]');
   const bodyOutMetrics = evaluatePoseFrameQuality(mockFrame({ bodyOutside: true }), { assessmentType: AssessmentTypes.ChairStand30s, brightness: 0.6 });
   assert.ok(bodyOutMetrics.reasons.some((reason) => reason.code === QualityReasonCodes.BodyOutOfFrame), 'body outside frame is rejected');
   const lowLightMetrics = evaluatePoseFrameQuality(mockFrame(), { assessmentType: AssessmentTypes.ChairStand30s, brightness: 0.05 });

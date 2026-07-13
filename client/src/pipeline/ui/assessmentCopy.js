@@ -9,7 +9,6 @@ export const DisplayRiskLevels = {
 export function testLabel(testType) {
   if (testType === 'four_stage_balance') return '4-Stage Balance Test';
   if (testType === 'chair_stand') return '30-Second Chair Stand Test';
-  if (testType === 'timed_up_and_go') return 'Timed Up and Go';
   if (testType === 'standing_posture' || testType === 'balance_hold') return 'Standing Posture';
   return 'Movement Check';
 }

@@ -447,7 +447,8 @@
   background: #17242E;
 }
 
-.camera-preview img {
+.camera-preview img,
+.camera-preview video {
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -1231,6 +1232,24 @@
 .step-two-home {
   display: grid;
   gap: 18px;
+}
+
+.step-two-home-camera {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.45fr);
+  gap: 16px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.step-two-home-camera .camera-preview {
+  min-height: 240px;
+  aspect-ratio: 16 / 9;
+}
+
+.step-two-home-camera .connection-indicator {
+  width: 100%;
+  align-content: center;
 }
 
 .step-two-session-card {
@@ -3092,6 +3111,7 @@
   }
 
   .step-two-connect__layout,
+  .step-two-home-camera,
   .step-two-session-card,
   .step-two-plan {
     grid-template-columns: 1fr;

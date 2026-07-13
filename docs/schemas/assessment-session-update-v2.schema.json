@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/assessment-session-update-v2.schema.json",
+  "title": "Steply AssessmentSession v2 wire update envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "schemaVersion", "messageId", "assessmentSessionId", "baseRevision", "revision", "session"],
+  "properties": {
+    "type": { "const": "assessment-session.updated" },
+    "schemaVersion": { "const": "assessment_session.v2" },
+    "messageId": { "type": "string", "minLength": 1 },
+    "assessmentSessionId": { "type": "string", "minLength": 1 },
+    "baseRevision": { "type": "integer", "minimum": 0 },
+    "revision": { "type": "integer", "minimum": 0 },
+    "session": { "$ref": "assessment-session-v2.schema.json" }
+  }
+}

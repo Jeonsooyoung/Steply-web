@@ -266,7 +266,7 @@ function addChairPrimaryFindings(findings, chair, { profile, ageYears, gender, c
   if (!chair) return;
   const reps = chairRepetitions(chair);
   const resolvedAge = finite(ageYears) ? ageYears : ageYearsFromProfile(profile);
-  const resolvedGender = normalizeSteadiGender(gender ?? profile?.gender ?? profile?.sex);
+  const resolvedGender = normalizeSteadiGender(gender ?? profile?.sex);
   const cutoff = chairStandBelowAverageThreshold(resolvedAge, resolvedGender);
   if (finite(reps) && finite(cutoff) && reps < cutoff) {
     addFinding(findings, {

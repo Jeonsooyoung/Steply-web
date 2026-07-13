@@ -9,6 +9,7 @@ import {
 } from '../pipeline/assessment/chairStand/chairStandStateMachine.js';
 import { balanceConfig } from '../pipeline/shared/config/balance.config.js';
 import { chairStandConfig } from '../pipeline/shared/config/chairStand.config.js';
+import { stage2Operational } from '../pipeline/shared/config/stage2Analysis.config.js';
 import {
   ANALYZER_VERSION,
   ArmUseStates,
@@ -26,6 +27,9 @@ import {
   createTypedId,
 } from '../pipeline/shared/types/index.js';
 import { validateAssessmentResult } from '../pipeline/shared/validation/runtimeValidation.js';
+import { mapStage2Vulnerabilities } from '../pipeline/findings/vulnerabilityMapper.js';
+import { chairStandBelowAverageThreshold } from '../pipeline/scoring/steadi/steadiSessionScorer.js';
+import { assertSupportedAssessmentTestType } from '../pipeline/shared/assessmentTestTypes.js';
 
 const BALANCE_DURATION_SECONDS = 60;
 
@@ -43,6 +47,14 @@ const BALANCE_STAGE_LABELS = {
   [BalanceStages.OneLeg]: 'One-leg',
 };
 
+const BALANCE_FAILURE_CODE_BY_REASON = Object.freeze({
+  FOOT_MOVED: 'F1',
+  POSITION_LOST: 'F2',
+  LIFTED_FOOT_TOUCHED_DOWN: 'F3',
+  SUPPORT_USED: 'F4',
+  CAREGIVER_INTERVENTION: 'F5',
+});
+
 const CHAIR_STATE_TO_PHASE = {
   [ChairStandMachineStates.WaitingForSit]: 'waiting',
   [ChairStandMachineStates.Sit]: 'seated',
@@ -52,6 +64,7 @@ const CHAIR_STATE_TO_PHASE = {
   [ChairStandMachineStates.Paused]: 'paused',
   [ChairStandMachineStates.Completed]: 'completed',
   [ChairStandMachineStates.Invalid]: 'invalid',
+  [ChairStandMachineStates.RestartRequired]: 'restart_required',
 };
 
 const CHAIR_STATE_TO_FINAL = {
@@ -95,6 +108,7 @@ function statusForStructuredResult({ forceInvalid = false, machineState = null }
   if (machineState === ChairStandMachineStates.Invalid || machineState === BalanceTestMachineStates.Invalid) {
     return AssessmentResultStatuses.Invalid;
   }
+  if (machineState === ChairStandMachineStates.RestartRequired) return AssessmentResultStatuses.Incomplete;
   return AssessmentResultStatuses.Valid;
 }
 
@@ -149,10 +163,19 @@ function buildChairStructuredResult({
   qualitySummary,
   forceInvalid = false,
   invalidReason = null,
+  calibrationProfile = null,
+  profile = null,
 }) {
   const status = statusForStructuredResult({ forceInvalid, machineState: snapshot?.state });
   const confidence = resultConfidence(snapshot, qualitySummary?.trackingQualityScore ?? 0);
   const partial = normalizePartial(snapshot?.partialRepetition);
+  const completedRepetitions = (snapshot?.repetitionCount ?? 0) + partial.partialRepetitionCredit;
+  const birthYear = Number(profile?.birthYear);
+  const derivedAgeYears = Number.isInteger(birthYear) ? new Date().getUTCFullYear() - birthYear : null;
+  const ageYears = Number(profile?.ageYears ?? derivedAgeYears);
+  const sex = String(profile?.sex ?? '').toUpperCase();
+  const cdcCutoff = chairStandBelowAverageThreshold(ageYears, sex);
+  const cdcScoredRepetitions = snapshot?.armUseCdcZero ? 0 : completedRepetitions;
   const result = {
     resultId: createTypedId('result'),
     assessmentId,
@@ -165,15 +188,47 @@ function buildChairStructuredResult({
     primaryMeasurements: {
       kind: ChairStandMeasurementKind,
       durationSeconds: chairStandConfig.durationSeconds,
-      completedRepetitions: snapshot?.repetitionCount ?? 0,
+      completedRepetitions: cdcScoredRepetitions,
       ...partial,
       armUse: snapshot?.armUse || ArmUseStates.NotDetected,
       finalState: chairFinalState(snapshot),
     },
-    secondaryObservations: snapshot?.secondaryObservations || [],
+    secondaryObservations: snapshot?.secondaryObservations ? [{
+      observationId: `chair-observation-${assessmentId}`,
+      type: 'LEFT_RIGHT_ASYMMETRY',
+      confidence,
+      evidenceEventIds: [],
+      affectsClinicalScore: false,
+      ...snapshot.secondaryObservations,
+    }] : [],
     qualitySummary: qualitySummary || { unavailable: true },
     events: snapshot?.allEvents || [],
     confidence,
+    calibration: calibrationProfile ? {
+      configVersion: calibrationProfile.version || 'stage2_operational.v1',
+      sampledDurationMs: calibrationProfile.sampledDurationMs || 0,
+      L_foot: calibrationProfile.references?.L_foot,
+      H_stand: calibrationProfile.references?.H_stand,
+      H_sit: calibrationProfile.references?.H_sit,
+      W_shoulder: calibrationProfile.references?.W_shoulder,
+      D_fold: calibrationProfile.references?.D_fold,
+    } : null,
+    vulnerabilityAssessment: mapStage2Vulnerabilities({
+      chair: {
+        completedRepetitions: cdcScoredRepetitions,
+        cdcCutoff,
+        belowCdcReference: finite(cdcCutoff) ? cdcScoredRepetitions < cdcCutoff : false,
+        lateSlowdownRatio: snapshot?.secondaryObservations?.speedChangeRatio === null
+          ? null : (snapshot.secondaryObservations.speedChangeRatio - 1),
+        maxTrunkLeanDegrees: snapshot?.secondaryObservations?.maxTrunkLeanDegrees,
+        armUseCdcZero: snapshot?.armUseCdcZero,
+        armUseOccurrenceCount: snapshot?.armUseOccurrenceCount,
+        asymmetryRatio: snapshot?.secondaryObservations?.asymmetryRatio,
+        asymmetryRepeatCount: snapshot?.secondaryObservations?.asymmetryRepeatCount,
+        suspectedWeakerSide: snapshot?.secondaryObservations?.suspectedWeakerSide,
+        sideConfidence: snapshot?.secondaryObservations?.sideConfidence,
+      },
+    }),
     ...(invalidReason || snapshot?.invalidReason ? {
       error: {
         code: invalidReason || snapshot.invalidReason,
@@ -212,7 +267,10 @@ function chairStateFromSnapshot({ snapshot, startedAt, nowMs, trackingQualitySco
     warningMessage: chairMessageForState(snapshot),
     postureMessage: chairMessageForState(snapshot),
     isArmUseSuspected: snapshot?.armUse === ArmUseStates.Suspected || snapshot?.armUse === ArmUseStates.Confirmed,
-    armUseDisqualified: snapshot?.armUse === ArmUseStates.Confirmed,
+    armUseDisqualified: snapshot?.armUseCdcZero === true,
+    armUseRestartRequired: snapshot?.armUseRestartRequired === true,
+    armUseCdcZero: snapshot?.armUseCdcZero === true,
+    armUseOccurrenceCount: snapshot?.armUseOccurrenceCount || 0,
     isStandingOrRising: [
       ChairStandMachineStates.Rising,
       ChairStandMachineStates.Stand,
@@ -291,6 +349,8 @@ function structuredBalanceStages(snapshot = {}) {
       status: stage.status || BalanceStageStatuses.NotAttempted,
       positionConfidence: clamp(stage.positionConfidence ?? 0, 0, 1),
       holdDurationSeconds: finite(stage.holdDurationSeconds) ? stage.holdDurationSeconds : 0,
+      onsetLatencyMs: finite(stage.onsetLatencyMs) ? stage.onsetLatencyMs : null,
+      sway: stage.sway || null,
       ...(stage.failureReason ? { failureReason: stage.failureReason } : {}),
     };
   });
@@ -306,6 +366,7 @@ function buildBalanceStructuredResult({
   qualitySummary,
   forceInvalid = false,
   invalidReason = null,
+  calibrationProfile = null,
 }) {
   const status = statusForStructuredResult({ forceInvalid, machineState: snapshot?.state });
   const confidence = resultConfidence(snapshot, qualitySummary?.trackingQualityScore ?? 0);
@@ -325,10 +386,25 @@ function buildBalanceStructuredResult({
       stages,
       ...(attempted.length ? { lastAttemptedStage: attempted.at(-1).stage } : {}),
     },
-    secondaryObservations: [],
+    secondaryObservations: stages.map((stage) => stage.sway).filter(Boolean),
     qualitySummary: qualitySummary || { unavailable: true },
     events: snapshot?.allEvents || [],
     confidence,
+    calibration: calibrationProfile ? {
+      configVersion: calibrationProfile.version || 'stage2_operational.v1',
+      sampledDurationMs: calibrationProfile.sampledDurationMs || 0,
+      L_foot: calibrationProfile.references?.L_foot,
+      H_stand: calibrationProfile.references?.H_stand,
+      W_shoulder: calibrationProfile.references?.W_shoulder,
+    } : null,
+    vulnerabilityAssessment: mapStage2Vulnerabilities({
+      balance: {
+        holdSecondsByStage: Object.fromEntries(stages.map((stage) => [stage.stage, stage.holdDurationSeconds])),
+        swayRatios: stages.find((stage) => stage.stage === BalanceStages.Tandem)?.sway?.ratios
+          || stages.find((stage) => stage.stage === BalanceStages.SemiTandem)?.sway?.ratios
+          || {},
+      },
+    }),
     ...(invalidReason || snapshot?.failureReason ? {
       error: {
         code: invalidReason || snapshot.failureReason,
@@ -369,9 +445,120 @@ function balanceStateFromSnapshot({ snapshot, startedAt, nowMs, trackingQualityS
   };
 }
 
+function stage2Calibration(structured, supportRoiNormalized = null) {
+  const value = structured.calibration || {};
+  return {
+    sampledDurationMs: value.sampledDurationMs,
+    lFootM: value.L_foot,
+    hStandM: value.H_stand,
+    hSitM: value.H_sit ?? null,
+    wShoulderM: value.W_shoulder,
+    dFoldM: value.D_fold ?? null,
+    supportRoiNormalized,
+  };
+}
+
+function stage2Quality(structured) {
+  const source = structured.qualitySummary || {};
+  const byGate = new Map((source.gates || []).map((gate) => [gate.gate, gate]));
+  const gates = ['G1', 'G2', 'G3', 'G4', 'G5'].map((gate) => ({
+    gate,
+    violationFrameCount: byGate.get(gate)?.violationFrameCount || 0,
+    violationDurationMs: byGate.get(gate)?.violationDurationMs || 0,
+    violationRatio: byGate.get(gate)?.violationRatio || 0,
+  }));
+  const invalid = structured.status !== AssessmentResultStatuses.Valid;
+  const g3ViolationRatio = byGate.get('G3')?.violationRatio || source.g3ViolationRatio || 0;
+  const invalidReasons = invalid ? [structured.error?.code || 'QUALITY_INVALID'] : [];
+  if (g3ViolationRatio > stage2Operational.quality.invalidViolationRatioExclusive) {
+    invalidReasons.push('G3_VIOLATION_RATIO_EXCEEDED');
+  }
+  return {
+    gates,
+    g3ViolationRatio,
+    invalidReasons: [...new Set(invalidReasons)],
+    excludeFromTrends: invalid,
+  };
+}
+
+function stage2Common(structured, completedAt) {
+  const vulnerabilityAssessment = structured.vulnerabilityAssessment ? {
+    ...structured.vulnerabilityAssessment,
+    evidence: (structured.vulnerabilityAssessment.evidence || []).map((evidence) => ({
+      ...evidence,
+      sourceResultId: evidence.sourceResultId || structured.resultId,
+    })),
+  } : null;
+  return {
+    resultSchemaVersion: 'stage2_assessment_result.v1',
+    resultId: structured.resultId,
+    attemptId: structured.assessmentId,
+    analysisSessionId: structured.sessionId,
+    assessmentType: structured.assessmentType,
+    status: structured.status === AssessmentResultStatuses.Valid ? 'VALID' : 'INVALID',
+    source: structured.metadata?.source === ResultSources.Replay ? 'REPLAY' : 'LIVE_POSE',
+    completedAt,
+    operationalConfigVersion: 'stage2_operational.v1',
+    calibration: stage2Calibration(structured),
+    quality: stage2Quality(structured),
+    vulnerabilityAssessment,
+  };
+}
+
+function buildStage2ChairResult({ structured, snapshot, completedAt }) {
+  const measurement = structured.primaryMeasurements;
+  const finalState = measurement.finalState === ChairStandFinalStates.Unknown ? ChairStandFinalStates.Sit : measurement.finalState;
+  const armUseCdcZero = snapshot?.armUseCdcZero === true;
+  return {
+    ...stage2Common(structured, completedAt),
+    chairStand: {
+      observedRepetitions: snapshot?.repetitionCount || 0,
+      completedRepetitions: measurement.completedRepetitions,
+      finalRepetitionCredit: measurement.partialRepetitionCredit,
+      finalState,
+      armUse: {
+        occurrenceCount: snapshot?.armUseOccurrenceCount || 0,
+        restartUsed: (snapshot?.armUseOccurrenceCount || 0) > 0,
+        outcome: armUseCdcZero ? 'DISQUALIFIED'
+          : snapshot?.armUseRestartRequired ? 'RESTART_REQUIRED'
+            : measurement.armUse === ArmUseStates.NotMeasurable ? 'NOT_MEASURABLE' : 'NOT_DETECTED',
+      },
+      cdcScoredRepetitions: armUseCdcZero ? 0 : measurement.completedRepetitions,
+    },
+  };
+}
+
+function buildStage2BalanceResult({ structured, snapshot, completedAt }) {
+  return {
+    ...stage2Common(structured, completedAt),
+    calibration: stage2Calibration(structured, snapshot?.supportRoi || null),
+    balance: {
+      stages: structured.primaryMeasurements.stages.map((stage) => ({
+        stage: stage.stage,
+        onsetLatencyMs: stage.onsetLatencyMs ?? null,
+        holdSeconds: stage.holdDurationSeconds,
+        status: stage.status === BalanceStageStatuses.NotAttempted ? 'NOT_ATTEMPTED'
+          : stage.failureReason === 'UNABLE_TO_ASSUME_POSITION' ? 'UNABLE_TO_ASSUME'
+            : stage.status,
+        failureCode: BALANCE_FAILURE_CODE_BY_REASON[stage.failureReason] || null,
+        failureReason: stage.failureReason || null,
+        sway: stage.sway ? {
+          mlRmsM: stage.sway.mlRms,
+          apRmsM: stage.sway.apRms,
+          initialRmsM: stage.sway.initialRms,
+          staticRmsM: stage.sway.staticRms,
+          initialToStaticRatio: stage.sway.ratios?.initialToStatic,
+          mlToApRatio: stage.sway.ratios?.mlToAp,
+        } : null,
+      })),
+    },
+  };
+}
+
 class StructuredMovementAnalyzer {
-  constructor(selectedTest = 'chair_stand') {
+  constructor(selectedTest = 'chair_stand', options = {}) {
     this.selectedTest = selectedTest;
+    this.options = options;
     this.reset();
   }
 
@@ -385,12 +572,14 @@ class StructuredMovementAnalyzer {
         sessionId,
         assessmentId: sessionId,
         startedAtMs: startedAt,
+        supportRoi: this.options.supportRoiNormalized || null,
       });
     } else {
       this.machine = createChairStandStateMachine({
         sessionId,
         assessmentId: sessionId,
         startedAtMs: startedAt,
+        armUseOccurrenceCount: this.options.armUseOccurrenceCount || 0,
       });
     }
     this.latestSnapshot = this.machine.snapshot([]);
@@ -403,6 +592,7 @@ class StructuredMovementAnalyzer {
     if (!input.poseFrame || !input.calibrationProfile || !input.qualityStatus) {
       return this.getCurrentState(input.poseFrame?.timestampMs || Date.now());
     }
+    this.latestCalibrationProfile = input.calibrationProfile;
     this.latestSnapshot = this.machine.addFrame(input);
     if (this.selectedTest === 'four_stage_balance' && this.latestSnapshot.state === BalanceTestMachineStates.Passed) {
       const advanced = this.machine.advanceToNextStage();
@@ -441,6 +631,7 @@ class StructuredMovementAnalyzer {
         qualitySummary,
         forceInvalid,
         invalidReason,
+        calibrationProfile: this.latestCalibrationProfile,
       })
       : buildChairStructuredResult({
         snapshot: this.latestSnapshot,
@@ -452,6 +643,8 @@ class StructuredMovementAnalyzer {
         qualitySummary,
         forceInvalid,
         invalidReason,
+        calibrationProfile: this.latestCalibrationProfile,
+        profile: this.options.profile,
       });
     const state = this.stateFromSnapshot(completedAt, structured.value.confidence);
     const result = this.selectedTest === 'four_stage_balance'
@@ -467,6 +660,7 @@ class StructuredMovementAnalyzer {
     this.assessmentId = null;
     this.machine = null;
     this.latestSnapshot = null;
+    this.latestCalibrationProfile = null;
     this.latestState = this.defaultState();
   }
 
@@ -538,6 +732,7 @@ class StructuredMovementAnalyzer {
   chairResultFromStructured({ structured, completedAt, state }) {
     const measurement = structured.value.primaryMeasurements;
     const repetitionCount = measurement.completedRepetitions;
+    const vulnerabilityAssessment = structured.value.vulnerabilityAssessment;
     return {
       ...state,
       testType: 'chair_stand',
@@ -563,6 +758,7 @@ class StructuredMovementAnalyzer {
       structuredAssessmentResult: structured.value,
       structuredAssessmentValidation: structured.validation,
       stateMachineSnapshot: this.latestSnapshot,
+      stage2Result: buildStage2ChairResult({ structured: structured.value, snapshot: this.latestSnapshot, completedAt }),
       testFlags: {
         armUseSuspected: measurement.armUse === ArmUseStates.Suspected,
         armUseDisqualified: measurement.armUse === ArmUseStates.Confirmed,
@@ -605,6 +801,7 @@ class StructuredMovementAnalyzer {
       structuredAssessmentResult: structured.value,
       structuredAssessmentValidation: structured.validation,
       stateMachineSnapshot: this.latestSnapshot,
+      stage2Result: buildStage2BalanceResult({ structured: structured.value, snapshot: this.latestSnapshot, completedAt }),
       testFlags: {
         structuredPipeline: true,
       },
@@ -614,6 +811,6 @@ class StructuredMovementAnalyzer {
   }
 }
 
-export function createMovementAnalyzer(selectedTest) {
-  return new StructuredMovementAnalyzer(selectedTest);
+export function createMovementAnalyzer(selectedTest, options = {}) {
+  return new StructuredMovementAnalyzer(assertSupportedAssessmentTestType(selectedTest), options);
 }

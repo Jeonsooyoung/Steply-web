@@ -42,7 +42,7 @@ flowchart TD
 - `FunctionalFinding`: 기능 관찰 기반 finding 타입이다. 특정 근육/질환명을 domain이나 finding으로 생성하지 않는다.
 - `SteadiScoreResult`: CDC STEADI reference helper를 structured assessment에 적용한 scoring 출력이다. non-clinical 입력은 `NOT_SCORABLE`이다.
 - `ExercisePlan`: deterministic Otago recommendation engine 출력 타입이다. source finding 없는 운동, HIGH risk professional review 누락, Demo/Fallback 기반 plan을 거부한다.
-- `AgentAction`: Care Orchestration Agent의 허용 action schema다. 자유 임상 판정 또는 자유 운동 생성 action은 없다.
+- `CareAgentAction`: Mobile Care Agent의 공용 action 계약이다. `shared/stage4CareAgentContract.cjs`가 Web projection을 strict 검증하며 자유 임상 판정 또는 처방 변경 필드를 거부한다.
 - `FrameAnalysisResult`: Worker 중간 결과다. `isFinal: false`이며 저장 대상이 아니다.
 - `FinalAssessmentResponse`: Worker 최종 결과다. `isFinal: true`이며 내부에 `AssessmentResult`를 담는다.
 
@@ -55,10 +55,10 @@ flowchart TD
 | `CalibrationProfile` | `client/src/pipeline/calibration/calibrationProfile.js` | future chair/balance analyzers |
 | `AssessmentEvent` | `client/src/pipeline/assessment/events.js`, structured state machines | `AssessmentResult`, audit/debug |
 | `AssessmentResult` | `client/src/pipeline/assessment/chairStand/chairStandStateMachine.js`, `client/src/pipeline/assessment/balanceTest/balanceTestStateMachine.js`, `client/src/pose/movementAnalyzers.js` | STEADI, findings, recommendation, progress |
-| `SteadiScoreResult` | `client/src/hooks/useSteplyDashboard.js` structured scoring wrapper + `client/src/pose/steadiRules.js` CDC helper | recommendation, agent state |
-| `FunctionalFinding` | `findings/functionalFindings.js` | recommendation, agent state |
-| `ExercisePlan` | `recommendation/otagoExerciseEngine.js` | UI/progress/agent state |
-| `AgentAction` | `agent/careAgent.js` | deterministic agent policy |
+| `SteadiScoreResult` | `client/src/hooks/useSteplyDashboard.js` structured scoring wrapper + `client/src/pose/steadiRules.js` CDC helper | recommendation, canonical Mobile session |
+| `FunctionalFinding` | `findings/functionalFindings.js` | recommendation, canonical Mobile session |
+| `ExercisePlan` | `recommendation/otagoExerciseEngine.js` | UI/progress/canonical Mobile session |
+| `CareAgentAction` | Mobile `CarePlanner.kt` | Android tools, Room decision log, Web projection |
 
 ## Validation 위치
 
@@ -73,7 +73,6 @@ flowchart TD
 - `validateSteadiScoreResult`
 - `validateFunctionalFinding`
 - `validateExercisePlan`
-- `validateAgentAction`
 - `validateWorkerCommand`
 - `validateWorkerResponse`
 - `validateFrameAnalysisResult`

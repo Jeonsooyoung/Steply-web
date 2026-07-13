@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/stage3-exercise-session-result-v1.schema.json",
+  "title": "Steply Stage 3 exercise session result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "resultId", "exerciseSessionId", "planId", "exerciseId", "level", "variantId", "status", "source", "startedAt", "completedAt", "prescribedDosage", "completedDosage", "formAccurate", "lowerBodyRecoveryWithoutGripping", "supportUsed", "cameraVerification", "safetyEvents"],
+  "properties": {
+    "schemaVersion": { "const": "exercise_session_result.v1" },
+    "resultId": { "$ref": "#/$defs/id" },
+    "exerciseSessionId": { "$ref": "#/$defs/id" },
+    "planId": { "$ref": "#/$defs/id" },
+    "exerciseId": { "$ref": "stage3-progression-v1.schema.json#/$defs/exerciseId" },
+    "level": { "$ref": "stage3-progression-v1.schema.json#/$defs/level" },
+    "variantId": { "$ref": "#/$defs/id" },
+    "status": { "enum": ["COMPLETED", "INCOMPLETE", "STOPPED_SAFETY"] },
+    "source": { "enum": ["LIVE_POSE", "USER_CONFIRMED"] },
+    "startedAt": { "type": "integer", "minimum": 0 },
+    "completedAt": { "type": "integer", "minimum": 0 },
+    "prescribedDosage": { "$ref": "#/$defs/dosage" },
+    "completedDosage": { "$ref": "#/$defs/dosage" },
+    "formAccurate": { "type": ["boolean", "null"] },
+    "lowerBodyRecoveryWithoutGripping": { "type": ["boolean", "null"] },
+    "supportUsed": { "type": "boolean" },
+    "cameraVerification": { "enum": ["FULL", "PARTIAL", "MANUAL_ONLY"] },
+    "safetyEvents": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "dosage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repetitions", "sets", "repetitionsPerSide", "steps", "holdSeconds"],
+      "properties": {
+        "repetitions": { "type": ["integer", "null"], "minimum": 0 },
+        "sets": { "type": "integer", "minimum": 0 },
+        "repetitionsPerSide": { "type": ["integer", "null"], "minimum": 0 },
+        "steps": { "type": ["integer", "null"], "minimum": 0 },
+        "holdSeconds": { "type": ["number", "null"], "minimum": 0 }
+      }
+    }
+  }
+}

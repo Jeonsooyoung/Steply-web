@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steply.local/schemas/assessment-session.schema.json",
+  "title": "Steply AssessmentSession v1",
+  "description": "Canonical, phone-persisted Stage 1 assessment snapshot shared by Steply Web and Mobile. Connection state and operational pose thresholds are intentionally outside this clinical session schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "assessmentSessionId",
+    "connectionSessionId",
+    "profileId",
+    "revision",
+    "status",
+    "screening",
+    "profileSnapshot",
+    "functionalTests",
+    "steadi",
+    "exercisePrescription",
+    "createdAt",
+    "updatedAt",
+    "completedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "assessment_session.v1" },
+    "assessmentSessionId": { "$ref": "#/$defs/nonEmptyString" },
+    "connectionSessionId": { "type": ["string", "null"], "minLength": 1 },
+    "profileId": { "$ref": "#/$defs/nonEmptyString" },
+    "revision": { "type": "integer", "minimum": 0 },
+    "status": { "enum": ["IN_PROGRESS", "COMPLETED", "CANCELLED"] },
+    "screening": { "$ref": "#/$defs/screening" },
+    "profileSnapshot": { "$ref": "#/$defs/profileSnapshot" },
+    "functionalTests": { "$ref": "#/$defs/functionalTests" },
+    "steadi": { "$ref": "#/$defs/steadiResult" },
+    "exercisePrescription": { "$ref": "#/$defs/exercisePrescription" },
+    "createdAt": { "$ref": "#/$defs/epochMilliseconds" },
+    "updatedAt": { "$ref": "#/$defs/epochMilliseconds" },
+    "completedAt": {
+      "oneOf": [
+        { "$ref": "#/$defs/epochMilliseconds" },
+        { "type": "null" }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "COMPLETED" } } },
+      "then": {
+        "properties": {
+          "completedAt": { "$ref": "#/$defs/epochMilliseconds" },
+          "steadi": { "$ref": "#/$defs/scoredSteadiResult" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "epochMilliseconds": { "type": "integer", "minimum": 0 },
+    "slotStatus": {
+      "enum": ["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "NEEDS_RETRY"]
+    },
+    "attemptStatus": {
+      "enum": ["IN_PROGRESS", "PAUSED", "VALID", "INVALID", "CANCELLED", "FAILED"]
+    },
+    "screening": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "responses", "fallHistory"],
+      "properties": {
+        "status": { "$ref": "#/$defs/slotStatus" },
+        "responses": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fallenPastYear", "feelsUnsteady", "worriedAboutFalling"],
+          "properties": {
+            "fallenPastYear": { "type": ["boolean", "null"] },
+            "feelsUnsteady": { "type": ["boolean", "null"] },
+            "worriedAboutFalling": { "type": ["boolean", "null"] }
+          }
+        },
+        "fallHistory": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "injuriousFall"],
+          "properties": {
+            "count": {
+              "oneOf": [
+                { "enum": ["ZERO", "ONE", "TWO_OR_MORE"] },
+                { "type": "null" }
+              ]
+            },
+            "injuriousFall": { "type": ["boolean", "null"] }
+          }
+        }
+      }
+    },
+    "profileSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["birthYear", "ageYears", "sex"],
+      "properties": {
+        "birthYear": { "type": ["integer", "null"], "minimum": 1900 },
+        "ageYears": { "type": ["integer", "null"], "minimum": 0, "maximum": 130 },
+        "sex": {
+          "oneOf": [
+            { "enum": ["MALE", "FEMALE"] },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "functionalTests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["FOUR_STAGE_BALANCE", "CHAIR_STAND_30S"],
+      "properties": {
+        "FOUR_STAGE_BALANCE": { "$ref": "#/$defs/testSlot" },
+        "CHAIR_STAND_30S": { "$ref": "#/$defs/testSlot" }
+      }
+    },
+    "testSlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "acceptedAttemptId", "acceptedResult", "attempts"],
+      "properties": {
+        "status": { "$ref": "#/$defs/slotStatus" },
+        "acceptedAttemptId": { "type": ["string", "null"], "minLength": 1 },
+        "acceptedResult": {
+          "oneOf": [
+            { "$ref": "#/$defs/acceptedTestResult" },
+            { "type": "null" }
+          ]
+        },
+        "attempts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/attemptSummary" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "COMPLETED" } } },
+          "then": {
+            "properties": {
+              "acceptedAttemptId": { "$ref": "#/$defs/nonEmptyString" },
+              "acceptedResult": { "$ref": "#/$defs/acceptedTestResult" }
+            }
+          }
+        }
+      ]
+    },
+    "attemptSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attemptId", "analysisSessionId", "status", "startedAt", "completedAt", "supersedesAttemptId"],
+      "properties": {
+        "attemptId": { "$ref": "#/$defs/nonEmptyString" },
+        "analysisSessionId": { "$ref": "#/$defs/nonEmptyString" },
+        "status": { "$ref": "#/$defs/attemptStatus" },
+        "startedAt": { "$ref": "#/$defs/epochMilliseconds" },
+        "completedAt": {
+          "oneOf": [
+            { "$ref": "#/$defs/epochMilliseconds" },
+            { "type": "null" }
+          ]
+        },
+        "supersedesAttemptId": { "type": ["string", "null"], "minLength": 1 }
+      }
+    },
+    "acceptedTestResult": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "resultId",
+        "attemptId",
+        "analysisSessionId",
+        "assessmentType",
+        "status",
+        "source",
+        "completedAt"
+      ],
+      "properties": {
+        "resultId": { "$ref": "#/$defs/nonEmptyString" },
+        "attemptId": { "$ref": "#/$defs/nonEmptyString" },
+        "analysisSessionId": { "$ref": "#/$defs/nonEmptyString" },
+        "assessmentType": { "enum": ["FOUR_STAGE_BALANCE", "CHAIR_STAND_30S"] },
+        "status": { "const": "VALID" },
+        "source": { "const": "LIVE_POSE" },
+        "completedAt": { "$ref": "#/$defs/epochMilliseconds" }
+      }
+    },
+    "steadiResult": {
+      "oneOf": [
+        { "$ref": "#/$defs/notScorableSteadiResult" },
+        { "$ref": "#/$defs/scoredSteadiResult" }
+      ]
+    },
+    "notScorableSteadiResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "riskLevel", "strengthProblem", "balanceProblem", "step1AtRisk", "step2Problem", "reasonCodes", "ruleVersion"],
+      "properties": {
+        "status": { "const": "NOT_SCORABLE" },
+        "riskLevel": { "const": "NOT_SCORABLE" },
+        "strengthProblem": { "type": "null" },
+        "balanceProblem": { "type": "null" },
+        "step1AtRisk": { "type": ["boolean", "null"] },
+        "step2Problem": { "type": ["boolean", "null"] },
+        "reasonCodes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "ruleVersion": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "scoredSteadiResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "riskLevel", "strengthProblem", "balanceProblem", "step1AtRisk", "step2Problem", "reasonCodes", "ruleVersion"],
+      "properties": {
+        "status": { "const": "SCORED" },
+        "riskLevel": { "enum": ["LOW", "MODERATE", "HIGH"] },
+        "strengthProblem": { "type": "boolean" },
+        "balanceProblem": { "type": "boolean" },
+        "step1AtRisk": { "type": "boolean" },
+        "step2Problem": { "type": "boolean" },
+        "reasonCodes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "ruleVersion": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "exercisePrescription": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "plan", "sessionResults"],
+      "properties": {
+        "status": { "enum": ["NOT_GENERATED", "BLOCKED", "ACTIVE", "PENDING_PROFESSIONAL_REVIEW"] },
+        "plan": {
+          "oneOf": [
+            { "$ref": "stage3-exercise-prescription-v1.schema.json" },
+            { "type": "null" }
+          ]
+        },
+        "sessionResults": {
+          "type": "array",
+          "items": { "$ref": "stage3-exercise-session-result-v1.schema.json" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "NOT_GENERATED" } }, "required": ["status"] },
+          "then": { "properties": { "plan": { "type": "null" }, "sessionResults": { "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "BLOCKED" } }, "required": ["status"] },
+          "then": { "properties": { "plan": { "allOf": [{ "$ref": "stage3-exercise-prescription-v1.schema.json" }, { "properties": { "status": { "const": "BLOCKED" } } }] } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "ACTIVE" } }, "required": ["status"] },
+          "then": { "properties": { "plan": { "allOf": [{ "$ref": "stage3-exercise-prescription-v1.schema.json" }, { "properties": { "status": { "const": "ACTIVE" } } }] } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "PENDING_PROFESSIONAL_REVIEW" } }, "required": ["status"] },
+          "then": { "properties": { "plan": { "allOf": [{ "$ref": "stage3-exercise-prescription-v1.schema.json" }, { "properties": { "status": { "const": "PENDING_PROFESSIONAL_REVIEW" } } }] } } }
+        }
+      ]
+    }
+  }
+}
