@@ -6,19 +6,50 @@ import { SteplyIcon } from '../shared/icons';
 import { goTo } from '../shared/navigation';
 import { connectionSteps, setupReminders } from './connectionData';
 
+export async function startWebcamBalanceTest(startCamera, navigate = goTo) {
+  if (typeof startCamera !== 'function') return false;
+  const started = await startCamera();
+  if (started) navigate('/display/assessment/balance/live');
+  return Boolean(started);
+}
+
 function QrCard({ dashboard }) {
   const qr = dashboard?.sessionBundle?.qrDataUrl;
   return <div className="ref-qr">{qr ? <img src={qr} alt="QR code to connect your phone" /> : <div><span><SteplyIcon name="scanQr" size={92} /></span><small>Preparing secure QR code…</small></div>}</div>;
 }
 
 export function ReferenceConnectScreen({ dashboard }) {
-  const ready = Boolean(dashboard?.session?.profile || dashboard?.hasReceivedPhoneFrame);
+  const usingWebcam = dashboard?.cameraInputMode === 'LOCAL_WEBCAM';
+  const startingWebcam = usingWebcam && dashboard?.localCameraState === 'REQUESTING';
+  const webcamReady = usingWebcam && dashboard?.isCameraReady === true;
+  const phoneReady = !usingWebcam && Boolean(dashboard?.session?.profile || dashboard?.hasReceivedPhoneFrame);
+  const ready = webcamReady || phoneReady;
+  const webcamError = usingWebcam ? dashboard?.localCameraError : '';
 
   useEffect(() => {
-    if (!ready) return undefined;
+    if (!phoneReady) return undefined;
     const timer = window.setTimeout(() => goTo('/display/home'), 1600);
     return () => window.clearTimeout(timer);
-  }, [ready]);
+  }, [phoneReady]);
+
+  const statusTitle = webcamReady
+    ? 'Webcam connected'
+    : startingWebcam
+      ? 'Starting webcam'
+      : webcamError
+        ? 'Webcam unavailable'
+        : phoneReady
+          ? 'Phone connected'
+          : 'Ready to pair';
+  const statusDetail = webcamReady
+    ? 'Your computer webcam is ready for the balance test.'
+    : startingWebcam
+      ? 'Allow camera access in your browser to continue.'
+      : webcamError
+        ? webcamError
+        : phoneReady
+          ? 'Your phone camera is ready for posture analysis.'
+          : 'Waiting for your phone to scan the QR code.';
 
   return (
     <PageShell active="Assessment" className="ref-connect-page">
@@ -45,11 +76,26 @@ export function ReferenceConnectScreen({ dashboard }) {
           </Panel>
         </div>
         <div className={`ref-connection-status ${ready ? 'ready' : ''}`}>
-          <span><SteplyIcon name="check" size={32} strokeWidth={2.5} /></span>
-          <div><small>Connection status</small><strong>{ready ? 'Phone connected' : 'Ready to pair'}</strong><p>{ready ? 'Your phone camera is ready for posture analysis.' : 'Waiting for your phone to scan the QR code.'}</p></div>
+          <span><SteplyIcon name={ready ? 'check' : 'camera'} size={32} strokeWidth={2.5} /></span>
+          <div><small>Connection status</small><strong>{statusTitle}</strong><p>{statusDetail}</p></div>
           <div className="ref-link-diagram"><SteplyIcon name="laptop" size={48} /><i /><SteplyIcon name="smartphone" size={42} /></div>
         </div>
-        <button type="button" className="ref-back-link" onClick={() => goTo('/display/session/plan')}><SteplyIcon name="arrowLeft" size={17} />Back to Assessment</button>
+        <div className="ref-connect-footer">
+          <button type="button" className="ref-back-link" onClick={() => goTo('/display/session/plan')}><SteplyIcon name="arrowLeft" size={17} />Back to Assessment</button>
+          <div className="ref-webcam-feedback">
+            {webcamError ? <p role="alert">{webcamError}</p> : null}
+            <button
+              type="button"
+              className="ref-webcam-action"
+              disabled={startingWebcam || typeof dashboard?.handleStartLocalCamera !== 'function'}
+              onClick={() => startWebcamBalanceTest(dashboard?.handleStartLocalCamera)}
+            >
+              <SteplyIcon name="camera" size={19} />
+              {startingWebcam ? 'Starting Webcam…' : 'Use Webcam'}
+              <SteplyIcon name="arrowRight" size={17} />
+            </button>
+          </div>
+        </div>
       </main>
     </PageShell>
   );

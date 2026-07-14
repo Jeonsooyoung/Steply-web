@@ -29,6 +29,10 @@ try {
   } = await server.ssrLoadModule('/client/src/routes/StepTwoScreens.jsx');
   const { CameraPreview } = await server.ssrLoadModule('/client/src/components/foundation/SteplyDesignSystem.jsx');
   const { LiveCamera } = await server.ssrLoadModule('/client/src/features/reference-ui/shared/LiveCamera.jsx');
+  const {
+    ReferenceConnectScreen,
+    startWebcamBalanceTest,
+  } = await server.ssrLoadModule('/client/src/features/reference-ui/connection/ReferenceConnectScreen.jsx');
   const { stage2Operational } = await server.ssrLoadModule('/client/src/pipeline/shared/config/stage2Analysis.config.js');
 
   const constraints = localCameraConstraints();
@@ -84,6 +88,38 @@ try {
   assert.doesNotMatch(laptopHtml, /<button[^>]*disabled[^>]*>Use Phone Camera<\/button>/, '[CAM-WEB-05] users can cancel a pending or failed permission request');
   assert.match(laptopHtml, />Refresh Code</, '[CAM-WEB-06] local video does not manufacture a Mobile profile or unlock clinical state');
   assert.doesNotMatch(laptopHtml, />Continue</, '[CAM-WEB-06] profile authority remains with Mobile');
+
+  const referenceConnectHtml = renderToStaticMarkup(React.createElement(ReferenceConnectScreen, {
+    dashboard: {
+      sessionBundle: { qrDataUrl: 'data:image/png;base64,qr' },
+      session: { id: 'camera-session', profile: null },
+      cameraInputMode: 'PHONE_CAMERA',
+      localCameraState: 'IDLE',
+      handleStartLocalCamera: () => true,
+    },
+  }));
+  assert.match(referenceConnectHtml, />Use Webcam</, '[CAM-WEB-06A] reference QR screen exposes the webcam action');
+
+  const webcamNavigatedPaths = [];
+  let resolveReferenceCameraStart;
+  const pendingReferenceCameraStart = new Promise((resolve) => {
+    resolveReferenceCameraStart = resolve;
+  });
+  const referenceStartResult = startWebcamBalanceTest(
+    () => pendingReferenceCameraStart,
+    (pathValue) => webcamNavigatedPaths.push(pathValue),
+  );
+  assert.deepEqual(webcamNavigatedPaths, [], '[CAM-WEB-06A] reference QR screen waits for webcam permission before leaving');
+  resolveReferenceCameraStart(true);
+  assert.equal(await referenceStartResult, true, '[CAM-WEB-06A] an available webcam starts successfully');
+  assert.deepEqual(webcamNavigatedPaths, ['/display/assessment/balance/live'], '[CAM-WEB-06A] webcam success opens the balance test');
+
+  const deniedNavigatedPaths = [];
+  assert.equal(await startWebcamBalanceTest(
+    () => Promise.resolve(false),
+    (pathValue) => deniedNavigatedPaths.push(pathValue),
+  ), false, '[CAM-WEB-06B] denied webcam access does not report success');
+  assert.deepEqual(deniedNavigatedPaths, [], '[CAM-WEB-06B] denied webcam access remains on the QR screen');
 
   const previewHtml = renderToStaticMarkup(React.createElement(CameraPreview, {
     mediaStream: {},

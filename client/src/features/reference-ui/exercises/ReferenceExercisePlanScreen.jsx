@@ -14,7 +14,7 @@ function ExerciseListItem({ exercise, index }) {
         <div className="ref-exercise-meta"><span><SteplyIcon name="timer" size={16} />{exercise.amount}</span><span><SteplyIcon name="repeat" size={16} />{exercise.sets}</span></div>
         <div className="ref-tags">{exercise.tags.map((tag) => <i key={tag}>{tag}</i>)}</div>
       </div>
-      <b><SteplyIcon name="arrowRight" size={22} /></b>
+      <b className="ref-exercise-list__arrow" aria-hidden="true"><SteplyIcon name="arrowRight" size={26} /></b>
     </button>
   );
 }

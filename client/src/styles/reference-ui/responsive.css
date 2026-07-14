@@ -77,8 +77,9 @@
   .ref-exercise-plan__columns { gap: 20px; }
   .ref-plan-banner { grid-template-columns: 48px 1fr; }
   .ref-plan-banner > b { grid-column: 1 / -1; width: max-content; }
-  .ref-exercise-list > button { grid-template-columns: 75px 1fr 18px; min-height: 190px; gap: 13px; }
+  .ref-exercise-list > button { grid-template-columns: 75px minmax(0, 1fr) 52px; min-height: 190px; gap: 13px; }
   .ref-exercise-list__number { font-size: 29px; }
+  .ref-exercise-list > button > .ref-exercise-list__arrow { width: 40px; height: 40px; }
   .ref-exercise-aside { display: grid; grid-template-columns: 1fr; }
   .ref-safety-card { grid-row: auto; }
   .ref-session-card { width: 100%; margin: 0; border: 0; border-radius: 0; }
@@ -104,6 +105,10 @@
   .ref-reminders { grid-column: auto; grid-template-columns: 1fr; }
   .ref-connection-status { grid-template-columns: 64px 1fr; padding: 18px; }
   .ref-link-diagram { display: none; }
+  .ref-connect-footer { flex-direction: column-reverse; align-items: stretch; }
+  .ref-webcam-feedback { width: 100%; justify-items: stretch; }
+  .ref-webcam-feedback > p { max-width: none; text-align: left; }
+  .ref-webcam-action { width: 100%; }
   .ref-balance-test { width: 100%; min-height: 0; padding: 25px 16px; }
   .ref-stage-track small { font-size: 9px; }
   .ref-balance-grid { grid-template-columns: 1fr; }
