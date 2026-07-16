@@ -74,12 +74,15 @@ try {
   const setupSource = fs.readFileSync(path.join(root, 'client/src/routes/StepThreeScreens.jsx'), 'utf8');
   const balanceSource = fs.readFileSync(path.join(root, 'client/src/routes/StepFourScreens.jsx'), 'utf8');
   const chairSource = fs.readFileSync(path.join(root, 'client/src/routes/StepFiveScreens.jsx'), 'utf8');
+  const overviewSource = fs.readFileSync(path.join(root, 'client/src/features/reference-ui/overview/overviewData.js'), 'utf8');
   const countdownHookSource = fs.readFileSync(path.join(root, 'client/src/hooks/useStableAssessmentCountdown.js'), 'utf8');
   const workerSource = fs.readFileSync(path.join(root, 'client/src/pose/poseLandmarker.worker.js'), 'utf8');
   assert.match(setupSource, /: '\/display\/assessment\/balance\/live'/, '[AUTO-START-05] stable standing proceeds directly to the Balance live test');
   assert.match(setupSource, /step-three-auto-start-countdown/, '[AUTO-START-05] the camera screen shows a visible countdown');
   assert.match(balanceSource, /useStableAssessmentCountdown/, '[AUTO-START-06] Balance instruction fallback uses the same stable countdown');
-  assert.match(chairSource, /calibrationStatus\?\.canStartAssessment === true/, '[AUTO-START-07] Chair Stand cannot start before seated calibration');
+  assert.match(overviewSource, /href: '\/display\/assessment\/chair\/live'/, '[AUTO-START-07] Chair Stand enters the live assessment directly');
+  assert.doesNotMatch(chairSource, /startReady = isStableAssessmentStartReady\([\s\S]*?calibrationReady:/, '[AUTO-START-07] Chair Stand starts analysis without a separate seated-calibration gate');
+  assert.match(chairSource, /if \(scenario\.remaining !== 0\) return;[\s\S]*?goTo\('\/display\/assessment\/chair\/result'\)/, '[AUTO-START-07] Chair Stand opens its result page when the 30-second timer reaches zero');
   assert.match(chairSource, /useStableAssessmentCountdown/, '[AUTO-START-07] Chair Stand uses the same central 3-second countdown');
   assert.match(countdownHookSource, /if \(!ready\)[\s\S]*setRemainingSeconds\(null\)/, '[AUTO-START-08] readiness loss resets the countdown');
   assert.match(countdownHookSource, /!completionReady \|\| remainingSeconds !== 0/, '[AUTO-START-08] navigation waits for both countdown and calibration completion');

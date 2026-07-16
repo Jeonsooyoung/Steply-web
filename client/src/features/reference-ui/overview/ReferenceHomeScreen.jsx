@@ -33,7 +33,7 @@ export function ReferenceHomeScreen() {
 
         <section className="ref-home-grid">
           <Panel className="ref-home-plan">
-            <div className="ref-panel-heading"><SectionTitle icon="clipboardList">Today’s Assessment Plan</SectionTitle><span>3 steps</span></div>
+            <div className="ref-panel-heading"><SectionTitle icon="clipboardList">Today’s Assessment Plan</SectionTitle><span>{assessmentSteps.length} steps</span></div>
             <div className="ref-home-plan__list">
               {assessmentSteps.map((step) => (
                 <button type="button" key={step.number} onClick={() => goTo(step.href)}>

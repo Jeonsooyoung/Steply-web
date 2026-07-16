@@ -14,6 +14,10 @@ import {
   isStableAssessmentStartReady,
 } from '../pipeline/ui/assessmentAutoStart.js';
 import { UserScreenIds } from '../pipeline/ui/sessionFlow';
+import { LiveCamera, useEnsureLocalCamera } from '../features/reference-ui/shared/LiveCamera';
+import { PageShell } from '../features/reference-ui/shared/ReferenceShell';
+import { CheckList, Metric, Panel, ProgressRing, ScreenHeading, SectionTitle } from '../features/reference-ui/shared/components';
+import { SteplyIcon } from '../features/reference-ui/shared/icons';
 import { navigateSpa } from './spaNavigation';
 
 function goTo(path) {
@@ -628,67 +632,45 @@ export function DisplayChairInstructionScreen({ dashboard }) {
     ready: readiness.ready,
     onComplete: () => goTo('/display/assessment/chair/live'),
   });
+  useEnsureLocalCamera(dashboard, !dashboard?.isPhoneProfileLinked);
 
   return (
-    <SessionShell
-      eyebrow="CDC STEADI"
-      title="30-Second Chair Stand Test"
-      description="Stand up and sit down with control for 30 seconds."
-      connection={<ConnectionIndicator status={readiness.ready ? 'connected' : 'waiting'} label={readiness.ready ? 'Starting position ready' : 'Starting position needed'} detail={readiness.ready ? `Test starts automatically in ${autoStartSeconds ?? ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS} seconds.` : 'Sit centered with both feet visible and hold still.'} />}
-      progress={<SessionProgress current={8} total={9} label="Session progress" />}
-      className="step-five-instruction-shell"
-    >
-      <main className="step-five-instruction" data-voice-script={voiceScript}>
-        <section className="step-five-prep-grid">
-          <ChairDemonstration />
-          <div className="step-five-prep-panel">
-            <h2>Prepare for the test</h2>
-            <div className="step-five-prep-sequence" aria-label="Chair Stand Test preparation sequence">
-              {preparationSteps.map((step, index) => (
-                <article key={step} className="step-five-prep-step">
-                  <span>{index + 1}</span>
-                  <strong>{step}</strong>
-                </article>
-              ))}
-            </div>
+    <PageShell active="Assessment" className="ref-balance-page ref-chair-page">
+      <main className="ref-balance-test ref-chair-test" data-voice-script={voiceScript}>
+        <div className="ref-balance-heading ref-chair-heading">
+          <h1>30-Second Chair Stand Test</h1>
+          <div className="ref-stage-track ref-chair-track">
+            {['Prepare', '30-second test', 'Results'].map((label, index) => <div key={label} className={index === 0 ? 'active' : ''}><span>{index + 1}</span><small>{label}</small></div>)}
           </div>
-        </section>
-
-        <section className="step-five-safety-copy">
-          <div>
-            <StepIcon tone="info">i</StepIcon>
-            <p>Make sure the chair is firmly placed against a wall.</p>
-          </div>
-          <div>
-            <StepIcon tone="warning">!</StepIcon>
-            <p>Stop immediately if you feel dizzy, have chest pain, or cannot catch your breath.</p>
-          </div>
-        </section>
-
-        <section className="step-five-readiness-panel" aria-label="Starting position readiness">
-          <StatusRow label="Camera position" status={readiness.cameraReady ? 'ready' : 'checking'} detail="Selected camera about 2 meters away at hip height." />
-          <StatusRow label="Starting position" status={readiness.seatedCalibrationReady ? 'ready' : 'checking'} detail="Sit centered with both feet flat and hold still." />
-          <StatusRow label="Chair placement" status="ready" detail="Chair placed firmly against a wall." />
-        </section>
-
-        <div className="step-five-actions">
-          <VoiceButton
-            label="Watch Demonstration"
-            script={voiceScript}
-            onReplay={() => setLastReplay(voiceScript)}
-          />
-          <PrimaryActionBar
-            primaryLabel={readiness.ready ? `Starting in ${autoStartSeconds ?? ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS}...` : 'Waiting for starting position'}
-            primaryDisabled
-            onPrimary={() => {}}
-          />
         </div>
-        {!readiness.ready ? (
-          <p className="step-five-disabled-note" role="status">Sit centered, keep both feet visible, and hold still before starting.</p>
-        ) : null}
+        <div className="ref-balance-grid ref-chair-grid">
+          <LiveCamera dashboard={dashboard} className="ref-balance-camera ref-chair-camera" label="Chair stand starting-position camera" />
+          <aside className="ref-balance-guidance ref-chair-guidance">
+            <Panel><SectionTitle icon="clipboardList" tone="amber">Prepare for the test</SectionTitle><CheckList items={preparationSteps.slice(0, 4)} /></Panel>
+            <Panel className="ref-balance-timer ref-chair-ready-timer">
+              <SectionTitle icon="timer">Starting position</SectionTitle>
+              <ProgressRing value={readiness.ready ? (autoStartSeconds ?? ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS) : '—'} progress={readiness.ready ? ((ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS - (autoStartSeconds ?? ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS)) / ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS) * 100 : 0} large />
+              <p>{readiness.ready ? 'Hold still. The test will start automatically.' : 'Sit centered with both feet visible.'}</p>
+            </Panel>
+          </aside>
+          <Panel className="ref-stage-status ref-chair-status">
+            <SectionTitle icon="flag" tone="amber">Readiness status</SectionTitle>
+            <p>Step 1 of 3</p><h2>{readiness.ready ? 'Ready to begin' : 'Starting position needed'}</h2><b>{readiness.ready ? 'Starting soon' : 'Checking'}</b>
+            <ol>
+              <li className={readiness.cameraReady ? 'complete' : 'active'}><span>1</span><p><strong>Full body and chair</strong><small>{readiness.cameraReady ? 'Visible' : 'Move into view'}</small></p></li>
+              <li className={readiness.seatedCalibrationReady ? 'complete' : 'active'}><span>2</span><p><strong>Seated position</strong><small>{readiness.seatedCalibrationReady ? 'Calibrated' : 'Sit still with feet flat'}</small></p></li>
+              <li><span>3</span><p><strong>Arms crossed</strong><small>Keep arms across your chest</small></p></li>
+            </ol>
+          </Panel>
+        </div>
+        <footer className="ref-balance-actions ref-chair-actions">
+          <button type="button" onClick={() => goTo('/display/session/plan')}><SteplyIcon name="arrowLeft" />Back</button>
+          <button type="button" onClick={() => setLastReplay(voiceScript)}><SteplyIcon name="help" />Hear instructions</button>
+          <button type="button" className="solid" disabled={!readiness.ready}>{readiness.ready ? `Starting in ${autoStartSeconds ?? ASSESSMENT_AUTO_START_COUNTDOWN_SECONDS}…` : 'Waiting for starting position'}</button>
+        </footer>
         {lastReplay ? <span className="step-five-sr-status" role="status">{lastReplay}</span> : null}
       </main>
-    </SessionShell>
+    </PageShell>
   );
 }
 
@@ -697,17 +679,9 @@ export function DisplayChairLiveScreen({ dashboard }) {
   const showBackWarning = useTimedBackGuard(true);
   const scenario = useMemo(() => chairLiveScenario(dashboard), [dashboard]);
   const qualityRows = useMemo(() => liveQualityRows(scenario, dashboard), [scenario, dashboard]);
-  const connectionStatus = scenario.key === 'lost' ? 'lost' : hasCameraConnection(dashboard) ? 'connected' : 'waiting';
   const hasDominantAlert = Boolean(scenario.armFirst || scenario.armSecond || scenario.safetyStop);
   const alert = <ChairStandAlert scenario={scenario} dashboard={dashboard} dominant={hasDominantAlert} />;
-  const showLiveActions = !(
-    scenario.armFirst
-    || scenario.armSecond
-    || scenario.safetyStop
-    || scenario.testComplete
-    || scenario.key === 'half_rep'
-    || scenario.key === 'calibration_failed'
-  );
+  useEnsureLocalCamera(dashboard, !dashboard?.isPhoneProfileLinked);
 
   useEffect(() => {
     dashboard?.setActiveStep?.(UserScreenIds.Assessment);
@@ -720,7 +694,6 @@ export function DisplayChairLiveScreen({ dashboard }) {
       cameraReady: dashboard?.isCameraReady,
       cameraReadiness: analysis?.cameraReadiness,
       landmarkCount: analysis?.analysisLandmarks?.length || analysis?.landmarks?.length || 0,
-      calibrationReady: analysis?.calibrationStatus?.canStartAssessment === true,
     });
     if (
       startReady
@@ -754,135 +727,95 @@ export function DisplayChairLiveScreen({ dashboard }) {
     goTo('/display/assessment/chair/result');
   }, [dashboard?.poseAnalysis?.analysisResult, dashboard?.poseAnalysis?.analysisSessionState]);
 
+  useEffect(() => {
+    if (scenario.remaining !== 0) return;
+    goTo('/display/assessment/chair/result');
+  }, [scenario.remaining]);
+
   return (
-    <SessionShell
-      eyebrow="30-Second Chair Stand Test"
-      title="30-Second Chair Stand Test"
-      description="Stand fully, sit fully, and keep your arms crossed."
-      connection={<ConnectionIndicator status={connectionStatus} label={scenario.key === 'lost' ? 'Camera connection lost' : dashboard?.cameraInputMode === 'LOCAL_WEBCAM' ? 'Laptop Camera' : 'Phone connection'} detail={scenario.movementLabel} />}
-      progress={<SessionProgress current={8} total={9} label="Session progress" />}
-      className="step-five-live-shell"
-    >
-      <main className="step-five-live" data-assessment-state={scenario.key} data-voice-script={scenario.voice}>
+    <PageShell active="Assessment" className="ref-balance-page ref-chair-page">
+      <main className="ref-balance-test ref-chair-test" data-assessment-state={scenario.key} data-voice-script={scenario.voice}>
+        <div className="ref-balance-heading ref-chair-heading"><h1>30-Second Chair Stand Test</h1><div className="ref-stage-track ref-chair-track">{['Prepare', '30-second test', 'Results'].map((label, index) => <div key={label} className={index <= 1 ? 'active' : ''}><span>{index + 1}</span><small>{label}</small></div>)}</div></div>
         {hasDominantAlert ? alert : null}
-        <ChairPreview dashboard={dashboard} scenario={scenario} />
-
-        <section className="step-five-live-center" aria-live="polite">
-          <div className={`step-five-rep-display step-five-rep-display--${scenario.bannerTone}`}>
-            <strong>
-              <span>{scenario.reps}</span>
-              <span>{scenario.reps === 1 ? 'repetition' : 'repetitions'}</span>
-            </strong>
-            <span>{scenario.remaining} seconds left</span>
-          </div>
-          <div className="step-five-current-cue">
-            <p className="step-five-card-kicker">Current instruction</p>
-            <h2>{scenario.instruction}</h2>
-            <p>{scenario.cue}</p>
-          </div>
-          <ScenarioBanner scenario={scenario} />
-          {!hasDominantAlert ? alert : null}
-          {scenario.testComplete ? (
-            <PrimaryActionBar
-              primaryLabel="Continue to Analysis"
-              onPrimary={() => goTo('/display/session/analyzing')}
-            />
-          ) : null}
-          {scenario.key === 'calibration_failed' ? (
-            <PrimaryActionBar
-              primaryLabel={scenario.primaryLabel}
-              onPrimary={() => goTo(scenario.primaryPath)}
-            />
-          ) : null}
-          {showLiveActions ? (
-            <div className="step-five-live-actions">
-              <PrimaryActionBar
-                primaryLabel="Hear Again"
-                onPrimary={() => {
-                  setLastReplay(scenario.voice);
-                }}
-              />
-            </div>
-          ) : null}
-        </section>
-
-        <aside className="step-five-live-side">
-          <ChairDemonstration compact />
-          <div className="step-five-posture-cue">
-            <p className="step-five-card-kicker">Posture cue</p>
-            <strong>{scenario.movementLabel}</strong>
-            <span>{scenario.cue}</span>
-          </div>
-          <section className="step-five-quality-panel" aria-label="Camera quality state">
-            <h2>Camera quality</h2>
-            <div className="step-five-quality-list">
-              {qualityRows.map((row) => <StatusRow key={row.label} {...row} />)}
-            </div>
-          </section>
-          <div className="step-five-note">
-            <StepIcon>i</StepIcon>
-            <span>Live analysis only. Raw camera video is not saved.</span>
-          </div>
-        </aside>
+        <div className="ref-balance-grid ref-chair-grid">
+          <LiveCamera dashboard={dashboard} className="ref-balance-camera ref-chair-camera" label="Live 30-second chair stand camera" />
+          <aside className="ref-balance-guidance ref-chair-guidance" aria-live="polite">
+            <Panel><SectionTitle icon="clipboardList" tone="amber">Current instruction</SectionTitle><h2 className="ref-chair-current-instruction">{scenario.instruction}</h2><CheckList items={[scenario.cue, 'Keep your arms crossed over your chest.', 'Stand fully, then sit fully before the next repetition.']} /></Panel>
+            <Panel className="ref-balance-timer"><SectionTitle icon="timer">Time remaining</SectionTitle><ProgressRing value={scenario.remaining} progress={((30 - scenario.remaining) / 30) * 100} large /></Panel>
+          </aside>
+          <Panel className="ref-stage-status ref-chair-status">
+            <SectionTitle icon="flag" tone="amber">Test status</SectionTitle><p>30-second test</p><h2>{scenario.movementLabel}</h2><b>{scenario.timerPaused ? 'Paused for safety' : scenario.testComplete ? 'Complete' : 'In progress'}</b>
+            <div className="ref-chair-reps"><strong>{scenario.reps}</strong><span>{scenario.reps === 1 ? 'valid repetition' : 'valid repetitions'}</span></div>
+            <ol className="ref-chair-quality-list">{qualityRows.slice(0, 4).map((row, index) => <li key={row.label} className={row.status === 'ready' ? 'complete' : row.status === 'adjust' || row.status === 'lost' ? 'active' : ''}><span>{index + 1}</span><p><strong>{row.label}</strong><small>{row.detail || (row.status === 'ready' ? 'Ready' : row.status === 'adjust' ? 'Adjust position' : row.status === 'lost' ? 'Connection lost' : 'Checking')}</small></p></li>)}</ol>
+          </Panel>
+        </div>
+        {!hasDominantAlert ? alert : null}
+        <footer className="ref-balance-actions ref-chair-actions">
+          <button type="button" className="amber" onClick={() => goTo('/display/session/complete')}><SteplyIcon name="pause" />Stop test</button>
+          <button type="button" onClick={() => setLastReplay(scenario.voice)}><SteplyIcon name="help" />Hear again</button>
+          <button type="button" className="solid" disabled={!scenario.testComplete && scenario.key !== 'half_rep'} onClick={() => goTo('/display/assessment/chair/result')}>{scenario.testComplete || scenario.key === 'half_rep' ? 'View Results' : `${scenario.remaining} seconds remaining`}<SteplyIcon name="arrowRight" /></button>
+        </footer>
+        {showBackWarning ? <div className="foundation-back-warning" role="status">Use Hear Again or Stop Test during this timed assessment.</div> : null}
         {lastReplay ? <span className="step-five-sr-status" role="status">{lastReplay}</span> : null}
       </main>
-      {showBackWarning ? (
-        <div className="foundation-back-warning" role="status">
-          Use Pause, Hear Again, or Stop Session during a timed assessment.
-        </div>
-      ) : null}
-    </SessionShell>
+    </PageShell>
   );
 }
 
 export function DisplayChairResultScreen({ dashboard }) {
-  const [lastReplay, setLastReplay] = useState('');
   const result = ChairResultState(dashboard);
+  const { chairStandResult } = chairStateFromDashboard(dashboard);
+  const armUseCount = wholeNumber(chairStandResult?.armUse?.occurrenceCount ?? chairStandResult?.armUseOccurrenceCount ?? 0, 0, 0, 2);
+  const completed = result.tone === 'success';
+  const safetyLabel = armUseCount === 0 ? 'No arm support' : armUseCount === 1 ? 'Restart used' : 'Review needed';
+  const observations = [
+    `${result.reps} valid ${result.reps === 1 ? 'repetition was' : 'repetitions were'} recorded.`,
+    completed ? 'The 30-second test was completed.' : result.status,
+    armUseCount === 0 ? 'No hand support was detected during the saved attempt.' : armUseCount === 1 ? 'One arm-use event was recorded and the permitted restart was used.' : 'Hand support was detected more than once, so the result needs review.',
+    Number(chairStandResult?.halfStandCredit ?? 0) > 0 ? 'The final partial stand was credited under the test rule.' : 'Only completed stand-and-sit cycles were counted.',
+  ];
 
   return (
-    <SessionShell
-      eyebrow="Chair Stand Test result"
-      title={result.title}
-      description={result.status}
-      connection={<ConnectionIndicator status={result.tone === 'success' ? 'connected' : 'waiting'} label="Result saved" detail={repetitionLabel(result.reps)} />}
-      progress={<SessionProgress current={9} total={9} label="Session progress" />}
-      className="step-five-result-shell"
-    >
-      <main className="step-five-result" data-voice-script={result.voice}>
-        <section className={`step-five-result-card step-five-result-card--${result.tone}`}>
-          <StepIcon tone={result.tone}>{result.tone === 'success' ? 'OK' : '!'}</StepIcon>
-          <div>
-            <p className="step-five-card-kicker">Valid repetition count</p>
-            <h2>{repetitionLabel(result.reps)}</h2>
-            <strong>{result.status}</strong>
-            <span>{result.detail}</span>
-          </div>
+    <PageShell active="Assessment" className="ref-posture-page ref-chair-result-page">
+      <main className="ref-page ref-posture ref-chair-result" data-voice-script={result.voice}>
+        <ScreenHeading title="Chair Stand Test Results" subtitle="Here’s a summary of your 30-second lower-body strength assessment." />
+        <section className="ref-posture-metrics">
+          <Metric icon="accessibility" label="Valid Chair Stands" value={`${result.reps} reps`} note="Completed stand-and-sit cycles" tone="amber" />
+          <Metric icon="timer" label="Test Duration" value="30 sec" note="CDC STEADI Chair Stand Test" />
+          <Metric icon="shieldCheck" label="Test Status" value={completed ? 'Complete' : 'Review'} note={result.detail} />
+          <Metric icon="personStanding" label="Arm Support" value={safetyLabel} note={armUseCount === 0 ? 'Arms remained crossed' : `${armUseCount} arm-use event${armUseCount === 1 ? '' : 's'} detected`} tone={armUseCount === 0 ? 'green' : 'amber'} />
         </section>
-
-        <section className="step-five-next-panel">
-          <h2>Next step</h2>
-          <p>Steply will prepare the session summary using the existing scoring pipeline.</p>
-          <div className="step-five-result-summary">
-            <div>
-              <span>Assessment</span>
-              <strong>30-Second Chair Stand Test</strong>
-            </div>
-            <div>
-              <span>Video storage</span>
-              <strong>Raw camera video is not saved</strong>
-            </div>
-          </div>
+        <section className="ref-posture-grid">
+          <Panel className="ref-alignment ref-chair-result-details">
+            <SectionTitle>Assessment details</SectionTitle>
+            <dl>
+              <div><dt>Assessment</dt><dd>30-Second Chair Stand</dd></div>
+              <div><dt>Valid repetitions</dt><dd>{result.reps}</dd></div>
+              <div><dt>Duration</dt><dd>30 seconds</dd></div>
+              <div><dt>Arm-use events</dt><dd className={armUseCount > 0 ? 'amber' : ''}>{armUseCount}</dd></div>
+              <div><dt>Result</dt><dd className={!completed ? 'amber' : ''}>{completed ? 'Saved' : 'Needs review'}</dd></div>
+            </dl>
+            <div className="ref-alignment-note"><SteplyIcon name={completed ? 'shieldCheck' : 'shieldAlert'} size={30} /><span>{result.status}<br />{result.detail}</span></div>
+          </Panel>
+          <aside className="ref-posture-aside">
+            <Panel><SectionTitle icon="eye">What we observed</SectionTitle><CheckList items={observations} /></Panel>
+            <Panel>
+              <SectionTitle icon="target" tone="amber">Recommended focus areas</SectionTitle>
+              <button type="button" onClick={() => goTo('/display/exercises/plan')}><span><SteplyIcon name="accessibility" /></span><b>Lower-body strength<small>Practice controlled sit-to-stand movements.</small></b><i><SteplyIcon name="arrowRight" size={19} /></i></button>
+              <button type="button" onClick={() => goTo('/display/exercises/plan')}><span><SteplyIcon name="scale" /></span><b>Movement control<small>Build steady transitions between sitting and standing.</small></b><i><SteplyIcon name="arrowRight" size={19} /></i></button>
+            </Panel>
+          </aside>
         </section>
-
-        <div className="step-five-actions">
-          <VoiceButton script={result.voice} onReplay={() => setLastReplay(result.voice)} />
-          <PrimaryActionBar
-            primaryLabel="Continue to Results"
-            onPrimary={() => goTo('/display/session/analyzing')}
-          />
-        </div>
-        {lastReplay ? <span className="step-five-sr-status" role="status">{lastReplay}</span> : null}
+        <footer className="ref-posture-actions">
+          <div className="ref-posture-actions__secondary">
+            <button type="button" onClick={() => window.print()}><SteplyIcon name="download" size={18} />Download Report</button>
+            <button type="button" onClick={() => goTo('/display/session/plan')}>Back to Assessment</button>
+          </div>
+          <button type="button" className="ref-posture-recommendation" onClick={() => goTo('/display/results/summary')}>
+            <span><SteplyIcon name="scan" size={19} /></span><b>View Full Assessment Results<small>Review balance, strength, and recommended next steps</small></b><i><SteplyIcon name="arrowRight" size={23} /></i>
+          </button>
+        </footer>
       </main>
-    </SessionShell>
+    </PageShell>
   );
 }

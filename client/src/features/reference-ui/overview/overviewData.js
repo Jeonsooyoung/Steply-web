@@ -8,6 +8,7 @@ export const homeMetrics = [
 export const assessmentSteps = [
   {
     number: '01',
+    category: 'SETUP',
     icon: 'smartphone',
     title: 'Connect your camera',
     description: 'Pair your phone or use this computer camera for a full-body view.',
@@ -16,6 +17,7 @@ export const assessmentSteps = [
   },
   {
     number: '02',
+    category: 'ASSESSMENT',
     icon: 'scale',
     title: '4-Stage Balance Test',
     description: 'Complete four standing positions with clear, guided instructions.',
@@ -24,6 +26,16 @@ export const assessmentSteps = [
   },
   {
     number: '03',
+    category: 'ASSESSMENT',
+    icon: 'accessibility',
+    title: '30-Second Chair Stand Test',
+    description: 'Stand up and sit down safely for 30 seconds to measure lower-body strength.',
+    action: 'Start Chair Stand Test',
+    href: '/display/assessment/chair/live',
+  },
+  {
+    number: '04',
+    category: 'RESULTS',
     icon: 'scan',
     title: 'Review posture results',
     description: 'See your balance score, alignment observations, and recommended focus areas.',
