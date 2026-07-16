@@ -1201,11 +1201,9 @@ function postWorkerFrameResult(payload) {
 }
 
 function postPoseFrame({ source, detected, bitmap, sequence = null, analyzedAt = Date.now() }) {
-  const structured = buildStructuredFramePayload({
-    detected,
-    bitmap,
-    analyzedAt,
-  });
+  // This is the latency-sensitive display lane. Post the freshly detected
+  // pose before smoothing, calibration, quality, and movement analysis. A
+  // later FRAME_RESULT carries the complete clinical payload.
   postWorkerFrameResult({
     source,
     sequence,
@@ -1219,7 +1217,6 @@ function postPoseFrame({ source, detected, bitmap, sequence = null, analyzedAt =
     frameSize: { width: bitmap.width, height: bitmap.height },
     receivedAt: detected.inputReceivedAt,
     analyzedAt,
-    ...structured,
   });
 }
 

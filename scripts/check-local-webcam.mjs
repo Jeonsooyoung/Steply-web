@@ -28,7 +28,7 @@ try {
     startLaptopCameraAndContinue,
   } = await server.ssrLoadModule('/client/src/routes/StepTwoScreens.jsx');
   const { CameraPreview } = await server.ssrLoadModule('/client/src/components/foundation/SteplyDesignSystem.jsx');
-  const { LiveCamera } = await server.ssrLoadModule('/client/src/features/reference-ui/shared/LiveCamera.jsx');
+  const { LiveCamera, displayPoseLandmarks } = await server.ssrLoadModule('/client/src/features/reference-ui/shared/LiveCamera.jsx');
   const {
     ReferenceConnectScreen,
     startWebcamBalanceTest,
@@ -134,6 +134,22 @@ try {
     { name: 'left_hip', x: 0.44, y: 0.58, visibility: 0.98 },
     { name: 'right_hip', x: 0.56, y: 0.58, visibility: 0.98 },
   ];
+  const rawDisplayLandmarks = poseLandmarks.map((point) => ({ ...point, x: point.x + 0.05 }));
+  const smoothedAnalysisLandmarks = poseLandmarks.map((point) => ({ ...point, x: point.x - 0.05 }));
+  assert.equal(
+    displayPoseLandmarks({
+      rawLandmarks: poseLandmarks,
+      analysisRawLandmarks: rawDisplayLandmarks,
+      analysisLandmarks: smoothedAnalysisLandmarks,
+    }),
+    poseLandmarks,
+    '[CAM-WEB-07A] the visual overlay prioritizes the immediate display lane over later clinical payloads',
+  );
+  assert.equal(
+    displayPoseLandmarks({ analysisLandmarks: smoothedAnalysisLandmarks }),
+    smoothedAnalysisLandmarks,
+    '[CAM-WEB-07A] the overlay keeps a smoothed fallback until the first raw pose arrives',
+  );
   const referencePoseHtml = renderToStaticMarkup(React.createElement(LiveCamera, {
     dashboard: {
       activeCameraFrame: { src: 'blob:pose-preview' },

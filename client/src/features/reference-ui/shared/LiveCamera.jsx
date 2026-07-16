@@ -13,6 +13,13 @@ export function useEnsureLocalCamera(dashboard, enabled = true) {
   }, [dashboard?.handleStartLocalCamera, dashboard?.isCameraReady, enabled]);
 }
 
+export function displayPoseLandmarks(poseAnalysis) {
+  if (poseAnalysis?.rawLandmarks?.length) return poseAnalysis.rawLandmarks;
+  if (poseAnalysis?.analysisRawLandmarks?.length) return poseAnalysis.analysisRawLandmarks;
+  if (poseAnalysis?.analysisLandmarks?.length) return poseAnalysis.analysisLandmarks;
+  return poseAnalysis?.landmarks || [];
+}
+
 export function LiveCamera({ dashboard, className = '', label = 'Live camera', overlay = true, phone = false }) {
   const videoRef = useRef(null);
   const stream = dashboard?.activeCameraStream || null;
@@ -20,9 +27,10 @@ export function LiveCamera({ dashboard, className = '', label = 'Live camera', o
   const ready = Boolean(stream || frame);
   const waitingForPhone = dashboard?.cameraInputMode === 'PHONE_CAMERA' && dashboard?.isPhoneProfileLinked;
   const poseAnalysis = dashboard?.poseAnalysis;
-  const poseLandmarks = poseAnalysis?.analysisLandmarks?.length
-    ? poseAnalysis.analysisLandmarks
-    : poseAnalysis?.landmarks || [];
+  // Keep the visual overlay responsive by rendering the latest raw pose.
+  // Clinical state machines continue to consume the separately smoothed
+  // analysisLandmarks stream inside the analysis pipeline.
+  const poseLandmarks = displayPoseLandmarks(poseAnalysis);
   const poseFrameSize = poseAnalysis?.frameSize || null;
   const hasPose = ready && poseLandmarks.length > 0;
 
