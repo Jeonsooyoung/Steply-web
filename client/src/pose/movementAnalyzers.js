@@ -266,7 +266,9 @@ function chairStateFromSnapshot({ snapshot, startedAt, nowMs, trackingQualitySco
     isFullBodyVisible: Boolean(features.valid),
     warningMessage: chairMessageForState(snapshot),
     postureMessage: chairMessageForState(snapshot),
-    isArmUseSuspected: snapshot?.armUse === ArmUseStates.Suspected || snapshot?.armUse === ArmUseStates.Confirmed,
+    isArmUseSuspected: snapshot?.armChecksIgnored
+      ? false
+      : snapshot?.armUse === ArmUseStates.Suspected || snapshot?.armUse === ArmUseStates.Confirmed,
     armUseDisqualified: snapshot?.armUseCdcZero === true,
     armUseRestartRequired: snapshot?.armUseRestartRequired === true,
     armUseCdcZero: snapshot?.armUseCdcZero === true,
@@ -580,6 +582,7 @@ class StructuredMovementAnalyzer {
         assessmentId: sessionId,
         startedAtMs: startedAt,
         armUseOccurrenceCount: this.options.armUseOccurrenceCount || 0,
+        ignoreArmUse: this.options.ignoreArmUse === true,
       });
     }
     this.latestSnapshot = this.machine.snapshot([]);

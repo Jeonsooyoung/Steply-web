@@ -24,6 +24,34 @@ function goTo(path) {
   navigateSpa(path);
 }
 
+const CHAIR_LIVE_RESULT_STORAGE_KEY = 'steply.chair-live-result.v1';
+
+function storedChairLiveResult() {
+  try {
+    return JSON.parse(window.sessionStorage.getItem(CHAIR_LIVE_RESULT_STORAGE_KEY) || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function chairRepetitionValue(...sources) {
+  const candidates = sources.flatMap((source) => [
+    source?.repetitionCount,
+    source?.countedRepetitionCount,
+    source?.completedRepetitions,
+    source?.primaryMeasurements?.completedRepetitions,
+    source?.structuredAssessmentResult?.primaryMeasurements?.completedRepetitions,
+    source?.stage2Result?.chairStand?.completedRepetitions,
+    source?.stage2Result?.chairStand?.cdcScoredRepetitions,
+    source?.chairStand?.completedRepetitions,
+    source?.chairStand?.cdcScoredRepetitions,
+  ]);
+  return candidates.reduce((maximum, value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? Math.max(maximum, numeric) : maximum;
+  }, 0);
+}
+
 function useTimedBackGuard(active = true) {
   const [warningVisible, setWarningVisible] = useState(false);
 
@@ -167,6 +195,8 @@ function chairStateFromDashboard(dashboard) {
   const analysisState = dashboard?.poseAnalysis?.analysisState || {};
   const finalResult = dashboard?.finalResult || {};
   const chairStandResult = analysisState?.chairStandResult
+    || dashboard?.poseAnalysis?.analysisResult
+    || dashboard?.poseAnalysis?.finalResult
     || finalResult?.chairStandResult
     || finalResult?.chairStand
     || finalResult;
@@ -582,8 +612,17 @@ function ChairStandAlert({ scenario, dashboard, dominant = false }) {
 
 function ChairResultState(dashboard) {
   const { chairStandResult } = chairStateFromDashboard(dashboard);
+  const stored = storedChairLiveResult();
   const reps = wholeNumber(
-    chairStandResult?.repetitionCount ?? chairStandResult?.countedRepetitionCount ?? 0,
+    Math.max(
+      chairRepetitionValue(
+        chairStandResult,
+        dashboard?.poseAnalysis?.analysisState,
+        dashboard?.poseAnalysis?.analysisResult,
+        dashboard?.finalResult,
+      ),
+      Number(stored?.reps) || 0,
+    ),
     0,
     0,
     99,
@@ -679,9 +718,36 @@ export function DisplayChairLiveScreen({ dashboard }) {
   const showBackWarning = useTimedBackGuard(true);
   const scenario = useMemo(() => chairLiveScenario(dashboard), [dashboard]);
   const qualityRows = useMemo(() => liveQualityRows(scenario, dashboard), [scenario, dashboard]);
-  const hasDominantAlert = Boolean(scenario.armFirst || scenario.armSecond || scenario.safetyStop);
-  const alert = <ChairStandAlert scenario={scenario} dashboard={dashboard} dominant={hasDominantAlert} />;
+  const hasDominantAlert = Boolean(scenario.armSecond || scenario.safetyStop);
+  const alert = scenario.armFirst
+    ? null
+    : <ChairStandAlert scenario={scenario} dashboard={dashboard} dominant={hasDominantAlert} />;
   useEnsureLocalCamera(dashboard, !dashboard?.isPhoneProfileLinked);
+
+  useEffect(() => {
+    try {
+      const previous = storedChairLiveResult();
+      const sameSession = previous?.analysisSessionId === dashboard?.poseAnalysis?.analysisSessionId;
+      const freshStart = scenario.remaining === 30 && scenario.reps === 0;
+      window.sessionStorage.setItem(CHAIR_LIVE_RESULT_STORAGE_KEY, JSON.stringify({
+        analysisSessionId: dashboard?.poseAnalysis?.analysisSessionId || null,
+        reps: Math.max(sameSession && !freshStart ? Number(previous?.reps) || 0 : 0, scenario.reps),
+        durationSeconds: 30,
+        armUseOccurrenceCount: Number(dashboard?.poseAnalysis?.analysisState?.armUseOccurrenceCount) || 0,
+        completed: scenario.remaining === 0 || scenario.testComplete === true,
+        savedAt: Date.now(),
+      }));
+    } catch {
+      // The in-memory structured result remains the primary source when
+      // session storage is unavailable.
+    }
+  }, [
+    dashboard?.poseAnalysis?.analysisSessionId,
+    dashboard?.poseAnalysis?.analysisState?.armUseOccurrenceCount,
+    scenario.remaining,
+    scenario.reps,
+    scenario.testComplete,
+  ]);
 
   useEffect(() => {
     dashboard?.setActiveStep?.(UserScreenIds.Assessment);
@@ -741,7 +807,15 @@ export function DisplayChairLiveScreen({ dashboard }) {
           <LiveCamera dashboard={dashboard} className="ref-balance-camera ref-chair-camera" label="Live 30-second chair stand camera" />
           <aside className="ref-balance-guidance ref-chair-guidance" aria-live="polite">
             <Panel><SectionTitle icon="clipboardList" tone="amber">Current instruction</SectionTitle><h2 className="ref-chair-current-instruction">{scenario.instruction}</h2><CheckList items={[scenario.cue, 'Keep your arms crossed over your chest.', 'Stand fully, then sit fully before the next repetition.']} /></Panel>
-            <Panel className="ref-balance-timer"><SectionTitle icon="timer">Time remaining</SectionTitle><ProgressRing value={scenario.remaining} progress={((30 - scenario.remaining) / 30) * 100} large /></Panel>
+            <Panel className="ref-balance-timer ref-chair-timer-and-count">
+              <SectionTitle icon="timer">Time remaining</SectionTitle>
+              <ProgressRing value={scenario.remaining} progress={((30 - scenario.remaining) / 30) * 100} large />
+              <div className="ref-chair-live-count" role="status" aria-live="polite" aria-label={`${scenario.reps} completed chair stand repetitions`}>
+                <span>Chair stand count</span>
+                <strong>{scenario.reps}</strong>
+                <small>{scenario.reps === 1 ? 'repetition' : 'repetitions'}</small>
+              </div>
+            </Panel>
           </aside>
           <Panel className="ref-stage-status ref-chair-status">
             <SectionTitle icon="flag" tone="amber">Test status</SectionTitle><p>30-second test</p><h2>{scenario.movementLabel}</h2><b>{scenario.timerPaused ? 'Paused for safety' : scenario.testComplete ? 'Complete' : 'In progress'}</b>
@@ -765,7 +839,16 @@ export function DisplayChairLiveScreen({ dashboard }) {
 export function DisplayChairResultScreen({ dashboard }) {
   const result = ChairResultState(dashboard);
   const { chairStandResult } = chairStateFromDashboard(dashboard);
-  const armUseCount = wholeNumber(chairStandResult?.armUse?.occurrenceCount ?? chairStandResult?.armUseOccurrenceCount ?? 0, 0, 0, 2);
+  const stored = storedChairLiveResult();
+  const armUseCount = wholeNumber(
+    chairStandResult?.armUse?.occurrenceCount
+      ?? chairStandResult?.armUseOccurrenceCount
+      ?? stored?.armUseOccurrenceCount
+      ?? 0,
+    0,
+    0,
+    2,
+  );
   const completed = result.tone === 'success';
   const safetyLabel = armUseCount === 0 ? 'No arm support' : armUseCount === 1 ? 'Restart used' : 'Review needed';
   const observations = [

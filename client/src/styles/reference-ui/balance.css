@@ -245,6 +245,40 @@
   font-weight: 700;
 }
 
+.ref-chair-timer-and-count {
+  align-content: start;
+}
+
+.ref-chair-live-count {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 14px;
+  margin-top: 22px;
+  padding: 15px 18px;
+  border: 1px solid #cce9dc;
+  border-radius: 14px;
+  background: #f1faf6;
+  color: var(--ref-green);
+}
+
+.ref-chair-live-count span {
+  color: var(--ref-text);
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.ref-chair-live-count strong {
+  grid-row: span 2;
+  font-size: 42px;
+  line-height: 1;
+}
+
+.ref-chair-live-count small {
+  color: var(--ref-muted);
+  font-size: 12px;
+}
+
 .ref-chair-quality-list {
   gap: 18px !important;
   padding-top: 22px !important;

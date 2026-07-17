@@ -1570,9 +1570,12 @@ async function handleFrame(message) {
       qualityDecision,
       brightness: brightnessStats,
     });
-    const blockedFrame = (selectedTest !== 'four_stage_balance' && qualityDecision.legacy.movementBlocked)
-      || structuredQualityBlocksAnalysis(structured.qualityStatus);
-    const calibrationBlocked = !structured.calibrationStatus?.canStartAssessment;
+    const blockedFrame = selectedTest === 'four_stage_balance'
+      && structuredQualityBlocksAnalysis(structured.qualityStatus);
+    // Chair Stand can fall back to knee-angle phase detection so a missing
+    // personal calibration never prevents the 30-second counter from running.
+    const calibrationBlocked = selectedTest === 'four_stage_balance'
+      && !structured.calibrationStatus?.canStartAssessment;
     let poseFrame = null;
     let state = null;
     if (calibrationBlocked) {
@@ -1593,6 +1596,9 @@ async function handleFrame(message) {
         trackingPaused: true,
       };
     } else {
+      const analysisQualityStatus = selectedTest === 'chair_stand'
+        ? { ...structured.qualityStatus, state: 'READY', reasons: [] }
+        : structured.qualityStatus;
       poseFrame = {
         timestampMs,
         landmarks: steadiFrame?.frame.landmarks || qualityPayload.landmarks,
@@ -1609,7 +1615,7 @@ async function handleFrame(message) {
       state = analyzer.addFrame({
         poseFrame: structured.poseFrame,
         calibrationProfile: structured.calibrationProfile,
-        qualityStatus: structured.qualityStatus,
+        qualityStatus: analysisQualityStatus,
       });
       state = {
         ...state,
@@ -1903,6 +1909,7 @@ function startSession(message) {
   const assessmentSessionId = message.assessmentSessionId || sessionId;
   analyzer = createMovementAnalyzer(selectedTest, {
     supportRoiNormalized: message.supportRoiNormalized || message.operationalContext?.supportRoiNormalized || null,
+    ignoreArmUse: selectedTest === 'chair_stand',
     armUseOccurrenceCount: Math.max(
       Number(message.armUseOccurrenceCount) || 0,
       armUseOccurrencesByAssessmentSession.get(assessmentSessionId) || 0,

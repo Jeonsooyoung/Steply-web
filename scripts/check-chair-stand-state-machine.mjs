@@ -370,12 +370,14 @@ try {
     sessionId = 'chair-session',
     assessmentId = 'assessment-chair',
     armUseOccurrenceCount = 0,
+    ignoreArmUse = false,
   } = {}) {
     const machine = createChairStandStateMachine({
       sessionId,
       assessmentId,
       startedAtMs: 0,
       armUseOccurrenceCount,
+      ignoreArmUse,
     });
     let snapshot = machine.snapshot();
     for (const entry of frames) {
@@ -475,6 +477,25 @@ try {
 
   const fast = runSequence(normalSequence(1, { riseMs: 300, descendMs: 300, dtMs: 33 }));
   assert.equal(fast.snapshot.repetitionCount, 1, 'fast complete movement is counted once');
+
+  const sparseNoCalibrationBuilder = new SequenceBuilder();
+  sparseNoCalibrationBuilder.hold(0, 100).add(1);
+  const sparseNoCalibration = runSequence(sparseNoCalibrationBuilder.frames, { profile: null });
+  assert.equal(
+    sparseNoCalibration.snapshot.repetitionCount,
+    1,
+    'a seated-to-standing frame jump increments immediately without personal hip calibration',
+  );
+  assert.equal(sparseNoCalibration.snapshot.state, ChairStandMachineStates.Stand);
+
+  const sparseThreeCyclesBuilder = new SequenceBuilder();
+  sparseThreeCyclesBuilder.hold(0, 100).add(1).add(0).add(1).add(0).add(1);
+  const sparseThreeCycles = runSequence(sparseThreeCyclesBuilder.frames, { profile: null, ignoreArmUse: true });
+  assert.equal(
+    sparseThreeCycles.snapshot.repetitionCount,
+    3,
+    `each directly sampled seated pose re-arms the next standing repetition: ${JSON.stringify(sparseThreeCycles.snapshot.debugTimeline.map(({ state, repetitionCount }) => ({ state, repetitionCount })))}`,
+  );
 
   const slow = runSequence(normalSequence(1, { riseMs: 2_000, descendMs: 2_000 }));
   assert.equal(slow.snapshot.repetitionCount, 1, 'slow complete movement is counted once');
